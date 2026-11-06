@@ -430,7 +430,8 @@ const DRIVE = (()=>{
   let ls=null; try{ ls=JSON.parse(localStorage.getItem('wb-drive')||'null'); }catch{}
   const root=parseFolderId(q.get('folder')||CONFIG.folder||ls?.folder||'');
   const key=(q.get('key')||CONFIG.apiKey||ls?.key||'').trim();
-  const clientId=(CONFIG.clientId||ls?.clientId||'').trim();
+  const okCid=v=>/^\d+-[\w-]+\.apps\.googleusercontent\.com$/.test((v||'').trim());
+  const clientId=[CONFIG.clientId,ls?.clientId].map(v=>(v||'').trim()).find(okCid)||'';
   const project=parseFolderId(q.get('p')||'');
   return root&&key?{root,folder:project||root,project:project||null,key,clientId,fromConfig:!!CONFIG.folder}:null;
 })();
@@ -1101,7 +1102,8 @@ async function testDrv(){
   msg.className=''; msg.textContent='Đang kiểm tra…';
   try{ const r=await gget(`${GAPI}/${folder}?fields=name,mimeType&key=${encodeURIComponent(key)}&supportsAllDrives=true`); const j=await r.json();
     if(j.mimeType&&j.mimeType!=='application/vnd.google-apps.folder'){ msg.className='err'; msg.textContent='Link này là một tệp, không phải thư mục.'; return; }
-    try{ localStorage.setItem('wb-drive',JSON.stringify({folder,key,clientId:$('#drvClient').value.trim()})); }catch{}
+    const cid=$('#drvClient').value.trim(); if(cid&&!/^\d+-[\w-]+\.apps\.googleusercontent\.com$/.test(cid)){ msg.className='err'; msg.textContent='OAuth Client ID không đúng dạng. Client ID có dạng 123456789-abc….apps.googleusercontent.com (không phải API key AIza… hay Client secret).'; return; }
+    try{ localStorage.setItem('wb-drive',JSON.stringify({folder,key,clientId:cid})); }catch{}
     const link=shareLink(folder,key); msg.className='ok'; msg.textContent=`Kết nối được thư mục "${j.name}". Đang mở…`;
     $('#drvLink').textContent=link; $('#drvShare').classList.add('show');
     setTimeout(()=>{ location.href=link; },700);
