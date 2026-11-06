@@ -194,6 +194,36 @@ body.focusing #world .item.hl{opacity:1}
 .frow .fn div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px}
 .frow .fn small{color:var(--muted);font-size:11.5px}
 .frow.off .fn div{color:#9a9ca3}
+/* AI panel */
+#aiBtn{display:none} body.ai-on #aiBtn{display:inline-flex}
+#aiBtn svg{stroke:#7048e8}
+#ai{right:12px;top:62px;bottom:12px;width:370px;display:none;flex-direction:column;z-index:8;overflow:hidden}
+#ai.show{display:flex}
+#ai .fh{display:flex;align-items:center;gap:6px;padding:12px 10px 8px 14px;border-bottom:1px solid var(--line)}
+#ai .fh b{font-size:14px} #ai .fh span{color:var(--muted);font-size:12px;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#aiLog{flex:1;overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:10px}
+.am{max-width:92%;padding:9px 11px;border-radius:11px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word}
+.am.u{align-self:flex-end;background:var(--accent-soft)}
+.am.a{align-self:flex-start;background:#f6f6f2;border:1px solid var(--line)}
+.am.err{background:#fff0f0;border-color:#f3c2c2;color:#a4262c}
+.am .att{display:block;color:var(--muted);font-size:11.5px;margin-top:4px}
+.am .acts{display:flex;gap:6px;margin-top:8px;white-space:normal}
+.am .acts button{height:28px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:0 9px;cursor:pointer;font-size:12px}
+.am .acts button:hover{background:#efefea}
+.am.wait{color:var(--muted)} .am.wait i{display:inline-block;animation:aiDot 1s infinite}
+@keyframes aiDot{50%{opacity:.25}}
+.aiintro{color:var(--muted);font-size:12.5px;line-height:1.55;padding:2px}
+.aiq{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0}
+.aiq button{height:28px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:0 11px;cursor:pointer;font-size:12.5px}
+.aiq button:hover{background:#f3f0ff;border-color:#d0bfff}
+.aiin{padding:8px 12px 12px}
+.aiin textarea{width:100%;resize:none;border:1px solid #deded8;border-radius:10px;padding:8px 10px;font:inherit;font-size:16px;min-height:44px;max-height:140px}
+.aiin textarea:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.aiin .row2{display:flex;align-items:center;gap:8px;margin-top:6px}
+.aiin label{flex:1;font-size:12px;color:var(--muted);display:flex;gap:6px;align-items:center;cursor:pointer}
+.aiin label input{accent-color:var(--accent);width:16px;height:16px}
+body.hub #ai,body.gate #ai{display:none!important}
+@media (max-width:640px){ #ai{left:8px;right:8px;width:auto;top:auto;bottom:calc(68px + env(safe-area-inset-bottom));height:70vh} }
 /* hub (bảng mẹ) */
 #hub{position:fixed;inset:0;overflow:auto;display:none;background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 24px 40px;z-index:3}
 body.hub #hub{display:block}
@@ -341,7 +371,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="btn primary" data-act="upload"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Chọn tệp</button>
 </div></div>
 
-<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button><button class="btn" id="notesBtn" data-act="notesPanel" title="Theo dõi ghi chú theo người"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl2">Ghi chú</span><b id="notesCnt"></b></button></div>
+<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button><button class="btn" id="notesBtn" data-act="notesPanel" title="Theo dõi ghi chú theo người"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl2">Ghi chú</span><b id="notesCnt"></b></button><button class="btn" id="aiBtn" data-act="aiOpen" title="Trợ lý AI"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg><span class="lbl2">AI</span></button></div>
 <div id="focusChip" class="panel"></div>
 
 <div id="actions" class="panel">
@@ -407,6 +437,13 @@ body.relogin #loginBtn{background:#e0a92b}
   <div class="fbtns"><button data-act="fAll">Hiện tất cả</button><button data-act="fNone">Ẩn tất cả</button></div>
   <div id="flist"></div></div>
   <div id="peoplePane"></div>
+</div>
+<div id="ai" class="panel">
+  <div class="fh"><b>Trợ lý AI</b><span id="aiCtx"></span><button class="ib" data-act="aiReset" title="Cuộc trò chuyện mới"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"/></svg></button><button class="ib" data-act="aiClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="aiLog"></div>
+  <div class="aiq"><button data-aiq="sum">Tóm tắt ghi chú</button><button data-aiq="todo">Việc cần làm</button><button data-aiq="read">Đọc ảnh/PDF đang xem</button></div>
+  <div class="aiin"><textarea id="aiText" rows="2" placeholder="Hỏi về dự án này… (Enter để gửi)"></textarea>
+    <div class="row2"><label title="Gửi kèm các ảnh/trang PDF đang chọn, hoặc tối đa 4 cái đang hiện giữa màn hình"><input type="checkbox" id="aiImg">Gửi kèm ảnh/PDF đang xem</label><button class="btn primary" data-act="aiSend" id="aiGo">Gửi</button></div></div>
 </div>
 <div id="hub">
   <header><div class="tt"><div class="crumb">Bảng mẹ · <a class="driveLink" id="hubDrive" target="_blank" rel="noopener">mở trên Google Drive ↗</a></div><h1 id="hubTitle">Đang tải…</h1></div>
@@ -477,7 +514,8 @@ body.relogin #loginBtn{background:#e0a92b}
 // Muốn gắn sẵn thư mục Drive vào phần mềm (không cần ?folder=...&key=... trên link), điền 2 dòng này:
 const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyBjXbq0cZwN16X5IMJifLGEe0ylO6mcyoY', clientId: '815013146430-cjh67feg7j7k5asaq72qrkrn3i70048r.apps.googleusercontent.com',  // clientId: để tải tệp lên Drive (không bắt buộc)
   requireLogin: true,              // true: phải đăng nhập Google mới xem được; mỗi người chỉ thấy dự án được chia sẻ cho mình
-  admin: 'sangkt0510@gmail.com' }; // email nhận yêu cầu xin quyền (admin thật sự = chủ sở hữu thư mục chính trên Drive)
+  admin: 'sangkt0510@gmail.com',   // email nhận yêu cầu xin quyền (admin thật sự = chủ sở hữu thư mục chính trên Drive)
+  aiUrl: '' };                     // địa chỉ cổng AI (Cloudflare Worker, xem ai-worker/HUONG-DAN.md). Để trống = ẩn nút AI
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/';
 const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
 const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
@@ -1965,6 +2003,8 @@ function closeMenus(){ $('#menu').classList.remove('show'); $('#help').classList
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act;
   if(a!=='menu'&&a!=='help') closeMenus();
+  if(a.startsWith('ai')&&/^ai[A-Z]/.test(a)){ aiAction(a); return; }
+  if(a==='files'||a==='notesPanel') $('#ai').classList.remove('show');
   if(a==='upload') $('#file').click();
   else if(a==='menu') { $('#help').classList.remove('show'); $('#menu').classList.toggle('show'); }
   else if(a==='help') { $('#menu').classList.remove('show'); $('#help').classList.toggle('show'); }
@@ -2086,6 +2126,114 @@ function toast(text, frac, hideMs){
   const t=$('#toast'); $('#toasttext').textContent=text; t.classList.toggle('nobar',frac==null);
   if(frac!=null) t.querySelector('.bar b').style.width=Math.round(frac*100)+'%';
   t.classList.add('show'); clearTimeout(toastT); if(hideMs) toastT=setTimeout(()=>t.classList.remove('show'),hideMs);
+}
+
+// ================== Trợ lý AI (qua cổng Cloudflare Worker) ==================
+const AI={ msgs:[], busy:false, view:[] }; // msgs: lịch sử gửi AI; view: các dòng hiển thị
+const AI_ON=!!(CONFIG.aiUrl&&DRIVE?.clientId);
+if(AI_ON) document.body.classList.add('ai-on');
+const AIQ={
+  sum:'Tóm tắt ngắn gọn các ghi chú trong dự án này: những ý chính, ai đang nói về việc gì, có vấn đề gì cần chú ý.',
+  todo:'Từ các ghi chú (và ảnh/PDF nếu có), liệt kê những việc cần làm tiếp theo, mỗi việc một dòng, ghi rõ người liên quan nếu biết.',
+  read:'Hãy đọc các ảnh/trang PDF gửi kèm: mô tả nội dung chính, các thông số/số liệu quan trọng, và điểm nào cần lưu ý.',
+};
+function aiNotesText(){
+  const rows=[]; let n=0;
+  for(const it of S.items.values()){ if(!isNote(it)) continue; const t=(it.text||'').trim(); if(!t) continue;
+    rows.push(`- [${it.by||it.own||'trên máy này'}${it.t?', '+new Date(it.t).toLocaleDateString('vi-VN'):''}] ${t.replace(/\s+/g,' ').slice(0,1500)}`);
+    if((n+=t.length)>40000){ rows.push('- …(còn nữa, đã cắt bớt)'); break; } }
+  return rows.join('\n');
+}
+function aiSystem(){
+  const notes=aiNotesText();
+  return `Bạn là trợ lý AI trong app "Bảng trắng" — bảng làm việc chung của một nhóm, mỗi dự án là một bảng gồm ảnh, trang PDF (bản vẽ, tài liệu) và ghi chú của nhiều người.
+Dự án đang mở: "${driveName||'không rõ tên'}". Người đang hỏi: ${me?.name||''} (${me?.email||''}). Hôm nay: ${new Date().toLocaleDateString('vi-VN')}.
+Luôn trả lời bằng tiếng Việt, rõ ràng, ngắn gọn, dùng gạch đầu dòng khi liệt kê. Không dùng bảng markdown hay tiêu đề #.
+Nếu người dùng nhờ tạo/viết ghi chú để dán lên bảng, hãy viết mỗi ghi chú thành một đoạn ngắn và ngăn cách các ghi chú bằng một dòng chỉ có "---".
+Nếu thông tin không có trong ghi chú hoặc ảnh, hãy nói rõ là không thấy, đừng bịa.
+
+Các ghi chú hiện có trên bảng (${notes?notes.split('\n').length:0}):
+${notes||'(chưa có ghi chú nào)'}`;
+}
+function aiMediaItems(){
+  const media=it=>it&&(it.type==='image'||it.type==='pdf');
+  let list=[...S.sel].map(id=>S.items.get(id)).filter(media);
+  if(!list.length){ const v=viewRect(0);
+    list=[...S.items.values()].filter(it=>{ if(!media(it)||!vis(it)) return false; const b=aabb(it); return b.x<v.x+v.w&&b.x+b.w>v.x&&b.y<v.y+v.h&&b.y+b.h>v.y; })
+      .sort((a,b)=>distC(a)-distC(b)); }
+  return list.slice(0,4);
+}
+const vis=it=>{ const r=els.get(it.id); return !r||r.el.style.display!=='none'; };
+const blobB64=b=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(',')[1]); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(b); });
+async function aiImage(it){
+  let c;
+  if(it.type==='pdf') c=await renderPage(it.key,it.page||1,1500);
+  else { const a=assets.get(it.key); if(!a) throw new Error('missing'); const d=await decodeImage(await getBlob(a));
+    try{ const k=Math.min(1,1568/Math.max(d.w,d.h)); c=makeCanvas(Math.max(1,Math.round(d.w*k)),Math.max(1,Math.round(d.h*k)));
+      const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.imageSmoothingQuality='high'; x.drawImage(d.src,0,0,c.width,c.height); } finally{ d.close(); } }
+  try{ const b=await canvasBlob(c,'image/jpeg',0.82); return {type:'image',source:{type:'base64',media_type:'image/jpeg',data:await blobB64(b)}}; }
+  finally{ c.width=c.height=0; }
+}
+const aiName=it=>{ const a=assets.get(it.key); const n=a?.name||(it.type==='pdf'?'PDF':'ảnh'); return it.type==='pdf'?`${n} – trang ${it.page||1}`:n; };
+function aiMd(t){ return esc(t).replace(/\n\s*-{3,}\s*(\n|$)/g,'<hr style="border:0;border-top:1px dashed #cfcfc8;margin:6px 0">').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/^#{1,4}\s*(.+)$/gm,'<b>$1</b>'); }
+function aiRender(){
+  const log=$('#aiLog'); $('#aiCtx').textContent=driveName?'· '+driveName:'';
+  const intro=`<div class="aiintro">Hỏi AI về dự án này. AI đọc được <b>tất cả ghi chú</b> trên bảng; đánh dấu "Gửi kèm ảnh/PDF đang xem" để AI đọc cả ảnh/trang PDF bạn đang chọn (hoặc đang hiện giữa màn hình, tối đa 4). Câu trả lời có thể thêm thẳng lên bảng thành ghi chú.</div>`;
+  log.innerHTML=intro+AI.view.map((m,i)=>m.role==='user'?`<div class="am u">${esc(m.text)}${m.att?`<span class="att">📎 ${esc(m.att)}</span>`:''}</div>`
+    :m.err?`<div class="am a err">${esc(m.text)}</div>`
+    :`<div class="am a">${aiMd(m.text)}<div class="acts"><button data-ai-note="${i}">＋ Thêm vào bảng</button><button data-ai-copy="${i}">Sao chép</button></div></div>`).join('')
+    +(AI.busy?`<div class="am a wait">${esc(AI.busy===true?'AI đang suy nghĩ':AI.busy)} <i>…</i></div>`:'');
+  log.scrollTop=log.scrollHeight; $('#aiGo').disabled=!!AI.busy;
+}
+function aiOpen(){ if(!AI_ON) return; $('#files').classList.remove('show'); $('#ai').classList.add('show'); aiRender(); if(!IS_TOUCH) setTimeout(()=>$('#aiText').focus(),50); }
+async function aiSend(text,withImg){
+  text=(text||'').trim(); if(!text||AI.busy) return;
+  if(!tokenValid()){ try{ await signIn(); }catch(e){ toast(e.message,null,5000); return; } }
+  const items=withImg?aiMediaItems():[];
+  if(withImg&&!items.length) toast('Không thấy ảnh/PDF nào đang chọn hoặc đang hiện trên màn hình — AI sẽ chỉ đọc ghi chú.',null,3500);
+  const att=items.map(aiName).join(', ');
+  AI.view.push({role:'user',text,att}); $('#aiText').value=''; AI.busy=items.length?`Đang chuẩn bị ${items.length} ảnh/trang`:true; aiRender();
+  try{
+    const imgs=[]; for(const it of items){ try{ imgs.push(await aiImage(it)); }catch(e){ console.warn('ai img',e); } }
+    AI.busy=true; aiRender();
+    const content=[...imgs, {type:'text',text:(att?`(Đính kèm: ${att})\n`:'')+text}];
+    const msgs=[...AI.msgs,{role:'user',content}];
+    const r=await fetch(CONFIG.aiUrl,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+gTok.t},body:JSON.stringify({system:aiSystem(),messages:msgs})});
+    const j=await r.json().catch(()=>({error:'Cổng AI trả về dữ liệu lạ (HTTP '+r.status+').'}));
+    if(!r.ok||j.error) throw new Error(j.error||('HTTP '+r.status));
+    // lưu lịch sử gọn: bỏ ảnh để lần hỏi sau không gửi lại
+    AI.msgs.push({role:'user',content:(att?`(Đã gửi kèm: ${att})\n`:'')+text},{role:'assistant',content:j.text||'(trống)'});
+    if(AI.msgs.length>20) AI.msgs.splice(0,AI.msgs.length-20);
+    AI.view.push({role:'assistant',text:j.text||'(AI không trả lời gì)'});
+  }catch(e){
+    const m=e instanceof TypeError?'Không kết nối được cổng AI. Kiểm tra mạng hoặc địa chỉ aiUrl.':e.message;
+    AI.view.push({role:'assistant',err:true,text:m}); if(/đăng nhập/i.test(m)){ gTok=null; try{ localStorage.removeItem('wb-gtok'); }catch{} }
+  }finally{ AI.busy=false; aiRender(); }
+}
+function aiToBoard(i){
+  const m=AI.view[i]; if(!m) return; if(!editMode()) return openLogin();
+  const parts=m.text.split(/\n\s*-{3,}\s*\n/).map(t=>t.replace(/\*\*(.+?)\*\*/g,'$1').replace(/^#{1,4}\s*/gm,'').trim()).filter(Boolean).slice(0,20);
+  const w=260/cam.z, gap=24/cam.z, cols=Math.min(parts.length,4), pw=innerWidth>640&&$('#ai').classList.contains('show')?$('#ai').offsetWidth+24:0, c=toWorld((innerWidth-pw)/2,innerHeight/2);
+  checkpoint(); const made=[]; let y=0, rowH=0;
+  parts.forEach((t,k)=>{ const col=k%cols; if(col===0&&k){ y+=rowH+gap; rowH=0; }
+    const h=w*clamp(0.55+t.length/320,0.8,3); rowH=Math.max(rowH,h);
+    made.push(createItem({type:'sticky',x:c.x-(cols*(w+gap)-gap)/2+col*(w+gap),y:c.y-140/cam.z+y,w,h,color:'#e3d9ff',fs:15/cam.z,text:t})); });
+  setTool('select'); setSel(made.map(x=>x.id)); toast(`Đã thêm ${made.length} ghi chú từ AI lên bảng`,null,2200);
+}
+$('#ai').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#ai').addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+$('#ai').addEventListener('click',e=>{
+  const q=e.target.closest('[data-aiq]'); if(q){ const k=q.dataset.aiq; aiSend(AIQ[k], k==='read'?true:$('#aiImg').checked); return; }
+  const n=e.target.closest('[data-ai-note]'); if(n){ aiToBoard(+n.dataset.aiNote); return; }
+  const cp=e.target.closest('[data-ai-copy]'); if(cp){ navigator.clipboard?.writeText(AI.view[+cp.dataset.aiCopy]?.text||'').then(()=>toast('Đã sao chép',null,1200)).catch(()=>{}); }
+});
+$('#aiText').addEventListener('keydown',e=>{ if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){ e.preventDefault(); aiSend($('#aiText').value,$('#aiImg').checked); } });
+$('#aiText').addEventListener('input',e=>{ const t=e.target; t.style.height='auto'; t.style.height=Math.min(140,t.scrollHeight)+'px'; });
+function aiAction(a){
+  if(a==='aiOpen'){ $('#ai').classList.contains('show')?$('#ai').classList.remove('show'):aiOpen(); }
+  else if(a==='aiClose') $('#ai').classList.remove('show');
+  else if(a==='aiReset'){ if(AI.busy) return; AI.msgs=[]; AI.view=[]; aiRender(); }
+  else if(a==='aiSend') aiSend($('#aiText').value,$('#aiImg').checked);
 }
 
 // ================== Boot ==================
