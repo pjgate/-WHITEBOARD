@@ -515,7 +515,7 @@ body.relogin #loginBtn{background:#e0a92b}
 const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyBjXbq0cZwN16X5IMJifLGEe0ylO6mcyoY', clientId: '815013146430-cjh67feg7j7k5asaq72qrkrn3i70048r.apps.googleusercontent.com',  // clientId: để tải tệp lên Drive (không bắt buộc)
   requireLogin: true,              // true: phải đăng nhập Google mới xem được; mỗi người chỉ thấy dự án được chia sẻ cho mình
   admin: 'sangkt0510@gmail.com',   // email nhận yêu cầu xin quyền (admin thật sự = chủ sở hữu thư mục chính trên Drive)
-  aiUrl: 'https://whiteboard.sangkt-0510.workers.dev' };                     // địa chỉ cổng AI (Cloudflare Worker, xem ai-worker/HUONG-DAN.md). Để trống = ẩn nút AI
+  aiUrl: 'https://whiteboard.sangkt-0510.workers.dev' };                     // địa chỉ cổng AI: Google Apps Script (…/exec) hoặc Cloudflare Worker, xem ai-worker/HUONG-DAN.md. Để trống = ẩn nút AI
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/';
 const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
 const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
@@ -2198,7 +2198,9 @@ async function aiSend(text,withImg){
     AI.busy=true; aiRender();
     const content=[...imgs, {type:'text',text:(att?`(Đính kèm: ${att})\n`:'')+text}];
     const msgs=[...AI.msgs,{role:'user',content}];
-    const r=await fetch(CONFIG.aiUrl,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+gTok.t},body:JSON.stringify({system:aiSystem(),messages:msgs})});
+    const gas=/^https:\/\/script\.google\.com\//.test(CONFIG.aiUrl); // Google Apps Script: gửi text/plain (không preflight), token nằm trong thân
+    const r=await fetch(CONFIG.aiUrl,gas?{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:gTok.t,system:aiSystem(),messages:msgs}),redirect:'follow'}
+      :{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+gTok.t},body:JSON.stringify({system:aiSystem(),messages:msgs})});
     const j=await r.json().catch(()=>({error:'Cổng AI trả về dữ liệu lạ (HTTP '+r.status+').'}));
     if(!r.ok||j.error) throw new Error(j.error||('HTTP '+r.status));
     // lưu lịch sử gọn: bỏ ảnh để lần hỏi sau không gửi lại

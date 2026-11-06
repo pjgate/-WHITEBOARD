@@ -1,4 +1,29 @@
-# Cổng AI cho Bảng trắng – hướng dẫn cài (khoảng 10 phút)
+# Cổng AI cho Bảng trắng
+
+Có 2 cách dựng cổng AI. **Đang dùng: Google Apps Script** (cách A). Cách B (Cloudflare Worker) giữ lại để tham khảo:
+gọi Gemini từ Cloudflare hay bị lỗi "User location is not supported" vì Cloudflare có lúc chạy ở Hồng Kông.
+
+## Cách A – Google Apps Script (khuyên dùng, miễn phí, ~5 phút)
+1. Vào https://script.google.com → **New project** (Dự án mới). Đặt tên `Bang trang AI`.
+2. Xóa code mẫu trong `Code.gs`, dán toàn bộ tệp `ai-worker/apps-script.gs` → bấm 💾 Lưu.
+3. Bấm ⚙ **Project Settings** → kéo xuống **Script Properties** → **Add script property**, thêm:
+   - `GEMINI_API_KEY` = khóa `AIza…` (aistudio.google.com/apikey)
+   - `ALLOWED_EMAILS` = email được dùng AI, cách nhau bằng dấu phẩy; ghi `@truongthang.vn` để cho cả tên miền
+   - (tùy chọn) `MODEL` = tên model, mặc định `gemini-3.5-flash-lite`
+   → **Save script properties**.
+4. **Deploy** → **New deployment** → bánh răng chọn **Web app** →
+   *Execute as*: **Me**, *Who has access*: **Anyone** → **Deploy**.
+5. Google hỏi cấp quyền: **Authorize access** → chọn tài khoản → nếu hiện "Google hasn't verified this app": **Advanced** → **Go to Bang trang AI (unsafe)** → **Allow**.
+   (Đây là script của chính bạn; quyền xin là "kết nối dịch vụ bên ngoài" để gọi Gemini.)
+6. Sao chép **Web app URL** (dạng `https://script.google.com/macros/s/…/exec`) → gửi Claude hoặc điền vào `aiUrl` trong `index.html`.
+7. Kiểm tra: mở URL đó trên trình duyệt, thấy `"configured":true` là đúng.
+
+Sửa danh sách email / model: vào Project Settings → Script Properties, sửa là có hiệu lực ngay (không cần Deploy lại).
+Sửa **code** thì phải Deploy → **Manage deployments** → ✏ → Version: **New version** → Deploy (giữ nguyên URL).
+
+---
+
+## Cách B – Cloudflare Worker
 
 Cổng AI là một chương trình nhỏ chạy miễn phí trên Cloudflare. Nó giữ khóa API Gemini (không lộ ra trang web),
 và chỉ cho người đã đăng nhập Google trên Bảng trắng (có email trong danh sách) dùng AI.
