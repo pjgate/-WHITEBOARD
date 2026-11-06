@@ -271,6 +271,17 @@ body.gate #hub,body.gate #vp,body.gate #ov,body.gate #tools,body.gate #zoom,body
 .adm .empty{color:var(--muted);font-size:12.5px}
 .adm .msg{font-size:13px;margin-top:6px;white-space:pre-line} .adm .msg.err{color:#d13438} .adm .msg.ok{color:#23894f}
 body.viewer #loginBtn{display:none!important}
+.revl{display:flex;flex-direction:column;gap:6px;max-height:55vh;overflow:auto}
+.revl .rv{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13.5px}
+.revl .rv span{flex:1;min-width:0} .revl .rv small{color:var(--muted);display:block}
+.revl .rv .btn{height:32px;font-size:13px}
+.revl .hint{color:var(--muted);font-size:13px} .revl .warn{background:#fdecec;color:#a4262c;border-radius:10px;padding:10px 12px;font-size:13px;white-space:pre-line}
+/* thanh trên cùng: không chồng lên nút bên phải */
+#top{min-width:0} #top h1{white-space:nowrap}
+#meta{min-width:0;overflow:hidden} #metatext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#top .btn{flex:none}
+@media (max-width:520px){ #metatext{display:none} }
+@media (max-width:1100px){ #top h1{display:none} #actions .btn .lbl{display:none} #actions .btn.primary{padding:0 11px} }
 /* read-only (not signed in) */
 #loginBtn{display:none}
 body.ro #loginBtn,body.relogin #loginBtn{display:inline-flex}
@@ -410,6 +421,11 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="btn ghost" data-act="gateOther" id="gateOther" style="display:none">Dùng tài khoản khác</button>
   <div id="gateMsg"></div>
   <small>Lần đầu dùng? Đăng nhập xong, bấm <b>Gửi yêu cầu</b> để admin duyệt quyền xem dự án.</small>
+</div></div>
+<div id="revm" class="modal"><div class="box wide">
+  <div class="admh"><h3>Khôi phục bố cục cũ</h3><button class="ib" data-act="revClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <p>Chọn một lần lưu trước đây để đưa vị trí ảnh/PDF về như lúc đó (áp dụng cho mọi người). Ghi chú không bị ảnh hưởng.</p>
+  <div id="revList" class="revl"></div>
 </div></div>
 <div id="adm" class="modal"><div class="box wide adm">
   <div class="admh"><h3>Quản lý quyền xem dự án</h3><button class="ib" data-act="admClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -990,10 +1006,10 @@ async function driveSync(quiet=false, preFiles=null){
     if(boardFile){
       rs.layoutId=boardFile.id;
       const done=await DB.get('meta','boardjson').catch(()=>null), v=boardFile.id+'~'+verOf(boardFile);
-      if(done!==v){ try{ const j=await (await gget(`${GAPI}/${boardFile.id}?alt=media&${kQ()}`)).json();
-          if(applyBoardJson(j,byId)){ applied=changed=true; rs.lastLayout=JSON.stringify(layoutPayload()); } await DB.put('meta','boardjson',v).catch(()=>{}); }
+      if(done!==v||!rs.layoutOk){ try{ const j=await (await gget(`${GAPI}/${boardFile.id}?alt=media&${kQ()}`)).json();
+          if(applyBoardJson(j,byId)){ applied=changed=true; rs.lastLayout=JSON.stringify(layoutPayload()); rs.layoutVer=v; rs.layoutOk=true; } await DB.put('meta','boardjson',v).catch(()=>{}); }
         catch(e){ console.warn('board.json',e); } }
-    }
+    } else rs.layoutOk=true;
     // notes per email
     if(DRIVE.clientId){ if(await syncNotes(noteFiles)) changed=true; }
     const present=new Set(), del=[];
@@ -1020,6 +1036,25 @@ async function driveSync(quiet=false, preFiles=null){
   }catch(e){ console.warn(e); if(!quiet){ driveName='lỗi kết nối'; setMeta(); toast(driveErrMsg(e), null, 9000); } }
   finally{ syncing=false; }
 }
+async function openRevisions(){
+  if(!editMode()) return openLogin(); const box=$('#revList'); $('#revm').classList.add('show');
+  if(!rs.layoutId){ box.innerHTML='<p class="hint">Chưa có bố cục nào được lưu.</p>'; return; }
+  box.innerHTML='<p class="hint">Đang tải lịch sử…</p>';
+  try{ const j=await (await gget(`${GAPI}/${rs.layoutId}/revisions?fields=revisions(id,modifiedTime,lastModifyingUser(displayName,emailAddress))&pageSize=200&${kQ()}`)).json();
+    const revs=(j.revisions||[]).slice().reverse();
+    box.innerHTML=revs.map((r,i)=>`<div class="rv"><span>${esc(new Date(r.modifiedTime).toLocaleString('vi-VN'))}${i===0?' · <b>hiện tại</b>':''}<small>${esc(r.lastModifyingUser?.displayName||r.lastModifyingUser?.emailAddress||'')}${r.lastModifyingUser?.emailAddress&&r.lastModifyingUser?.displayName?' · '+esc(r.lastModifyingUser.emailAddress):''}</small></span>${i===0?'':`<button class="btn ghost" data-act="revUse" data-rev="${esc(r.id)}">Dùng bản này</button>`}</div>`).join('')||'<p class="hint">Không có lịch sử.</p>';
+  }catch(e){ box.innerHTML=`<div class="warn">${esc(driveErrMsg(e))}</div>`; }
+}
+async function useRevision(id,btn){
+  if(btn) btn.disabled=true;
+  try{ const j=await (await gget(`${GAPI}/${rs.layoutId}/revisions/${id}?alt=media&${kQ()}`)).json();
+    checkpoint(); if(!applyBoardJson(j,driveEntries)) throw new Error('Bản này không đọc được.');
+    $('#revm').classList.remove('show'); onItemsChanged(); renderCtx(); refreshVisible(); renderFiles(); fitTo([...S.items.values()]);
+    rs.layoutOk=true; scheduleRemoteSave(); toast('Đã khôi phục bố cục, đang lưu lên Drive cho mọi người…',null,3000);
+  }catch(e){ if(btn) btn.disabled=false; toast(e.status!=null?driveErrMsg(e):e.message,null,6000); }
+}
+function fitTop(){ const a=$('#actions'), t=$('#top'); if(!a||!t) return; t.style.maxWidth=Math.max(160,innerWidth-(a.offsetWidth||0)-40)+'px'; }
+addEventListener('resize',fitTop); if(window.ResizeObserver) new ResizeObserver(fitTop).observe($('#actions'));
 function lostAccess(e){ // không (còn) quyền xem dự án: xóa bản lưu trên máy và báo
   for(const id of [...S.items.keys()]) removeEl(id); S.items.clear(); S.sel.clear(); driveEntries=new Map(); remoteNotes.clear();
   DB.clear('files').catch(()=>{}); DB.clear('thumbs').catch(()=>{}); DB.del('meta','boardjson').catch(()=>{}); saveNow();
@@ -1073,7 +1108,7 @@ function needLogin(){ return !!(DRIVE&&DRIVE.clientId&&!hubMode); }
 function editMode(){ return !needLogin()||(!!me&&canWrite); }
 function canEdit(it){ return !!it&&!it.ro&&editMode(); }
 let me=null;
-const rs={synced:false,layoutId:null,lastLayout:null,notesId:null,notesVer:null,lastNotes:null,saving:false,again:false,state:'',authNeeded:false};
+const rs={layoutOk:false,layoutVer:null,synced:false,layoutId:null,lastLayout:null,notesId:null,notesVer:null,lastNotes:null,saving:false,again:false,state:'',authNeeded:false};
 const remoteNotes=new Map(); // email -> {name,ver,items,fileId}
 let hiddenAuthors=new Set(); try{ if(DRIVE) hiddenAuthors=new Set(JSON.parse(localStorage.getItem('wb-ha-'+DRIVE.folder)||'[]')); }catch{}
 const notesName=e=>`notes-${e}.json`;
@@ -1123,15 +1158,18 @@ async function remoteSave(){
   if(!me||!rs.synced||!canWrite) return;
   if(rs.saving){ rs.again=true; return; }
   const L=JSON.stringify(layoutPayload()), N=JSON.stringify(notesPayload());
-  const needL=L!==rs.lastLayout, needN=N!==rs.lastNotes;
+  const needL=rs.layoutOk&&L!==rs.lastLayout, needN=N!==rs.lastNotes;
   if(!needL&&!needN){ setRemote('ok'); return; }
   if(!tokenValid()){ setAuthNeeded(true); return; }
   rs.saving=true; setRemote('saving');
   try{
-    if(needL){ const r=await writeJson('board.json',L,rs.layoutId); rs.layoutId=r.id; rs.lastLayout=L; await DB.put('meta','boardjson',r.id+'~'+verOf(r)).catch(()=>{}); }
+    if(needL&&rs.layoutId&&rs.layoutVer){ // ai đó vừa đổi bố cục chung -> lấy bản mới, không ghi đè
+      const m=await gget(`${GAPI}/${rs.layoutId}?fields=id,md5Checksum,modifiedTime&${kQ()}`).then(r=>r.json()).catch(()=>null);
+      if(m&&rs.layoutId+'~'+verOf(m)!==rs.layoutVer){ rs.layoutOk=false; setTimeout(()=>driveSync(true),50); throw Object.assign(new Error('layout-changed'),{skip:true}); } }
+    if(needL){ const r=await writeJson('board.json',L,rs.layoutId); rs.layoutId=r.id; rs.layoutVer=r.id+'~'+verOf(r); rs.lastLayout=L; await DB.put('meta','boardjson',r.id+'~'+verOf(r)).catch(()=>{}); }
     if(needN){ const r=await writeJson(notesName(me.email),N,rs.notesId); rs.notesId=r.id; rs.notesVer=verOf(r); rs.lastNotes=N; }
     persistRs(); setAuthNeeded(false); setRemote('ok');
-  }catch(e){ console.warn('remote save',e); if(e.status===401) setAuthNeeded(true); else { setRemote('err'); toast(upErrMsg(e),null,7000); } }
+  }catch(e){ if(e.skip){ setRemote('ok'); return; } console.warn('remote save',e); if(e.status===401) setAuthNeeded(true); else { setRemote('err'); toast(upErrMsg(e),null,7000); } }
   finally{ rs.saving=false; if(rs.again){ rs.again=false; scheduleRemoteSave(); } }
 }
 async function writeJson(name,str,id){
@@ -1476,7 +1514,7 @@ function renderMenuDrive(){
     hub:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',lnk:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',files:'<path d="M4 6h16M4 12h16M4 18h10"/>'};
   const b=(a,i,t)=>`<button data-act="${a}"><svg viewBox="0 0 24 24">${ic[i]}</svg>${t}</button>`;
   const acct=DRIVE?.clientId&&!hubMode?(me?b('gOut','drv',`Đăng xuất (${esc(me.email)})`):b('gIn','drv','Đăng nhập Google')):'';
-  $('#menuDrive').innerHTML=DRIVE?(DRIVE.project?b('hub','hub','Về danh sách dự án'):'')+acct+b('files','files','Chọn tệp hiện trên bảng')+b('drvSync','sync','Đồng bộ lại từ Drive')+b('copyLink','lnk','Sao chép link bảng này')+b('drvExport','exp','Xuất bố cục (board.json)')+b('drvOpen','drv','Cài đặt Google Drive')
+  $('#menuDrive').innerHTML=DRIVE?(DRIVE.project?b('hub','hub','Về danh sách dự án'):'')+acct+b('files','files','Chọn tệp hiện trên bảng')+b('drvSync','sync','Đồng bộ lại từ Drive')+(DRIVE.project&&DRIVE.clientId?b('revOpen','sync','Khôi phục bố cục cũ'):'')+b('copyLink','lnk','Sao chép link bảng này')+b('drvExport','exp','Xuất bố cục (board.json)')+b('drvOpen','drv','Cài đặt Google Drive')
     :b('drvOpen','drv','Kết nối Google Drive');
 }
 
@@ -1948,6 +1986,9 @@ document.addEventListener('click',e=>{
   else if(a==='gOut'||a==='gOutHub') signOut();
   else if(a==='gateIn'||a==='gateOther') gateLogin(a==='gateOther');
   else if(a==='reqSend') sendRequest();
+  else if(a==='revOpen') openRevisions();
+  else if(a==='revClose') $('#revm').classList.remove('show');
+  else if(a==='revUse') useRevision(b.dataset.rev,b);
   else if(a==='admOpen') openAdmin();
   else if(a==='admClose') $('#adm').classList.remove('show');
   else if(a.startsWith('adm')) admAction(a,b);
