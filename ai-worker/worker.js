@@ -108,7 +108,8 @@ async function askGemini(env, system, messages) {
   if (!r.ok) {
     const m = out?.error?.message || ('HTTP ' + r.status);
     throw fail(/api key/i.test(m) ? 'Khóa Gemini sai hoặc đã bị xóa.'
-      : r.status === 429 ? 'Gemini đang hết lượt miễn phí/hạn mức, thử lại sau ít phút.'
+      : /location is not supported/i.test(m) ? 'Gemini chặn vùng máy chủ Cloudflare đang dùng. Vào Worker → Settings → Placement → Region → GCP → us-central1.'
+      : r.status === 429 ? `Gemini báo hết hạn mức (model ${model}). Chi tiết: ${m.slice(0, 300)}`
       : r.status === 404 ? `Không tìm thấy model "${model}". Kiểm tra biến MODEL.`
       : 'Gemini báo lỗi: ' + m, r.status === 429 ? 429 : 502);
   }
