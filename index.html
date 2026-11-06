@@ -515,7 +515,7 @@ body.relogin #loginBtn{background:#e0a92b}
 const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyBjXbq0cZwN16X5IMJifLGEe0ylO6mcyoY', clientId: '815013146430-cjh67feg7j7k5asaq72qrkrn3i70048r.apps.googleusercontent.com',  // clientId: để tải tệp lên Drive (không bắt buộc)
   requireLogin: true,              // true: phải đăng nhập Google mới xem được; mỗi người chỉ thấy dự án được chia sẻ cho mình
   admin: 'sangkt0510@gmail.com',   // email nhận yêu cầu xin quyền (admin thật sự = chủ sở hữu thư mục chính trên Drive)
-  aiUrl: 'https://whiteboard.sangkt-0510.workers.dev' };                     // địa chỉ cổng AI: Google Apps Script (…/exec) hoặc Cloudflare Worker, xem ai-worker/HUONG-DAN.md. Để trống = ẩn nút AI
+  aiUrl: 'https://script.google.com/macros/s/AKfycbzuIILuMxsXM8juy11x812WgRssGC4BdjjQIhAhdXCuo_I4uhuA-JyJ3cZQk6ILe95nWw/exec' };                     // địa chỉ cổng AI: Google Apps Script (…/exec) hoặc Cloudflare Worker, xem ai-worker/HUONG-DAN.md. Để trống = ẩn nút AI
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/';
 const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
 const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
