@@ -2,16 +2,19 @@
 // Nhiệm vụ: giữ khóa API của Claude ở phía máy chủ (không lộ ra trang web),
 // chỉ cho phép người đã đăng nhập Google từ trang Bảng trắng (và có email trong danh sách) gọi AI.
 //
+// Dùng Gemini (Google) nếu có GEMINI_API_KEY, nếu không thì dùng Claude (ANTHROPIC_API_KEY).
 // Biến môi trường cần đặt trong Cloudflare (Settings → Variables and Secrets):
-//   ANTHROPIC_API_KEY  (Secret, bắt buộc)  khóa API lấy ở https://console.anthropic.com
+//   GEMINI_API_KEY     (Secret)  khóa lấy ở https://aistudio.google.com/apikey
+//   ANTHROPIC_API_KEY  (Secret)  hoặc khóa Claude lấy ở https://console.anthropic.com
 //   ALLOWED_EMAILS     (Text, nên có)      danh sách email được dùng AI, cách nhau bằng dấu phẩy. Để trống = ai đăng nhập được app đều dùng được.
 //   GOOGLE_CLIENT_ID   (Text, nên có)      OAuth Client ID của app, để chỉ nhận đăng nhập từ đúng app Bảng trắng.
 //   ALLOWED_ORIGINS    (Text, tùy chọn)    mặc định https://sangs8516.github.io
-//   MODEL              (Text, tùy chọn)    mặc định claude-sonnet-5-5
-//   MAX_TOKENS         (Text, tùy chọn)    độ dài tối đa mỗi câu trả lời, mặc định 2000
+//   MODEL              (Text, tùy chọn)    Gemini: mặc định gemini-flash-latest (luôn là bản Flash mới nhất); Claude: claude-sonnet-5-5
+//   MAX_TOKENS         (Text, tùy chọn)    độ dài tối đa mỗi câu trả lời, mặc định 8192 (Gemini) / 2000 (Claude)
 
 const DEFAULT_ORIGINS = 'https://sangs8516.github.io';
-const DEFAULT_MODEL = 'claude-sonnet-5-5';
+const DEFAULT_CLAUDE = 'claude-sonnet-5-5';
+const DEFAULT_GEMINI = 'gemini-flash-latest';
 const MAX_BODY = 8 * 1024 * 1024; // 8 MB
 const tokenCache = new Map();     // google token -> {email, exp}
 
@@ -54,12 +57,12 @@ export default {
   async fetch(req, env) {
     const h = cors(req.headers.get('Origin'), env);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: h });
-    if (req.method === 'GET') return json({ ok: true, service: 'bang-trang-ai', configured: !!env.ANTHROPIC_API_KEY }, 200, h);
+    if (req.method === 'GET') return json({ ok: true, service: 'bang-trang-ai', provider: env.GEMINI_API_KEY ? 'gemini' : env.ANTHROPIC_API_KEY ? 'claude' : null, configured: !!(env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY) }, 200, h);
     if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405, h);
 
     const origin = (req.headers.get('Origin') || '').toLowerCase();
     if (!list(env.ALLOWED_ORIGINS || DEFAULT_ORIGINS).includes(origin)) return json({ error: 'Trang này không được phép dùng cổng AI.' }, 403, h);
-    if (!env.ANTHROPIC_API_KEY) return json({ error: 'Cổng AI chưa có ANTHROPIC_API_KEY.' }, 500, h);
+    if (!env.GEMINI_API_KEY && !env.ANTHROPIC_API_KEY) return json({ error: 'Cổng AI chưa có khóa API (GEMINI_API_KEY).' }, 500, h);
 
     const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
     if (!token) return json({ error: 'Cần đăng nhập Google để dùng AI.' }, 401, h);
@@ -75,30 +78,63 @@ export default {
     try { body = await req.json(); } catch { return json({ error: 'Dữ liệu gửi lên không hợp lệ.' }, 400, h); }
     if (!Array.isArray(body.messages) || !body.messages.length) return json({ error: 'Thiếu nội dung câu hỏi.' }, 400, h);
 
-    const maxT = Math.max(256, Math.min(+env.MAX_TOKENS || 2000, 8000));
-    const payload = {
-      model: env.MODEL || DEFAULT_MODEL,
-      max_tokens: Math.min(+body.max_tokens || maxT, maxT),
-      messages: body.messages.slice(-20),
-      metadata: { user_id: email.replace(/[^a-z0-9]/g, '_').slice(0, 64) },
-    };
-    if (typeof body.system === 'string') payload.system = body.system.slice(0, 60000);
-
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-    const out = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      const m = out?.error?.message || ('HTTP ' + r.status);
-      const vi = r.status === 401 ? 'Khóa API của Claude sai hoặc đã bị thu hồi.'
-        : r.status === 429 ? 'AI đang quá tải hoặc hết hạn mức, thử lại sau ít phút.'
-        : /credit|billing|balance/i.test(m) ? 'Tài khoản API hết tiền. Hãy nạp thêm ở console.anthropic.com.'
-        : 'AI báo lỗi: ' + m;
-      return json({ error: vi }, r.status >= 500 ? 502 : r.status, h);
-    }
-    const text = (out.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
-    return json({ text, usage: out.usage, model: out.model, email }, 200, h);
+    const messages = body.messages.slice(-20);
+    const system = typeof body.system === 'string' ? body.system.slice(0, 60000) : '';
+    try {
+      const text = env.GEMINI_API_KEY ? await askGemini(env, system, messages) : await askClaude(env, system, messages, email);
+      return json({ text, email }, 200, h);
+    } catch (e) { return json({ error: e.message }, e.status || 502, h); }
   },
 };
+
+const fail = (msg, status = 502) => Object.assign(new Error(msg), { status });
+
+async function askGemini(env, system, messages) {
+  const model = env.MODEL || DEFAULT_GEMINI;
+  const maxT = Math.max(512, Math.min(+env.MAX_TOKENS || 8192, 65536));
+  const part = c => c.type === 'image' ? { inline_data: { mime_type: c.source.media_type, data: c.source.data } } : { text: String(c.text || '') };
+  const contents = messages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: Array.isArray(m.content) ? m.content.map(part) : [{ text: String(m.content || '') }],
+  }));
+  const payload = { contents, generationConfig: { maxOutputTokens: maxT } };
+  if (system) payload.systemInstruction = { parts: [{ text: system }] };
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: 'POST',
+    headers: { 'x-goog-api-key': env.GEMINI_API_KEY, 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const m = out?.error?.message || ('HTTP ' + r.status);
+    throw fail(/api key/i.test(m) ? 'Khóa Gemini sai hoặc đã bị xóa.'
+      : r.status === 429 ? 'Gemini đang hết lượt miễn phí/hạn mức, thử lại sau ít phút.'
+      : r.status === 404 ? `Không tìm thấy model "${model}". Kiểm tra biến MODEL.`
+      : 'Gemini báo lỗi: ' + m, r.status === 429 ? 429 : 502);
+  }
+  if (out.promptFeedback?.blockReason) throw fail('Gemini từ chối câu hỏi này (' + out.promptFeedback.blockReason + ').', 400);
+  const cand = out.candidates?.[0];
+  const text = (cand?.content?.parts || []).filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
+  if (!text) throw fail(cand?.finishReason === 'MAX_TOKENS' ? 'Câu trả lời quá dài, bị cắt hết. Tăng MAX_TOKENS hoặc hỏi ngắn hơn.' : 'Gemini không trả lời (' + (cand?.finishReason || 'trống') + ').');
+  return text + (cand?.finishReason === 'MAX_TOKENS' ? '\n…(bị cắt do quá dài)' : '');
+}
+
+async function askClaude(env, system, messages, email) {
+  const maxT = Math.max(256, Math.min(+env.MAX_TOKENS || 2000, 8000));
+  const payload = { model: env.MODEL || DEFAULT_CLAUDE, max_tokens: maxT, messages, metadata: { user_id: email.replace(/[^a-z0-9]/g, '_').slice(0, 64) } };
+  if (system) payload.system = system;
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const m = out?.error?.message || ('HTTP ' + r.status);
+    throw fail(r.status === 401 ? 'Khóa API của Claude sai hoặc đã bị thu hồi.'
+      : r.status === 429 ? 'AI đang quá tải hoặc hết hạn mức, thử lại sau ít phút.'
+      : /credit|billing|balance/i.test(m) ? 'Tài khoản API hết tiền.'
+      : 'AI báo lỗi: ' + m, r.status === 429 ? 429 : 502);
+  }
+  return (out.content || []).filter(c => c.type === 'text').map(c => c.text).join('\n').trim();
+}

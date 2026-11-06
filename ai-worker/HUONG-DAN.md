@@ -1,17 +1,18 @@
 # Cổng AI cho Bảng trắng – hướng dẫn cài (khoảng 10 phút)
 
-Cổng AI là một chương trình nhỏ chạy miễn phí trên Cloudflare. Nó giữ khóa API của Claude (không lộ ra trang web),
+Cổng AI là một chương trình nhỏ chạy miễn phí trên Cloudflare. Nó giữ khóa API Gemini (không lộ ra trang web),
 và chỉ cho người đã đăng nhập Google trên Bảng trắng (có email trong danh sách) dùng AI.
 
 ```
-Bảng trắng (GitHub Pages)  →  Cổng AI (Cloudflare Worker, giữ khóa)  →  Claude API
+Bảng trắng (GitHub Pages)  →  Cổng AI (Cloudflare Worker, giữ khóa)  →  Gemini API
      gửi kèm đăng nhập Google       kiểm tra email được phép
 ```
 
-## Bước 1 – Lấy khóa API của Claude
-1. Vào https://console.anthropic.com và đăng ký/đăng nhập.
-2. Mục **Billing**: nạp tiền (trả theo lượng dùng). Nên vào **Limits** đặt giới hạn chi tiêu mỗi tháng cho yên tâm.
-3. Mục **API Keys** → **Create Key** → đặt tên `bang-trang` → sao chép khóa (bắt đầu bằng `sk-ant-…`). Khóa chỉ hiện một lần, lưu lại tạm.
+## Bước 1 – Lấy khóa API Gemini
+1. Vào https://aistudio.google.com/apikey, đăng nhập Google (nên dùng tài khoản duli3ucanhan hoặc tài khoản quản lý).
+2. Bấm **Create API key** → chọn (hoặc tạo) một dự án Google Cloud → sao chép khóa (bắt đầu bằng `AIza…`).
+3. Gói miễn phí có giới hạn số lượt mỗi phút/mỗi ngày; nếu nhóm dùng nhiều có thể bật thanh toán (Billing) trong AI Studio.
+   Lưu ý: theo điều khoản của Google, dữ liệu gửi qua gói miễn phí có thể được Google dùng để cải thiện sản phẩm. Nếu bản vẽ/tài liệu nhạy cảm, nên bật Billing (gói trả phí không dùng dữ liệu theo cách đó) — xem điều khoản hiện hành trên trang AI Studio.
 
 ## Bước 2 – Tạo Worker trên Cloudflare
 1. Vào https://dash.cloudflare.com, đăng ký tài khoản miễn phí.
@@ -26,15 +27,16 @@ Trong Worker vừa tạo: **Settings** → **Variables and Secrets** → **Add**
 
 | Tên | Loại | Giá trị |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | **Secret** | khóa `sk-ant-…` ở bước 1 |
+| `GEMINI_API_KEY` | **Secret** | khóa `AIza…` ở bước 1 |
 | `ALLOWED_EMAILS` | Text | các email được dùng AI, cách nhau bằng dấu phẩy, vd. `sangkt0510@gmail.com, ban@gmail.com` |
 | `GOOGLE_CLIENT_ID` | Text | `815013146430-cjh67feg7j7k5asaq72qrkrn3i70048r.apps.googleusercontent.com` |
 
-Tùy chọn: `MODEL` (mặc định `claude-sonnet-5-5`), `MAX_TOKENS` (độ dài trả lời, mặc định 2000).
+Tùy chọn: `MODEL` (mặc định `gemini-flash-latest` = luôn dùng bản Flash mới nhất; có thể ghi cụ thể như `gemini-3.6-flash`), `MAX_TOKENS` (mặc định 8192).
+(Muốn đổi sang Claude sau này: xóa `GEMINI_API_KEY`, thêm `ANTHROPIC_API_KEY`.)
 Bấm **Deploy/Save** sau khi thêm.
 
 ## Bước 4 – Kiểm tra và gắn vào app
-1. Mở địa chỉ Worker (dạng `https://bang-trang-ai.<tên-bạn>.workers.dev`). Thấy `"configured":true` là đúng.
+1. Mở địa chỉ Worker (dạng `https://bang-trang-ai.<tên-bạn>.workers.dev`). Thấy `"provider":"gemini"` và `"configured":true` là đúng.
 2. Gửi địa chỉ đó cho Claude, hoặc tự điền vào `index.html`: `aiUrl: 'https://bang-trang-ai.<tên-bạn>.workers.dev'`.
 3. Mở Bảng trắng, vào một dự án → nút **✦ AI** trên thanh trên cùng.
 
@@ -49,7 +51,8 @@ Sửa biến `ALLOWED_EMAILS` trong Cloudflare → Save. Không cần sửa app.
 
 ## Lỗi thường gặp
 - *"chưa được phép dùng AI"*: email chưa có trong `ALLOWED_EMAILS`.
-- *"Khóa API… sai"*: kiểm tra lại `ANTHROPIC_API_KEY`.
-- *"hết tiền"*: nạp thêm ở console.anthropic.com → Billing.
+- *"Khóa Gemini sai"*: kiểm tra lại `GEMINI_API_KEY`.
+- *"hết lượt miễn phí/hạn mức"*: chờ vài phút, hoặc bật Billing trong AI Studio.
+- *"Không tìm thấy model"*: sửa hoặc xóa biến `MODEL`.
 - *"Không kết nối được cổng AI"*: sai `aiUrl` hoặc Worker chưa Deploy.
 - Gói miễn phí của Cloudflare giới hạn thời gian xử lý mỗi lượt; nếu gửi nhiều ảnh lớn hay lỗi, chọn ít ảnh hơn.
