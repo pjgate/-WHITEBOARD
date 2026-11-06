@@ -1262,12 +1262,14 @@ function boardLink(p){ const q=new URLSearchParams();
   if(!(DRIVE.fromConfig&&parseFolderId(CONFIG.folder)===DRIVE.root)) q.set('folder',DRIVE.root);
   if(p) q.set('p',p); if(!CONFIG.apiKey) q.set('key',DRIVE.key);
   const t=q.toString(); return location.origin+location.pathname+(t?'?'+t:''); }
-let hubData=[], rootInfo=null, isAdmin=false, reqState=null;
+let hubData=[], rootInfo=null, isAdmin=false, adminPending=false, reqState=null;
 const FOLDER='application/vnd.google-apps.folder';
 async function loadRootInfo(){ // ai đọc được thư mục chính thì thấy mọi dự án; chủ sở hữu = admin
   rootInfo=null; isAdmin=false;
   try{ rootInfo=await (await gget(`${GAPI}/${DRIVE.root}?fields=name,ownedByMe,capabilities(canAddChildren,canShare)&${kQ()}`)).json(); }catch(e){ if(!PRIV||!tokenValid()) throw e; }
-  isAdmin=!!(rootInfo?.ownedByMe&&tokenValid());
+  const cfgAdmin=!!(me&&CONFIG.admin&&normEmail(me.email)===normEmail(CONFIG.admin));
+  isAdmin=!!(tokenValid()&&(rootInfo?.ownedByMe||(cfgAdmin&&rootInfo?.capabilities?.canShare)));
+  adminPending=!!(tokenValid()&&cfgAdmin&&!isAdmin);
 }
 async function listMyProjects(){ // người thường: chỉ những thư mục dự án được chia sẻ cho mình
   const qs=[`appProperties has { key='wbRoot' and value='${DRIVE.root}' } and mimeType='${FOLDER}' and trashed=false`,`'${DRIVE.root}' in parents and mimeType='${FOLDER}' and trashed=false`];
@@ -1313,7 +1315,9 @@ function renderHub(){
     return `<a class="pcard${p.common?' common':''}" href="${esc(boardLink(p.id))}"><div class="th${th.length===1?' one':''}">${th.length?th.map(f=>`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(f.thumbnailLink)}" alt="">`).join(''):ph}</div><div class="bd"><div class="nm" title="${esc(p.name)}">${esc(p.name)}${p.personal&&isAdmin?'<span class="tag">Cá nhân</span>':''}</div><div class="mt">${mt}${d&&fs?` · ${d.toLocaleDateString('vi-VN')}`:''}</div></div></a>`; }).join('');
   $('#hubGrid').querySelectorAll('img').forEach(im=>im.onerror=()=>im.remove());
   const he=$('#hubEmpty');
-  if(!hubData.length&&PRIV&&tokenValid()&&!rootInfo){ // chưa được cấp quyền dự án nào
+  const ap=adminPending?`<div class="reqbox" style="text-align:left"><h3>Tài khoản này được đặt làm admin nhưng chưa đủ quyền</h3><p>Để quản lý quyền, chủ thư mục chính trên Google Drive cần chia sẻ thư mục đó cho <b>${esc(me.email)}</b> với quyền <b>Người chỉnh sửa</b>. Xong bấm Làm mới ↻.</p></div>`:'';
+  if(ap) he.innerHTML=ap;
+  else if(!hubData.length&&PRIV&&tokenValid()&&!rootInfo){ // chưa được cấp quyền dự án nào
     he.innerHTML=`<div class="reqbox"><h3>Bạn chưa được cấp quyền xem dự án nào</h3>`+
       (reqState==='loading'?'<p>Đang kiểm tra…</p>':reqState?.sent?`<p class="ok">Đã gửi yêu cầu lúc ${esc(new Date(reqState.sent).toLocaleString('vi-VN'))}. Admin duyệt xong, bấm Làm mới ↻ để xem dự án.</p><button class="btn ghost" data-act="reqSend">Gửi lại yêu cầu</button>`
         :`<p>Gửi yêu cầu để admin duyệt. Admin sẽ nhận email và chọn dự án cho bạn xem.</p><button class="btn primary" data-act="reqSend">Gửi yêu cầu xem dự án</button>`)+
@@ -1371,7 +1375,7 @@ async function loadAdmin(){
   }catch(e){ adm.err=e; }
   adm.loading=false; renderAdmin();
 }
-const personRow=x=>`<div class="pp" data-perm="${esc(x.id)}"><span>${esc(x.displayName||x.emailAddress||'')} <small>${esc(x.displayName?x.emailAddress||'':'')}</small></span><small>${esc(ROLE[x.role]||x.role)}</small><button class="btn ghost" data-act="admRevoke">Thu hồi</button></div>`;
+const personRow=x=>`<div class="pp" data-perm="${esc(x.id)}"><span>${esc(x.displayName||x.emailAddress||'')} <small>${esc(x.displayName?x.emailAddress||'':'')}</small></span><small>${esc(ROLE[x.role]||x.role)}</small>${normEmail(x.emailAddress)===normEmail(me?.email)||(CONFIG.admin&&normEmail(x.emailAddress)===normEmail(CONFIG.admin))?'<small style="min-width:62px;text-align:right">admin</small>':'<button class="btn ghost" data-act="admRevoke">Thu hồi</button>'}</div>`;
 function renderAdmin(){
   const b=$('#admBody'); if(!b) return;
   if(adm.loading&&!adm.projects.length){ b.innerHTML='<p class="hint">Đang tải danh sách quyền…</p>'; return; }
@@ -1404,7 +1408,6 @@ async function grantAccess(email,role,ids){
     if(ex){ if(ex.role!==role&&ex.role!=='owner') await gapi('PATCH',`${GAPI}/${id}/permissions/${ex.id}?supportsAllDrives=true&fields=id`,{role}); }
     else { const note=`Bạn được mời xem dự án "${p.name}" trên Bảng trắng. Mở link sau và đăng nhập bằng ${email}: ${boardLink(id)}`;
       await gapi('POST',`${GAPI}/${id}/permissions?supportsAllDrives=true&sendNotificationEmail=true&emailMessage=${encodeURIComponent(note)}&fields=id`,{type:'user',role,emailAddress:email}); }
-    if(role==='writer') gapi('PATCH',`${GAPI}/${id}?supportsAllDrives=true&fields=id`,{writersCanShare:false}).catch(()=>{});
     n++; }
   return n;
 }
