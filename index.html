@@ -88,6 +88,9 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 .sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.14);cursor:pointer;margin:0 2px;padding:0}
 .sw:hover{transform:scale(1.12)}
 .sw.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--accent)}
+.sw.nofill{background:linear-gradient(135deg,#fff 44%,#e03131 44% 56%,#fff 56%)!important}
+.sw.ring{background:#fff!important;border:3px solid var(--c)}
+.ctxlbl{font-size:11px;color:var(--muted);padding:0 4px 0 6px;white-space:nowrap}
 #penbar{left:64px;top:50%;transform:translateY(-50%);padding:8px 6px;display:none;flex-direction:column;gap:6px;align-items:center}
 #penbar.show{display:flex}
 #penbar .sz{width:28px;height:28px;border-radius:8px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center}
@@ -257,6 +260,8 @@ body.relogin #loginBtn{background:#e0a92b}
   <button data-act="fit"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Xem toàn bộ bảng</button>
   <button data-act="selall"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/></svg>Chọn tất cả</button>
   <div id="menuDrive"></div>
+  <button data-act="lockMedia"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Khóa tất cả ảnh &amp; PDF</button>
+  <button data-act="unlockAll"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>Mở khóa tất cả</button>
   <button data-act="clear" class="red"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Xóa toàn bộ bảng</button>
 </div>
 
@@ -295,6 +300,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Nhân bản</td><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td></tr>
     <tr><td>Xóa</td><td><kbd>Delete</kbd></td></tr>
     <tr><td>Xoay</td><td>Kéo nút tròn phía trên (<kbd>Shift</kbd>: bước 15°)</td></tr>
+    <tr><td>Khóa / mở khóa</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td></tr>
     <tr><td>Mũi tên nối đối tượng</td><td><kbd>A</kbd> rồi kéo</td></tr>
     <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>P</kbd></td></tr>
   </table>
@@ -547,7 +553,7 @@ function syncEl(it){
   if(it.type==='image'){ const a=assets.get(it.key); if(a?.thumbUrl && !r.img.getAttribute('src')){ r.img.src=a.thumbUrl; r.level='t'; } }
   else if(it.type==='pdf'){ const u=pdfThumbs.get(it.key+'#'+it.page); if(u && !r.img.getAttribute('src')){ r.img.src=u; el.classList.add('ready'); } }
   else if(it.type==='sticky'){ s.background=it.color; s.fontSize=it.fs+'px'; if(editing?.id!==it.id) r.txt.textContent=it.text||''; }
-  else if(it.type==='shape'){ el.classList.toggle('ellipse',it.shape==='ellipse'); s.background=it.color; s.fontSize=it.fs+'px'; s.borderWidth=(it.bw||2)+'px'; if(editing?.id!==it.id) r.txt.textContent=it.text||''; }
+  else if(it.type==='shape'){ el.classList.toggle('ellipse',it.shape==='ellipse'); s.background=it.nofill?'transparent':it.color; s.borderColor=it.stroke||'#2a2d34'; s.fontSize=it.fs+'px'; s.borderWidth=(it.bw||2)+'px'; if(editing?.id!==it.id) r.txt.textContent=it.text||''; }
   else if(it.type==='text'){ s.color=it.color; s.fontSize=it.fs+'px'; if(editing?.id!==it.id) r.txt.textContent=it.text||''; }
   else if(it.type==='pen'){ const svg=el.firstChild; svg.setAttribute('viewBox',`0 0 ${it.vw} ${it.vh}`);
     const [h,k]=svg.children; for(const p of [h,k]) p.setAttribute('d',it.d);
@@ -1260,7 +1266,7 @@ function redo(){ if(!redoS.length) return; undoS.push(snapshot()); applySnap(red
 // ================== Selection & text editing ==================
 function setSel(ids){ S.sel=new Set([...ids].filter(id=>canEdit(S.items.get(id)))); renderCtx(); requestRender(); }
 function startEdit(id){
-  const it=S.items.get(id), r=els.get(id); if(!it||!r?.txt||!canEdit(it)) return;
+  const it=S.items.get(id), r=els.get(id); if(!it||!r?.txt||!canEdit(it)||it.locked) return;
   checkpoint(); editing={id}; r.el.classList.add('editing');
   r.txt.contentEditable='plaintext-only'; if(r.txt.contentEditable!=='plaintext-only') r.txt.contentEditable='true';
   r.txt.focus(); const rg=document.createRange(); rg.selectNodeContents(r.txt); const s=getSelection(); s.removeAllRanges(); s.addRange(rg);
@@ -1281,7 +1287,7 @@ function finishEdit(){
 // ================== Pointer input ==================
 function selItems(){ return [...S.sel].map(id=>S.items.get(id)).filter(Boolean); }
 function handleGeom(){ // screen-space handle positions for the current selection
-  if(!S.sel.size||editing) return null; const its=selItems(); if(!its.length) return null;
+  if(!S.sel.size||editing) return null; const its=selItems(); if(!its.length||its.some(i=>i.locked)) return null;
   if(its.length===1&&its[0].type==='arrow'){ const it=its[0]; return {arrow:it, a:toScreen(it.a.x,it.a.y), b:toScreen(it.b.x,it.b.y)}; }
   let cs, up;
   if(its.length===1){ const it=its[0]; cs=corners(it).map(p=>toScreen(p.x,p.y)); const a=rad(it); up={x:Math.sin(a),y:-Math.cos(a)}; }
@@ -1335,6 +1341,7 @@ vp.addEventListener('pointerdown',e=>{
       drag={type:'gscale', its, orig, anchor:cs[(h.i+2)%4], sx:(h.i===1||h.i===2)?1:-1, sy:h.i>=2?1:-1, w0:b.w, h0:b.h}; return; }
     if(hid){ if(e.shiftKey){ const s=new Set(S.sel); s.has(hid)?s.delete(hid):s.add(hid); setSel(s); }
       else if(!S.sel.has(hid)) setSel([hid]);
+      if(S.items.get(hid)?.locked){ drag={type:'pan', last:sp}; vp.classList.add('panning'); return; }
       drag={type:'move', start:sp, moved:false, hid}; }
     else { if(!e.shiftKey) setSel([]); drag={type:'marquee', start:wp, cur:wp, base:new Set(S.sel)}; }
     return;
@@ -1371,13 +1378,13 @@ addEventListener('pointermove',e=>{
     case 'pan': cam.x+=sp.x-drag.last.x; cam.y+=sp.y-drag.last.y; drag.last=sp; moving(); break;
     case 'move':{
       if(!drag.moved){ if(Math.hypot(sp.x-drag.start.x,sp.y-drag.start.y)<3) return; drag.moved=true; checkpoint();
-        drag.orig=[...S.sel].map(id=>{ const it=S.items.get(id); return [it,it.x,it.y,it.a&&{...it.a},it.b&&{...it.b}]; }); }
+        drag.orig=[...S.sel].map(id=>S.items.get(id)).filter(it=>it&&!it.locked).map(it=>[it,it.x,it.y,it.a&&{...it.a},it.b&&{...it.b}]); }
       const dx=(sp.x-drag.start.x)/cam.z, dy=(sp.y-drag.start.y)/cam.z;
       for(const [it,x,y,a,b] of drag.orig){ if(it.type==='arrow'){ if(!a.id){ it.a.x=a.x+dx; it.a.y=a.y+dy; } if(!b.id){ it.b.x=b.x+dx; it.b.y=b.y+dy; } } else { it.x=x+dx; it.y=y+dy; syncPos(it); } }
       updateArrows(); requestRender(); break; }
     case 'marquee':{ drag.cur=toWorld(sp.x,sp.y); const a=drag.start,b=drag.cur;
       const r={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)};
-      const s=new Set(drag.base); for(const it of S.items.values()) if(hit(it,r)&&canEdit(it)) s.add(it.id);
+      const s=new Set(drag.base); for(const it of S.items.values()) if(hit(it,r)&&canEdit(it)&&!it.locked) s.add(it.id);
       S.sel=s; requestRender(); break; }
     case 'resize':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it, mn=8/cam.z, A=d.anchor;
       const vx=wp.x-A.x, vy=wp.y-A.y; let w=Math.max(mn,(vx*d.ux.x+vy*d.ux.y)*d.sx), h=Math.max(mn,(vx*d.uy.x+vy*d.uy.y)*d.sy);
@@ -1448,7 +1455,7 @@ function createPen(pts){
 vp.addEventListener('dblclick',e=>{
   if(tool!=='select') return; const id=document.elementFromPoint(e.clientX,e.clientY)?.closest('.item')?.dataset.id; if(!id) return;
   const it=S.items.get(id); if(!it) return;
-  if((it.type==='sticky'||it.type==='text'||it.type==='shape')&&canEdit(it)){ setSel([id]); startEdit(id); }
+  if((it.type==='sticky'||it.type==='text'||it.type==='shape')&&canEdit(it)&&!it.locked){ setSel([id]); startEdit(id); }
   else if(it.type==='image'||it.type==='pdf') fitTo([it], 12);
 });
 vp.addEventListener('wheel',e=>{
@@ -1497,6 +1504,9 @@ function drawOverlay(){
     ov.fillStyle='rgba(59,91,253,.07)'; ov.strokeStyle='rgba(59,91,253,.8)'; ov.lineWidth=1;
     ov.fillRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(a.x-b.x),Math.abs(a.y-b.y));
     ov.strokeRect(Math.min(a.x,b.x)+.5,Math.min(a.y,b.y)+.5,Math.abs(a.x-b.x),Math.abs(a.y-b.y)); }
+  for(const id of new Set([...S.sel, ...(hoverId?[hoverId]:[])])){ const it=S.items.get(id); if(!it?.locked) continue; const r=sRect(aabb(it));
+    const x=r.x+r.w-12, y=r.y-12; ov.fillStyle='#2a2d34'; ov.beginPath(); ov.arc(x+6,y+6,11,0,Math.PI*2); ov.fill(); ov.strokeStyle='#fff'; ov.lineWidth=1.6;
+    ov.strokeRect(x+1.5,y+5,9,7); ov.beginPath(); ov.arc(x+6,y+5,3,Math.PI,0); ov.stroke(); }
   if(drag?.type==='aend' && drag.tid){ const t=S.items.get(drag.tid); if(t){ const cs=corners(t).map(p=>toScreen(p.x,p.y)); ov.strokeStyle=A; ov.lineWidth=2.5; ov.beginPath(); cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); } }
   if(drag?.type==='pen' && drag.pts.length){ ov.strokeStyle=penColor; ov.lineWidth=penSize; ov.lineCap='round'; ov.lineJoin='round'; ov.beginPath();
     drag.pts.forEach(([x,y],i)=>{ const s=toScreen(x,y); i?ov.lineTo(s.x,s.y):ov.moveTo(s.x,s.y); }); ov.stroke(); }
@@ -1513,22 +1523,27 @@ const ICON={
   hEnd:'<path d="M4 12h15M14 7l5 5-5 5"/>',
   hBoth:'<path d="M5 12h14M10 7l-5 5 5 5M14 7l5 5-5 5"/>',
   hNone:'<path d="M4 12h16"/>',
+  lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  unlock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
   zoom:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M11 8.5v5M8.5 11h5"/>'
 };
 const ctx=$('#ctx');
 function renderCtx(){
   if(!S.sel.size||editing){ ctx.classList.remove('show'); return; }
   const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean);
-  const hasFill=its.some(i=>i.type==='sticky'||i.type==='shape'), hasInk=its.some(i=>i.type==='text'||i.type==='pen'||i.type==='arrow');
   let h='';
-  const cur=its[0]?.color;
-  if(hasFill) h+=FILLS.map(c=>`<button class="sw${cur===c?' on':''}" data-fill="${c}" style="background:${c}" title="Màu nền"></button>`).join('')+'<div class="vsep"></div>';
-  if(hasInk) h+=INKS.map(c=>`<button class="sw${cur===c?' on':''}" data-ink="${c}" style="background:${c}" title="Màu chữ / nét"></button>`).join('')+'<div class="vsep"></div>';
+  if(its.every(i=>i.locked)){ if(its.length===1&&(its[0].type==='image'||its[0].type==='pdf')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
+    h+=`<span class="ctxlbl">Đang khóa</span>`+btn('unlock','Mở khóa (Ctrl Shift L)'); ctx.innerHTML=h; ctx.classList.add('show'); positionCtx(); return; }
+  const hasFill=its.some(i=>i.type==='sticky'||i.type==='shape'), hasShape=its.some(i=>i.type==='shape'), hasInk=its.some(i=>i.type==='text'||i.type==='pen'||i.type==='arrow'||i.type==='shape');
+  const f0=its.find(i=>i.type==='sticky'||i.type==='shape'), i0=its.find(i=>i.type!=='sticky'&&i.type!=='image'&&i.type!=='pdf');
+  const curF=f0&&(f0.nofill?'none':f0.color), curI=i0&&(i0.type==='shape'?(i0.stroke||'#2a2d34'):i0.color);
+  if(hasFill) h+=(hasShape?'<span class="ctxlbl">Nền</span>':'')+FILLS.map(c=>`<button class="sw${curF===c?' on':''}" data-fill="${c}" style="background:${c}" title="Màu nền"></button>`).join('')+(hasShape?`<button class="sw nofill${curF==='none'?' on':''}" data-nofill="1" title="Không tô (chỉ viền)"></button>`:'')+'<div class="vsep"></div>';
+  if(hasInk) h+=(hasShape?'<span class="ctxlbl">Viền</span>':'')+INKS.map(c=>`<button class="sw${curI===c?' on':''}" data-ink="${c}" style="background:${c}" title="${hasShape?'Màu viền / nét':'Màu chữ / nét'}"></button>`).join('')+'<div class="vsep"></div>';
   if(its.length===1 && (its[0].type==='image'||its[0].type==='pdf')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
   if(its.length===1 && els.get(its[0].id)?.txt) h+=btn('edit','Sửa chữ (nhấp đúp)');
   if(its.length===1 && its[0].type==='arrow'){ const hd=its[0].head||'end'; h+=btn(hd==='end'?'hEnd':hd==='both'?'hBoth':'hNone','Đổi kiểu đầu mũi tên'); }
   if(its.some(i=>i.rot)) h+=btn('rot0','Về góc 0°');
-  h+=btn('front','Đưa lên trên ( ] )')+btn('back','Đưa xuống dưới ( [ )')+btn('dup','Nhân bản (Ctrl D)')+btn('del','Xóa (Delete)');
+  h+=btn('lock','Khóa: không di chuyển, co giãn, xoay (Ctrl Shift L)')+btn('front','Đưa lên trên ( ] )')+btn('back','Đưa xuống dưới ( [ )')+btn('dup','Nhân bản (Ctrl D)')+btn('del','Xóa (Delete)');
   ctx.innerHTML=h; ctx.classList.add('show'); positionCtx();
 }
 const btn=(k,t)=>`<button class="ib" data-cx="${k}" title="${t}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`;
@@ -1545,8 +1560,10 @@ function positionCtx(){
 ctx.addEventListener('pointerdown',e=>e.stopPropagation());
 ctx.addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return; const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean);
-  if(b.dataset.fill){ checkpoint(); its.forEach(i=>{ if(i.type==='sticky'||i.type==='shape'){ i.color=b.dataset.fill; syncEl(i); } }); }
-  else if(b.dataset.ink){ checkpoint(); its.forEach(i=>{ if(i.type==='text'||i.type==='pen'||i.type==='arrow'){ i.color=b.dataset.ink; syncEl(i); } }); }
+  if(b.dataset.fill){ checkpoint(); its.forEach(i=>{ if(i.type==='sticky'||i.type==='shape'){ i.color=b.dataset.fill; delete i.nofill; syncEl(i); } }); }
+  else if(b.dataset.nofill){ checkpoint(); its.forEach(i=>{ if(i.type==='shape'){ i.nofill=true; syncEl(i); } }); }
+  else if(b.dataset.ink){ checkpoint(); its.forEach(i=>{ if(i.type==='text'||i.type==='pen'||i.type==='arrow'){ i.color=b.dataset.ink; syncEl(i); } else if(i.type==='shape'){ i.stroke=b.dataset.ink; syncEl(i); } }); }
+  else if(b.dataset.cx==='lock'||b.dataset.cx==='unlock') return toggleLock();
   else if(['hEnd','hBoth','hNone'].includes(b.dataset.cx)){ checkpoint(); const it=its[0]; it.head={end:'both',both:'none',none:'end'}[it.head||'end']; syncEl(it); }
   else if(b.dataset.cx==='rot0'){ checkpoint(); its.forEach(i=>{ if(i.rot){ i.rot=0; syncPos(i); } }); updateArrows(); }
   else if(b.dataset.cx==='del') return deleteSel();
@@ -1557,13 +1574,15 @@ ctx.addEventListener('click',e=>{
   else if(b.dataset.cx==='edit') return startEdit(its[0].id);
   saveSoon(); renderCtx(); requestRender();
 });
-function deleteSel(){ if(!S.sel.size) return; checkpoint(); deleteItems([...S.sel]); }
+function deleteSel(){ if(!S.sel.size) return; const ids=[...S.sel].filter(id=>!S.items.get(id)?.locked); if(!ids.length){ toast('Đối tượng đang khóa. Mở khóa trước khi xóa.',null,2200); return; } checkpoint(); deleteItems(ids); }
+function toggleLock(){ const its=selItems(); if(!its.length) return; checkpoint(); const lock=its.some(i=>!i.locked);
+  its.forEach(i=>{ if(lock) i.locked=true; else delete i.locked; }); saveSoon(); renderCtx(); requestRender(); toast(lock?`Đã khóa ${its.length} đối tượng`:`Đã mở khóa ${its.length} đối tượng`,null,1600); }
 function toFront(){ if(!S.sel.size) return; checkpoint(); [...S.sel].map(id=>S.items.get(id)).sort((a,b)=>a.z-b.z).forEach(it=>{ it.z=++zTop; syncEl(it); }); saveSoon(); }
 function toBack(){ if(!S.sel.size) return; checkpoint(); let mn=Math.min(...[...S.items.values()].map(i=>i.z));
   [...S.sel].map(id=>S.items.get(id)).sort((a,b)=>b.z-a.z).forEach(it=>{ it.z=--mn; syncEl(it); }); saveSoon(); }
 let clip=null;
 function cloneItems(list,dx,dy=dx){ if(!editMode()) return openLogin(); checkpoint(); const ids=[], map=new Map(), arrows=[];
-  for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
+  for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,locked,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
     if(rest.type==='arrow'){ rest.a.x+=dx; rest.a.y+=dy; rest.b.x+=dx; rest.b.y+=dy; }
     const n=createItem(rest); map.set(id,n.id); ids.push(n.id); if(n.type==='arrow') arrows.push(n); }
   for(const n of arrows){ for(const k of ['a','b']) if(n[k].id&&map.has(n[k].id)) n[k].id=map.get(n[k].id); updateArrow(n); }
@@ -1591,7 +1610,9 @@ document.addEventListener('click',e=>{
   else if(a==='zout') zoomAt(innerWidth/2,innerHeight/2,0.8);
   else if(a==='z100') zoomAt(innerWidth/2,innerHeight/2,1/cam.z);
   else if(a==='fit') fitTo([...S.items.values()]);
-  else if(a==='selall') { setTool('select'); setSel([...S.items.keys()]); }
+  else if(a==='selall') { setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); }
+  else if(a==='lockMedia'||a==='unlockAll'){ if(!editMode()) return openLogin(); const lock=a==='lockMedia'; const list=[...S.items.values()].filter(i=>canEdit(i)&&(lock?(i.type==='image'||i.type==='pdf')&&!i.locked:i.locked));
+    if(!list.length){ toast(lock?'Không có ảnh/PDF nào cần khóa':'Không có gì đang khóa',null,1800); return; } checkpoint(); list.forEach(i=>{ if(lock) i.locked=true; else delete i.locked; }); setSel([]); saveSoon(); requestRender(); toast(lock?`Đã khóa ${list.length} ảnh/trang PDF`:`Đã mở khóa ${list.length} đối tượng`,null,2000); }
   else if(a==='clear') $('#modal').classList.add('show');
   else if(a==='mcancel') $('#modal').classList.remove('show');
   else if(a==='mok') { $('#modal').classList.remove('show'); clearBoard(); }
@@ -1637,7 +1658,8 @@ addEventListener('keydown',e=>{
   if(e.code==='Space'){ e.preventDefault(); if(!spaceDown){ spaceDown=true; vp.classList.add('grab'); } return; }
   if(mod&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
   if(mod&&k==='y'){ e.preventDefault(); redo(); return; }
-  if(mod&&k==='a'){ e.preventDefault(); setTool('select'); setSel([...S.items.keys()]); return; }
+  if(mod&&k==='a'){ e.preventDefault(); setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); return; }
+  if(mod&&e.shiftKey&&k==='l'){ e.preventDefault(); toggleLock(); return; }
   if(mod&&k==='d'){ e.preventDefault(); duplicate(); return; }
   if(mod&&(k==='='||k==='+')){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,1.25); return; }
   if(mod&&k==='-'){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,0.8); return; }
@@ -1651,7 +1673,7 @@ addEventListener('keydown',e=>{
   if(k===']'){ toFront(); return; } if(k==='['){ toBack(); return; }
   if(k.startsWith('arrow')&&S.sel.size){ e.preventDefault(); const st=(e.shiftKey?10:1)/cam.z; checkpoint();
     const ddx=k==='arrowleft'?-st:k==='arrowright'?st:0, ddy=k==='arrowup'?-st:k==='arrowdown'?st:0;
-    for(const id of S.sel){ const it=S.items.get(id); if(it.type==='arrow'){ for(const q of ['a','b']) if(!it[q].id){ it[q].x+=ddx; it[q].y+=ddy; } } else { it.x+=ddx; it.y+=ddy; syncPos(it); } } updateArrows();
+    for(const id of S.sel){ const it=S.items.get(id); if(it.locked) continue; if(it.type==='arrow'){ for(const q of ['a','b']) if(!it[q].id){ it[q].x+=ddx; it[q].y+=ddy; } } else { it.x+=ddx; it.y+=ddy; syncPos(it); } } updateArrows();
     requestRender(); saveSoon(); return; }
   const map={v:'select',h:'hand',n:'sticky',t:'text',r:'rect',o:'ellipse',a:'arrow',p:'pen'}; if(map[k]){ setTool(map[k]); }
 });
