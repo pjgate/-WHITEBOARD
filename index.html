@@ -104,7 +104,7 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 #drop.show{display:flex}
 #drop span{background:var(--accent);color:#fff;padding:10px 18px;border-radius:10px;font-weight:600;font-size:15px}
 
-#toast{left:50%;bottom:16px;transform:translateX(-50%);padding:10px 14px;min-width:260px;max-width:min(520px,90vw);display:none;z-index:30;font-size:13px}
+#toast{white-space:pre-line;left:50%;bottom:16px;transform:translateX(-50%);padding:10px 14px;min-width:260px;max-width:min(520px,90vw);display:none;z-index:30;font-size:13px}
 #toast.show{display:block}
 #toast .bar{height:4px;background:#efefeb;border-radius:4px;margin-top:8px;overflow:hidden}
 #toast .bar b{display:block;height:100%;width:0;background:var(--accent);transition:width .15s}
@@ -124,7 +124,7 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 .modal summary{cursor:pointer;color:var(--accent);font-weight:500}
 .modal ol{padding-left:20px;margin:8px 0 0}
 .modal code{background:#f1f1ee;border-radius:4px;padding:0 4px;font-size:12px}
-#drvMsg{font-size:13px;margin:-2px 0 12px;line-height:1.45}
+#drvMsg{font-size:13px;margin:-2px 0 12px;line-height:1.45;white-space:pre-line;word-break:break-word}
 #drvMsg.err{color:#d13438} #drvMsg.ok{color:#23894f}
 #drvShare{display:none;margin:0 0 14px;padding:10px 12px;background:#f6f6f2;border-radius:10px;font-size:12.5px;word-break:break-all}
 #drvShare.show{display:block}
@@ -307,7 +307,7 @@ body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub 
 <script type="module">
 // ================== Config ==================
 // Muốn gắn sẵn thư mục Drive vào phần mềm (không cần ?folder=...&key=... trên link), điền 2 dòng này:
-const CONFIG = { folder: '', apiKey: '' };
+const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyDDObnWu794A3-O9uMJo7PBaOZgVS8KZyQ' };
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/';
 const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
 const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
@@ -680,11 +680,16 @@ async function gget(url){
   return r;
 }
 function driveErrMsg(e){
-  if(e.status===0) return 'Không kết nối được Google Drive. Kiểm tra mạng. Nếu đang mở trong link Claude thì không dùng được Drive, hãy đưa phần mềm lên GitHub Pages hoặc Netlify.';
-  if(e.status===400&&/key/i.test(e.message)) return 'API key không hợp lệ. Kiểm tra lại key.';
-  if(e.status===403) return 'Google từ chối truy cập. Kiểm tra: đã bật Google Drive API, key cho phép đúng địa chỉ trang web này, thư mục chia sẻ "Bất kỳ ai có đường liên kết".';
-  if(e.status===404) return 'Không tìm thấy thư mục. Kiểm tra link và chế độ chia sẻ "Bất kỳ ai có đường liên kết".';
-  return 'Lỗi Google Drive: '+e.message;
+  if(e.status===0) return 'Không kết nối được Google Drive. Kiểm tra mạng. Nếu đang mở trong link Claude thì không dùng được Drive, hãy mở trang trên GitHub Pages.';
+  const raw=(e.message||'').replace(/^Drive \d+:\s*/,''), m=raw.toLowerCase(); let vi;
+  if(/referer|referrer/.test(m)) vi=`API key đang chặn trang này. Trong Google Cloud → Credentials → API key → "Website restrictions", thêm đúng dòng: ${location.origin}/* rồi Save, đợi 5 phút.`;
+  else if(/has not been used|is disabled|not been enabled|service_disabled/.test(m)) vi='Google Drive API chưa được bật. Vào Google Cloud → APIs & Services → Library → Google Drive API → Enable (đúng dự án chứa API key này), đợi vài phút.';
+  else if(/api key not valid|api_key_invalid|invalid api key/.test(m)) vi='API key không đúng. Sao chép lại key trong Google Cloud → Credentials.';
+  else if(/blocked|api_key_service_blocked|not authorized to use this api/.test(m)) vi='API key không được phép dùng Google Drive API. Trong key → "API restrictions", tích thêm Google Drive API rồi Save.';
+  else if(e.status===404||/not found|file not found/.test(m)) vi='Không tìm thấy thư mục. Kiểm tra link, và thư mục phải chia sẻ "Bất kỳ ai có đường liên kết".';
+  else if(e.status===403) vi='Google từ chối truy cập. Kiểm tra: đã bật Google Drive API, key cho phép trang '+location.origin+'/*, thư mục chia sẻ "Bất kỳ ai có đường liên kết".';
+  else vi='Lỗi Google Drive.';
+  return raw?`${vi}\n(Google báo: ${raw})`:vi;
 }
 async function driveList(folder){
   const out=[]; let tok='';
