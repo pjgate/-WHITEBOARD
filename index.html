@@ -225,6 +225,52 @@ body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub 
 #hubErr.show{display:block}
 #hubErr button{margin-top:10px}
 #hub .driveLink{color:var(--muted);font-size:13px;margin-left:6px}
+#hubEmpty{max-width:1200px;margin:18px auto 0;color:var(--muted);line-height:1.55}
+#hubUser{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+#hubUser .who{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#hubUser .btn{height:38px;padding:0 12px;background:#fff;border:1px solid #deded8;color:var(--ink)}
+#hubUser .btn.admin{background:var(--accent);border-color:var(--accent);color:#fff}
+.pcard .tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:20px;background:#fff1d6;color:#9a6200;margin-left:6px;vertical-align:1px}
+.reqbox{max-width:520px;margin:30px auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 24px;text-align:center;color:var(--ink)}
+.reqbox h3{margin:0 0 6px;font-size:17px} .reqbox p{margin:0 0 14px;color:var(--muted)} .reqbox .btn{margin:0 auto}
+.reqbox .ok{color:#23894f;font-weight:500}
+/* màn hình đăng nhập */
+#gate{position:fixed;inset:0;background:var(--bg);z-index:60;display:none;place-items:center;padding:24px}
+body.gate #gate{display:grid}
+body.gate #hub,body.gate #vp,body.gate #ov,body.gate #tools,body.gate #zoom,body.gate #top,body.gate #actions,body.gate #help-btn,body.gate #empty,body.gate #ctx,body.gate #penbar,body.gate #files{display:none!important}
+#gate .gbox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:30px 28px;width:min(380px,100%);text-align:center;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:10px}
+#gate img{border-radius:18px} #gate h2{margin:4px 0 0;font-size:21px} #gate p{margin:0 0 6px;color:var(--muted);line-height:1.5}
+#gate .btn{width:100%;justify-content:center;height:42px}
+#gateMsg{color:#d13438;font-size:13px;white-space:pre-line} #gateMsg:empty{display:none}
+#gate small{color:var(--muted);font-size:12px;line-height:1.5;margin-top:6px}
+/* quản lý quyền */
+.adm{width:min(680px,96vw)!important}
+.admh{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px} .admh h3{margin:0}
+.adm section{border-top:1px solid var(--line);padding:14px 0 6px} .adm section:first-child{border-top:0}
+.adm h4{margin:0 0 8px;font-size:14px} .adm .hint{color:var(--muted);font-size:12.5px;line-height:1.5;margin:0 0 10px}
+.adm .warn{background:#fdecec;color:#a4262c;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.5;margin:0 0 10px}
+.adm .warn .btn{margin-top:8px;height:32px}
+.adm .note{background:#fff7e0;color:#7a5600;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin:0 0 10px}
+.adm .chips{display:flex;flex-wrap:wrap;gap:6px 12px;margin:6px 0 10px}
+.adm .chips label{display:flex;align-items:center;gap:6px;margin:0;font-weight:400;font-size:13px;cursor:pointer}
+.adm .chips label.dis{color:#aaa;cursor:not-allowed}
+.adm .chips input{width:auto;height:auto;margin:0;display:inline}
+.adm .frm{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.adm .frm input[type=email]{flex:1;min-width:200px;margin:0;height:36px;font-size:15px}
+.adm select{height:36px;border:1px solid #d6d6d0;border-radius:9px;padding:0 8px;font:inherit;font-size:14px;background:#fff}
+.adm .btn{height:34px;padding:0 12px;font-size:13.5px}
+.adm .req{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.adm .req b{font-size:13.5px} .adm .req small{color:var(--muted)}
+.adm .proj{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.adm .ph{display:flex;align-items:center;gap:8px;flex-wrap:wrap} .adm .ph b{flex:1;font-size:13.5px;min-width:120px}
+.adm .ph label{display:flex;align-items:center;gap:5px;margin:0;font-weight:400;font-size:12.5px;color:var(--muted);cursor:pointer}
+.adm .ph label input{width:auto;height:auto;margin:0;display:inline}
+.adm .ppl{margin-top:6px;display:flex;flex-direction:column;gap:4px}
+.adm .pp{display:flex;align-items:center;gap:8px;font-size:13px} .adm .pp span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm .pp small{color:var(--muted)} .adm .pp .btn{height:28px;font-size:12.5px;padding:0 10px}
+.adm .empty{color:var(--muted);font-size:12.5px}
+.adm .msg{font-size:13px;margin-top:6px;white-space:pre-line} .adm .msg.err{color:#d13438} .adm .msg.ok{color:#23894f}
+body.viewer #loginBtn{display:none!important}
 /* read-only (not signed in) */
 #loginBtn{display:none}
 body.ro #loginBtn,body.relogin #loginBtn{display:inline-flex}
@@ -353,9 +399,22 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="hub">
   <header><div class="tt"><div class="crumb">Bảng mẹ · <a class="driveLink" id="hubDrive" target="_blank" rel="noopener">mở trên Google Drive ↗</a></div><h1 id="hubTitle">Đang tải…</h1></div>
-    <div class="hact"><input id="hsearch" placeholder="Tìm dự án…" autocomplete="off"><button class="btn ghost" data-act="hubRefresh" title="Làm mới"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18 3v4h-4M6 21v-4h4"/></svg></button><button class="btn ghost" data-act="drvOpen" title="Cài đặt Google Drive"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
-  <div id="hubErr"></div><div id="hubGrid"></div><p id="hubEmpty"></p>
+    <div class="hact"><span id="hubUser"></span><input id="hsearch" placeholder="Tìm dự án…" autocomplete="off"><button class="btn ghost" data-act="hubRefresh" title="Làm mới"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18 3v4h-4M6 21v-4h4"/></svg></button><button class="btn ghost" data-act="drvOpen" title="Cài đặt Google Drive"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
+  <div id="hubErr"></div><div id="hubGrid"></div><div id="hubEmpty"></div>
 </div>
+<div id="gate"><div class="gbox">
+  <img src="icons/icon-192.png" alt="" width="72" height="72">
+  <h2>Bảng trắng</h2>
+  <p>Đăng nhập Google để xem các dự án được chia sẻ cho bạn.</p>
+  <button class="btn primary" data-act="gateIn" id="gateBtn">Đăng nhập Google</button>
+  <button class="btn ghost" data-act="gateOther" id="gateOther" style="display:none">Dùng tài khoản khác</button>
+  <div id="gateMsg"></div>
+  <small>Lần đầu dùng? Đăng nhập xong, bấm <b>Gửi yêu cầu</b> để admin duyệt quyền xem dự án.</small>
+</div></div>
+<div id="adm" class="modal"><div class="box wide adm">
+  <div class="admh"><h3>Quản lý quyền xem dự án</h3><button class="ib" data-act="admClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="admBody"></div>
+</div></div>
 <div id="drop"><span>Thả để thêm vào bảng</span></div>
 <div id="toast" class="panel"><div id="toasttext"></div><div class="bar"><b></b></div></div>
 <div id="modal" class="modal"><div class="box"><h3>Xóa toàn bộ bảng?</h3><p>Tất cả ảnh, PDF và ghi chú trên bảng sẽ bị xóa khỏi trình duyệt này. Không thể hoàn tác.</p>
@@ -400,7 +459,9 @@ body.relogin #loginBtn{background:#e0a92b}
 <script type="module">
 // ================== Config ==================
 // Muốn gắn sẵn thư mục Drive vào phần mềm (không cần ?folder=...&key=... trên link), điền 2 dòng này:
-const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyDDObnWu794A3-O9uMJo7PBaOZgVS8KZyQ', clientId: '249929611709-vbbe7mi31ftt3rq5c9a7d6fg84vv5bgc.apps.googleusercontent.com' };  // clientId: để tải tệp lên Drive (không bắt buộc)
+const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyDDObnWu794A3-O9uMJo7PBaOZgVS8KZyQ', clientId: '249929611709-vbbe7mi31ftt3rq5c9a7d6fg84vv5bgc.apps.googleusercontent.com',  // clientId: để tải tệp lên Drive (không bắt buộc)
+  requireLogin: true,              // true: phải đăng nhập Google mới xem được; mỗi người chỉ thấy dự án được chia sẻ cho mình
+  admin: 'sangkt0510@gmail.com' }; // email nhận yêu cầu xin quyền (admin thật sự = chủ sở hữu thư mục chính trên Drive)
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/';
 const IS_IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
 const IS_TOUCH = matchMedia('(pointer:coarse)').matches;
@@ -483,6 +544,9 @@ const DRIVE = (()=>{
   return root&&key?{root,folder:project||root,project:project||null,key,clientId,fromConfig:!!CONFIG.folder}:null;
 })();
 let driveName='', hubMode=false;
+const PRIV=!!(DRIVE?.clientId&&CONFIG.requireLogin); // chế độ riêng tư: bắt buộc đăng nhập
+let canWrite=true, booted=false; // canWrite: tài khoản có quyền ghi vào thư mục dự án đang mở
+const normEmail=e=>{ e=(e||'').trim().toLowerCase(); const [u,d]=e.split('@'); return (d==='gmail.com'||d==='googlemail.com')?u.split('+')[0].replace(/\./g,'')+'@gmail.com':e; };
 
 // ================== Storage (IndexedDB) ==================
 const DB = (()=>{ let p;
@@ -825,15 +889,25 @@ function placePdf(key,sizes,L,x0,y0){
 const GAPI='https://www.googleapis.com/drive/v3/files';
 const GEXPORT=new Set(['application/vnd.google-apps.document','application/vnd.google-apps.presentation','application/vnd.google-apps.spreadsheet','application/vnd.google-apps.drawing']);
 const kQ=()=>'key='+encodeURIComponent(DRIVE.key)+'&supportsAllDrives=true';
-async function gget(url){
-  let r; try{ r=await fetch(url); }catch(e){ const er=new Error('network'); er.status=0; throw er; }
-  if(!r.ok){ let m=''; try{ m=(await r.json()).error?.message||''; }catch{} const er=new Error(`Drive ${r.status}: ${m}`); er.status=r.status; throw er; }
+async function gget(url){ // đọc Drive: có đăng nhập thì đọc bằng quyền của người đó
+  const auth=tokenValid()?{Authorization:'Bearer '+gTok.t}:undefined;
+  let r; try{ r=await fetch(url,auth?{headers:auth}:undefined); }catch(e){ const er=new Error('network'); er.status=0; throw er; }
+  if(!r.ok){ let m=''; try{ m=(await r.json()).error?.message||''; }catch{} const er=new Error(`Drive ${r.status}: ${m}`); er.status=r.status;
+    if(r.status===401&&auth){ gTok=null; try{ localStorage.removeItem('wb-gtok'); }catch{} if(me&&!hubMode) setAuthNeeded(true); }
+    throw er; }
   return r;
+}
+async function gapi(method,url,body){ // ghi Drive (cần đăng nhập)
+  if(!tokenValid()) throw upErr(401,'');
+  let r; try{ r=await fetch(url,{method,headers:{Authorization:'Bearer '+gTok.t,...(body?{'Content-Type':'application/json; charset=UTF-8'}:{})},body:body?JSON.stringify(body):undefined}); }
+  catch(e){ throw Object.assign(new Error('network'),{status:0,upload:true}); }
+  if(!r.ok) throw upErr(r.status,await r.text()); return r.status===204?null:r.json().catch(()=>null);
 }
 function driveErrMsg(e){
   if(e.status===0) return 'Không kết nối được Google Drive. Kiểm tra mạng. Nếu đang mở trong link Claude thì không dùng được Drive, hãy mở trang trên GitHub Pages.';
   const raw=(e.message||'').replace(/^Drive \d+:\s*/,''), m=raw.toLowerCase(); let vi;
-  if(/referer|referrer/.test(m)) vi=`API key đang chặn trang này. Trong Google Cloud → Credentials → API key → "Website restrictions", thêm đúng dòng: ${location.origin}/* rồi Save, đợi 5 phút.`;
+  if(PRIV&&tokenValid()&&(e.status===404||e.status===403)&&!/referer|referrer|disabled|not been|api key|blocked/.test(m)) vi=`Tài khoản ${me?.email||'này'} chưa được cấp quyền xem mục này. Hãy về danh sách dự án và gửi yêu cầu cho admin.`;
+  else if(/referer|referrer/.test(m)) vi=`API key đang chặn trang này. Trong Google Cloud → Credentials → API key → "Website restrictions", thêm đúng dòng: ${location.origin}/* rồi Save, đợi 5 phút.`;
   else if(/has not been used|is disabled|not been enabled|service_disabled/.test(m)) vi='Google Drive API chưa được bật. Vào Google Cloud → APIs & Services → Library → Google Drive API → Enable (đúng dự án chứa API key này), đợi vài phút.';
   else if(/api key not valid|api_key_invalid|invalid api key/.test(m)) vi='API key không đúng. Sao chép lại key trong Google Cloud → Credentials.';
   else if(/blocked|api_key_service_blocked|not authorized to use this api/.test(m)) vi='API key không được phép dùng Google Drive API. Trong key → "API restrictions", tích thêm Google Drive API rồi Save.';
@@ -842,13 +916,14 @@ function driveErrMsg(e){
   else vi='Lỗi Google Drive.';
   return raw?`${vi}\n(Google báo: ${raw})`:vi;
 }
-async function driveList(folder){
+async function driveQuery(q,order='name_natural'){
   const out=[]; let tok='';
-  const fields=encodeURIComponent('nextPageToken,files(id,name,mimeType,size,modifiedTime,md5Checksum,thumbnailLink,imageMediaMetadata(width,height,rotation))');
-  do{ const u=`${GAPI}?q=${encodeURIComponent(`'${folder}' in parents and trashed=false`)}&fields=${fields}&pageSize=1000&orderBy=name_natural&includeItemsFromAllDrives=true&${kQ()}${tok?'&pageToken='+encodeURIComponent(tok):''}`;
+  const fields=encodeURIComponent('nextPageToken,files(id,name,mimeType,size,modifiedTime,md5Checksum,thumbnailLink,appProperties,owners(emailAddress,displayName),imageMediaMetadata(width,height,rotation))');
+  do{ const u=`${GAPI}?q=${encodeURIComponent(q)}&fields=${fields}&pageSize=1000${order?'&orderBy='+order:''}&includeItemsFromAllDrives=true&${kQ()}${tok?'&pageToken='+encodeURIComponent(tok):''}`;
     const j=await (await gget(u)).json(); out.push(...(j.files||[])); tok=j.nextPageToken; }while(tok);
   return out;
 }
+const driveList=folder=>driveQuery(`'${folder}' in parents and trashed=false`);
 const verOf=f=>(f.md5Checksum||'').slice(0,10)||String(f.modifiedTime||'').replace(/\D/g,'');
 function kindOf(f){ const m=f.mimeType||''; if(m==='application/pdf'||/\.pdf$/i.test(f.name)) return 'pdf';
   if(m.startsWith('image/')) return 'image'; if(GEXPORT.has(m)) return 'pdf'; return null; }
@@ -894,8 +969,11 @@ async function driveSync(quiet=false, preFiles=null){
   if(!DRIVE||syncing) return; syncing=true; lastSync=Date.now();
   try{
     if(!quiet) toast('Đang đọc thư mục Google Drive…');
-    const [files,meta]=await Promise.all([preFiles||driveList(DRIVE.folder), driveName&&driveName!=='lỗi kết nối'?{name:driveName}:gget(`${GAPI}/${DRIVE.folder}?fields=name&${kQ()}`).then(r=>r.json()).catch(()=>({}))]);
-    driveName=meta.name||'Google Drive'; setMeta();
+    const authed=tokenValid();
+    const [files,meta]=await Promise.all([preFiles||driveList(DRIVE.folder), gget(`${GAPI}/${DRIVE.folder}?fields=name,capabilities(canAddChildren)&${kQ()}`).then(r=>r.json()).catch(e=>({__err:e}))]);
+    if(PRIV&&authed&&tokenValid()&&(meta.__err?.status===404||meta.__err?.status===403)){ lostAccess(meta.__err); return; }
+    driveName=meta.name||(driveName!=='lỗi kết nối'&&driveName)||'Google Drive'; setMeta();
+    if(authed&&me&&meta.capabilities){ const cw=!!meta.capabilities.canAddChildren; if(cw!==canWrite){ canWrite=cw; updateRoUI(); } }
     const byId=new Map(); let boardFile=null; const noteFiles=[];
     for(const f of files){
       if(f.name==='board.json'){ if(!boardFile||f.modifiedTime>boardFile.modifiedTime) boardFile=f; continue; }
@@ -942,6 +1020,12 @@ async function driveSync(quiet=false, preFiles=null){
   }catch(e){ console.warn(e); if(!quiet){ driveName='lỗi kết nối'; setMeta(); toast(driveErrMsg(e), null, 9000); } }
   finally{ syncing=false; }
 }
+function lostAccess(e){ // không (còn) quyền xem dự án: xóa bản lưu trên máy và báo
+  for(const id of [...S.items.keys()]) removeEl(id); S.items.clear(); S.sel.clear(); driveEntries=new Map(); remoteNotes.clear();
+  DB.clear('files').catch(()=>{}); DB.clear('thumbs').catch(()=>{}); DB.del('meta','boardjson').catch(()=>{}); saveNow();
+  canWrite=false; driveName='không có quyền'; updateRoUI(); updateCount(); requestRender();
+  toast(driveErrMsg(e),null,0);
+}
 async function placeDriveFiles(entries){
   const list=[...S.items.values()], b=list.length?bbox(list):{x:0,y:0,w:0,h:0};
   let y=list.length?b.y+b.h+120:0; const xL=list.length?b.x:0; const created=[];
@@ -986,14 +1070,14 @@ function exportBoard(){
 const NOTE_T=new Set(['sticky','text','shape','pen','arrow']);
 function isNote(it){ return !!it&&NOTE_T.has(it.type); }
 function needLogin(){ return !!(DRIVE&&DRIVE.clientId&&!hubMode); }
-function editMode(){ return !needLogin()||!!me; }
+function editMode(){ return !needLogin()||(!!me&&canWrite); }
 function canEdit(it){ return !!it&&!it.ro&&editMode(); }
 let me=null;
 const rs={synced:false,layoutId:null,lastLayout:null,notesId:null,notesVer:null,lastNotes:null,saving:false,again:false,state:'',authNeeded:false};
 const remoteNotes=new Map(); // email -> {name,ver,items,fileId}
 let hiddenAuthors=new Set(); try{ if(DRIVE) hiddenAuthors=new Set(JSON.parse(localStorage.getItem('wb-ha-'+DRIVE.folder)||'[]')); }catch{}
 const notesName=e=>`notes-${e}.json`;
-function remoteTxt(){ if(!needLogin()) return ''; if(!me) return 'chỉ xem'; if(rs.authNeeded) return 'chưa lưu lên Drive (cần đăng nhập lại)';
+function remoteTxt(){ if(!needLogin()) return ''; if(!me) return 'chỉ xem'; if(!canWrite) return 'chỉ xem (bạn chưa có quyền ghi chú ở dự án này)'; if(rs.authNeeded) return 'chưa lưu lên Drive (cần đăng nhập lại)';
   return {saving:'đang lưu lên Drive…',ok:'đã lưu lên Drive',err:'lỗi lưu lên Drive',pending:'chờ lưu lên Drive…'}[rs.state]||''; }
 function setRemote(st){ rs.state=st; setMeta(); }
 async function persistRs(){ try{ await DB.put('meta','rs',{layoutId:rs.layoutId,lastLayout:rs.lastLayout,notesId:rs.notesId,notesVer:rs.notesVer,lastNotes:rs.lastNotes,email:me?.email}); }catch{} }
@@ -1032,11 +1116,11 @@ function rebuildAuthor(email){
 }
 let rsT=0;
 function scheduleRemoteSave(){
-  if(!DRIVE?.clientId||!me||hubMode) return;
+  if(!DRIVE?.clientId||!me||hubMode||!canWrite) return;
   clearTimeout(rsT); if(rs.state!=='saving') setRemote('pending'); rsT=setTimeout(remoteSave,1500);
 }
 async function remoteSave(){
-  if(!me||!rs.synced) return;
+  if(!me||!rs.synced||!canWrite) return;
   if(rs.saving){ rs.again=true; return; }
   const L=JSON.stringify(layoutPayload()), N=JSON.stringify(notesPayload());
   const needL=L!==rs.lastLayout, needN=N!==rs.lastNotes;
@@ -1059,15 +1143,15 @@ async function writeJson(name,str,id){
   if(!r.ok) throw upErr(r.status,await r.text()); return r.json();
 }
 function setAuthNeeded(v){ rs.authNeeded=v; document.body.classList.toggle('relogin',!!(v&&me)); $('#loginTxt').textContent=v&&me?'Đăng nhập lại để lưu':'Đăng nhập để ghi chú'; setMeta(); }
-function updateRoUI(){ const ro=needLogin()&&!me; document.body.classList.toggle('ro',ro); if(ro){ setSel([]); if(tool!=='hand') tool='select'; document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===tool)); $('#penbar').classList.remove('show'); }
+function updateRoUI(){ const ro=needLogin()&&!editMode(); document.body.classList.toggle('ro',ro); document.body.classList.toggle('viewer',ro&&!!me&&tokenValid()); if(ro){ setSel([]); if(tool!=='hand') tool='select'; document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===tool)); $('#penbar').classList.remove('show'); }
   renderMenuDrive(); renderFiles(); renderPeople(); setMeta(); }
-function openLogin(){ if(!DRIVE?.clientId) return; $('#upmTitle').textContent='Đăng nhập để ghi chú'; $('#upmText').textContent='Chỉ người đã đăng nhập Google mới thêm, sửa ghi chú hoặc sắp xếp được. Ghi chú của bạn được lưu riêng theo email vào thư mục dự án trên Drive.'; pendingUp=null; document.querySelector('#upm [data-act=upLocal]').style.display='none'; $('#upm').classList.add('show'); }
+function openLogin(){ if(!DRIVE?.clientId) return; if(me&&!canWrite&&tokenValid()){ toast('Bạn chỉ có quyền xem dự án này. Muốn ghi chú, hãy nhờ admin cấp quyền "Xem & ghi chú".',null,4000); return; }$('#upmTitle').textContent='Đăng nhập để ghi chú'; $('#upmText').textContent='Chỉ người đã đăng nhập Google mới thêm, sửa ghi chú hoặc sắp xếp được. Ghi chú của bạn được lưu riêng theo email vào thư mục dự án trên Drive.'; pendingUp=null; document.querySelector('#upm [data-act=upLocal]').style.display='none'; $('#upm').classList.add('show'); }
 async function onLogin(){
   // my notes that were shown read-only become mine
   const mine=remoteNotes.get(me.email); if(mine){ rs.notesId=mine.fileId; rs.notesVer=mine.ver; remoteNotes.delete(me.email); }
   applyOwnership(); if(mine) rs.lastNotes=JSON.stringify(notesPayload());
   setAuthNeeded(false); updateRoUI(); requestRender();
-  if(!hubMode&&DRIVE){ await driveSync(true); scheduleRemoteSave(); }
+  if(booted&&!hubMode&&DRIVE){ await driveSync(true); scheduleRemoteSave(); }
 }
 // ----- People pane -----
 const avColor=e=>{ let h=2166136261; for(const c of e){ h^=c.charCodeAt(0); h=Math.imul(h,16777619)>>>0; } return `hsl(${(h%24)*15} 58% 46%)`; };
@@ -1178,18 +1262,40 @@ function boardLink(p){ const q=new URLSearchParams();
   if(!(DRIVE.fromConfig&&parseFolderId(CONFIG.folder)===DRIVE.root)) q.set('folder',DRIVE.root);
   if(p) q.set('p',p); if(!CONFIG.apiKey) q.set('key',DRIVE.key);
   const t=q.toString(); return location.origin+location.pathname+(t?'?'+t:''); }
-let hubData=[];
+let hubData=[], rootInfo=null, isAdmin=false, reqState=null;
+const FOLDER='application/vnd.google-apps.folder';
+async function loadRootInfo(){ // ai đọc được thư mục chính thì thấy mọi dự án; chủ sở hữu = admin
+  rootInfo=null; isAdmin=false;
+  try{ rootInfo=await (await gget(`${GAPI}/${DRIVE.root}?fields=name,ownedByMe,capabilities(canAddChildren,canShare)&${kQ()}`)).json(); }catch(e){ if(!PRIV||!tokenValid()) throw e; }
+  isAdmin=!!(rootInfo?.ownedByMe&&tokenValid());
+}
+async function listMyProjects(){ // người thường: chỉ những thư mục dự án được chia sẻ cho mình
+  const qs=[`appProperties has { key='wbRoot' and value='${DRIVE.root}' } and mimeType='${FOLDER}' and trashed=false`,`'${DRIVE.root}' in parents and mimeType='${FOLDER}' and trashed=false`];
+  const res=await Promise.allSettled(qs.map(q=>driveQuery(q,'')));
+  if(res.every(r=>r.status==='rejected')) throw res[0].reason;
+  const m=new Map(); for(const r of res) if(r.status==='fulfilled') for(const f of r.value) m.set(f.id,f);
+  return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name,'vi',{numeric:true}));
+}
+function renderHubUser(){
+  const u=$('#hubUser'); if(!DRIVE?.clientId){ u.innerHTML=''; return; }
+  u.innerHTML=me&&tokenValid()?`${isAdmin?'<button class="btn admin" data-act="admOpen" title="Duyệt quyền xem dự án">Quản lý quyền</button>':''}<span class="who" title="${esc(me.email)}">${esc(me.email)}</span><button class="btn" data-act="gOutHub">Đăng xuất</button>`
+    :`<button class="btn" data-act="gIn">Đăng nhập</button>`;
+}
 async function showHub(files){
   hubMode=true; document.body.classList.add('hub','drive'); $('#toast').classList.remove('show'); renderMenuDrive();
   $('#hubDrive').href=`https://drive.google.com/drive/folders/${DRIVE.root}`; $('#hubErr').classList.remove('show');
-  if(!files){ try{ files=await driveList(DRIVE.root); }catch(e){
-    $('#hubTitle').textContent='Chưa đọc được Google Drive'; hubData=[]; $('#hubGrid').innerHTML=''; $('#hubEmpty').textContent='';
-    const he=$('#hubErr'); he.textContent=driveErrMsg(e); const b=document.createElement('button'); b.className='btn primary'; b.dataset.act='drvOpen'; b.textContent='Mở cài đặt Google Drive'; he.appendChild(document.createElement('br')); he.appendChild(b); he.classList.add('show'); return; } }
-  const meta=await gget(`${GAPI}/${DRIVE.root}?fields=name&${kQ()}`).then(r=>r.json()).catch(()=>({}));
-  $('#hubTitle').textContent=meta.name||'Dự án'; document.title=(meta.name||'Dự án')+' · Bảng trắng';
-  const folders=files.filter(isFolder), own=files.filter(f=>kindOf(f));
-  hubData=folders.map(f=>({id:f.id,name:f.name,modified:f.modifiedTime,files:null}));
+  const fail=e=>{ $('#hubTitle').textContent='Chưa đọc được Google Drive'; hubData=[]; $('#hubGrid').innerHTML=''; $('#hubEmpty').textContent=''; renderHubUser();
+    const he=$('#hubErr'); he.textContent=driveErrMsg(e); const b=document.createElement('button'); b.className='btn primary'; b.dataset.act='drvOpen'; b.textContent='Mở cài đặt Google Drive'; he.appendChild(document.createElement('br')); he.appendChild(b); he.classList.add('show'); };
+  if(!files){ try{ await loadRootInfo(); files=rootInfo?await driveList(DRIVE.root):await listMyProjects(); }catch(e){ return fail(e); } }
+  renderHubUser();
+  document.querySelector('#hub .crumb').style.visibility=rootInfo?'':'hidden';
+  const title=rootInfo?.name||(PRIV?'Dự án của bạn':'Dự án');
+  $('#hubTitle').textContent=title; document.title=title+' · Bảng trắng';
+  const folders=files.filter(isFolder), own=rootInfo?files.filter(f=>kindOf(f)):[];
+  hubData=folders.map(f=>({id:f.id,name:f.name,modified:f.modifiedTime,files:null,personal:f.appProperties?.wbPersonal==='1'}));
   if(own.length) hubData.push({id:DRIVE.root,name:'Tệp chung (thư mục chính)',common:true,files:own});
+  if(isAdmin) tagProjects(folders);
+  reqState=null; if(PRIV&&tokenValid()&&!rootInfo) checkMyRequest(folders.length>0);
   renderHub();
   const lim=limiter(4);
   await Promise.all(hubData.filter(p=>!p.files).map(p=>lim(async()=>{ try{ p.files=(await driveList(p.id)).filter(f=>kindOf(f)); }catch{ p.files=[]; p.err=true; } renderHub(); })));
@@ -1198,15 +1304,126 @@ function renderHub(){
   const q=$('#hsearch').value.trim().toLowerCase(); const list=hubData.filter(p=>!q||p.name.toLowerCase().includes(q));
   const ph='<div class="ph"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>';
   const newCard=`<button class="pcard new" data-act="npOpen"><span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Dự án mới<small>${DRIVE.clientId?'Tạo thư mục mới trên Google Drive':'Tạo thư mục con trên Google Drive'}</small></button>`;
-  $('#hubGrid').innerHTML=(q?'':newCard)+list.map(p=>{
+  const canNew=!PRIV||!!rootInfo?.capabilities?.canAddChildren;
+  $('#hubGrid').innerHTML=(q||!canNew?'':newCard)+list.map(p=>{
     const fs=p.files; const th=(fs||[]).filter(f=>f.thumbnailLink).slice(0,4);
     const np=(fs||[]).filter(f=>kindOf(f)==='pdf').length, ni=(fs||[]).length-np;
     const mt=!fs?'Đang đếm tệp…':p.err?'Không đọc được thư mục':fs.length?[np&&`${np} PDF`,ni&&`${ni} ảnh`].filter(Boolean).join(' · '):'Chưa có tệp';
     const d=p.modified?new Date(p.modified):null;
-    return `<a class="pcard${p.common?' common':''}" href="${esc(boardLink(p.id))}"><div class="th${th.length===1?' one':''}">${th.length?th.map(f=>`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(f.thumbnailLink)}" alt="">`).join(''):ph}</div><div class="bd"><div class="nm" title="${esc(p.name)}">${esc(p.name)}</div><div class="mt">${mt}${d&&fs?` · ${d.toLocaleDateString('vi-VN')}`:''}</div></div></a>`; }).join('');
+    return `<a class="pcard${p.common?' common':''}" href="${esc(boardLink(p.id))}"><div class="th${th.length===1?' one':''}">${th.length?th.map(f=>`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(f.thumbnailLink)}" alt="">`).join(''):ph}</div><div class="bd"><div class="nm" title="${esc(p.name)}">${esc(p.name)}${p.personal&&isAdmin?'<span class="tag">Cá nhân</span>':''}</div><div class="mt">${mt}${d&&fs?` · ${d.toLocaleDateString('vi-VN')}`:''}</div></div></a>`; }).join('');
   $('#hubGrid').querySelectorAll('img').forEach(im=>im.onerror=()=>im.remove());
-  $('#hubEmpty').textContent=!hubData.length?'Chưa có dự án nào. Bấm "Dự án mới" để bắt đầu.':!list.length?'Không tìm thấy dự án.':'';
+  const he=$('#hubEmpty');
+  if(!hubData.length&&PRIV&&tokenValid()&&!rootInfo){ // chưa được cấp quyền dự án nào
+    he.innerHTML=`<div class="reqbox"><h3>Bạn chưa được cấp quyền xem dự án nào</h3>`+
+      (reqState==='loading'?'<p>Đang kiểm tra…</p>':reqState?.sent?`<p class="ok">Đã gửi yêu cầu lúc ${esc(new Date(reqState.sent).toLocaleString('vi-VN'))}. Admin duyệt xong, bấm Làm mới ↻ để xem dự án.</p><button class="btn ghost" data-act="reqSend">Gửi lại yêu cầu</button>`
+        :`<p>Gửi yêu cầu để admin duyệt. Admin sẽ nhận email và chọn dự án cho bạn xem.</p><button class="btn primary" data-act="reqSend">Gửi yêu cầu xem dự án</button>`)+
+      `<div class="msg" id="reqMsg"></div></div>`;
+  } else he.textContent=!hubData.length?(canNew?'Chưa có dự án nào. Bấm "Dự án mới" để bắt đầu.':'Chưa có dự án nào.'):!list.length?'Không tìm thấy dự án.':'';
 }
+async function tagProjects(folders){ // gắn nhãn ẩn để người được chia sẻ tìm thấy dự án
+  const lim=limiter(3);
+  await Promise.all(folders.filter(f=>f.appProperties?.wbRoot!==DRIVE.root).map(f=>lim(()=>gapi('PATCH',`${GAPI}/${f.id}?supportsAllDrives=true&fields=id`,{appProperties:{wbRoot:DRIVE.root}}).catch(e=>console.warn('tag',e)))));
+}
+// ----- Xin quyền: tạo 1 tệp nhỏ trong Drive của người xin và chia sẻ cho admin (admin nhận email) -----
+const reqQ=()=>`appProperties has { key='wbReq' and value='${DRIVE.root}' } and trashed=false`;
+async function myRequest(){ const fs=await driveQuery(reqQ()+` and 'me' in owners`,''); return fs[0]||null; }
+async function checkMyRequest(hasProjects){
+  if(!hasProjects) reqState='loading';
+  try{ const f=await myRequest();
+    if(hasProjects){ if(f) gapi('PATCH',`${GAPI}/${f.id}`,{trashed:true}).catch(()=>{}); return; } // đã được duyệt: dọn yêu cầu cũ
+    reqState=f?{id:f.id,sent:f.modifiedTime}:null; }
+  catch{ reqState=null; }
+  renderHub();
+}
+async function sendRequest(){
+  const msg=$('#reqMsg'), btn=document.querySelector('[data-act=reqSend]'); if(btn) btn.disabled=true; if(msg){ msg.className='msg'; msg.textContent='Đang gửi…'; }
+  try{
+    if(!tokenValid()) await signIn();
+    let f=await myRequest().catch(()=>null);
+    const body=JSON.stringify({app:'bang-trang',kind:'access-request',email:me.email,name:me.name,root:DRIVE.root,t:Date.now()});
+    if(!f){ const bd='wb'+uid(); const meta={name:'Bảng trắng – xin quyền xem dự án.json',mimeType:'application/json',appProperties:{wbReq:DRIVE.root},description:`${me.name} (${me.email}) xin quyền xem dự án trên Bảng trắng.`};
+      const r=await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime`,{method:'POST',headers:{Authorization:'Bearer '+gTok.t,'Content-Type':`multipart/related; boundary=${bd}`},
+        body:`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${body}\r\n--${bd}--`});
+      if(!r.ok) throw upErr(r.status,await r.text()); f=await r.json(); }
+    const note=`${me.name} (${me.email}) xin quyền xem dự án trên Bảng trắng. Mở trang để duyệt: ${boardLink(null)} → Quản lý quyền.`;
+    await gapi('POST',`${GAPI}/${f.id}/permissions?sendNotificationEmail=true&emailMessage=${encodeURIComponent(note)}&fields=id`,{type:'user',role:'reader',emailAddress:CONFIG.admin});
+    reqState={id:f.id,sent:new Date().toISOString()}; renderHub(); toast('Đã gửi yêu cầu cho admin',null,2500);
+  }catch(e){ if(btn) btn.disabled=false; const m=$('#reqMsg'); if(m){ m.className='msg err'; m.textContent='Chưa gửi được: '+(e.status!=null?upErrMsg(e):e.message); } }
+}
+// ----- Quản lý quyền (chỉ chủ sở hữu thư mục chính) -----
+const ROLE={reader:'Chỉ xem',commenter:'Chỉ xem',writer:'Xem & ghi chú',fileOrganizer:'Xem & ghi chú',organizer:'Xem & ghi chú',owner:'Chủ sở hữu'};
+const adm={loading:false,err:null,projects:[],rootPerms:[],reqs:[]};
+const isUserPerm=x=>(x.type==='user'||x.type==='group')&&x.role!=='owner';
+const isPublicPerm=x=>x.type==='anyone'||x.type==='domain';
+let reqDismissed=new Set(); try{ reqDismissed=new Set(JSON.parse(localStorage.getItem('wb-reqdis')||'[]')); }catch{}
+async function listPerms(id){ return (await (await gget(`${GAPI}/${id}/permissions?fields=permissions(id,type,role,emailAddress,displayName)&supportsAllDrives=true&${kQ()}`)).json()).permissions||[]; }
+async function loadAdmin(){
+  adm.loading=true; adm.err=null; renderAdmin();
+  try{
+    const projects=hubData.filter(p=>!p.common).map(p=>({id:p.id,name:p.name,personal:!!p.personal,perms:[]}));
+    const [rootPerms,reqFiles]=await Promise.all([listPerms(DRIVE.root),driveQuery(reqQ(),'').catch(()=>[])]);
+    const lim=limiter(4);
+    await Promise.all(projects.map(p=>lim(async()=>{ try{ p.perms=await listPerms(p.id); }catch{ p.err=true; } })));
+    const has=new Set([...rootPerms,...projects.flatMap(p=>p.perms)].filter(isUserPerm).map(x=>normEmail(x.emailAddress)));
+    adm.projects=projects; adm.rootPerms=rootPerms;
+    adm.reqs=reqFiles.map(f=>({id:f.id,email:(f.owners?.[0]?.emailAddress||'').toLowerCase(),name:f.owners?.[0]?.displayName||'',t:f.modifiedTime}))
+      .filter(r=>r.email&&normEmail(r.email)!==normEmail(me?.email)&&!has.has(normEmail(r.email))&&!reqDismissed.has(r.id));
+  }catch(e){ adm.err=e; }
+  adm.loading=false; renderAdmin();
+}
+const personRow=x=>`<div class="pp" data-perm="${esc(x.id)}"><span>${esc(x.displayName||x.emailAddress||'')} <small>${esc(x.displayName?x.emailAddress||'':'')}</small></span><small>${esc(ROLE[x.role]||x.role)}</small><button class="btn ghost" data-act="admRevoke">Thu hồi</button></div>`;
+function renderAdmin(){
+  const b=$('#admBody'); if(!b) return;
+  if(adm.loading&&!adm.projects.length){ b.innerHTML='<p class="hint">Đang tải danh sách quyền…</p>'; return; }
+  if(adm.err){ b.innerHTML=`<div class="warn">Không đọc được quyền: ${esc(adm.err.status!=null&&adm.err.upload?upErrMsg(adm.err):driveErrMsg(adm.err))}</div>`; return; }
+  const projs=adm.projects, rootSet=new Set(adm.rootPerms.filter(isUserPerm).map(x=>normEmail(x.emailAddress)));
+  const pub=adm.rootPerms.some(isPublicPerm)||projs.some(p=>p.perms.some(isPublicPerm));
+  const checks=n=>`<div class="chips">${projs.map(p=>`<label class="${p.personal?'dis':''}"${p.personal?' title="Dự án cá nhân – bỏ đánh dấu Cá nhân nếu muốn chia sẻ"':''}><input type="checkbox" name="${n}" value="${esc(p.id)}"${p.personal?' disabled':''}>${esc(p.name)}${p.personal?' 🔒':''}</label>`).join('')||'<span class="empty">Chưa có dự án.</span>'}</div>`;
+  const roleSel='<select data-role><option value="writer">Xem &amp; ghi chú</option><option value="reader">Chỉ xem</option></select>';
+  let h='';
+  if(pub) h+=`<div class="warn"><b>Thư mục đang chia sẻ công khai.</b> Ai có link đều xem được mọi dự án, kể cả dự án cá nhân, nên phân quyền chưa có tác dụng.<br><button class="btn danger" data-act="admUnpublic">Tắt chia sẻ công khai</button></div>`;
+  if(CONFIG.admin&&normEmail(CONFIG.admin)!==normEmail(me?.email)) h+=`<div class="note">Yêu cầu xin quyền đang gửi tới <b>${esc(CONFIG.admin)}</b>, khác tài khoản bạn đang dùng (${esc(me?.email||'')}), nên bạn sẽ không thấy yêu cầu ở đây.</div>`;
+  h+=`<section><h4>Yêu cầu chờ duyệt (${adm.reqs.length})</h4>`+(adm.reqs.length?adm.reqs.map(r=>`<div class="req" data-req="${esc(r.id)}" data-email="${esc(r.email)}"><b>${esc(r.name||r.email)}</b> <small>${esc(r.email)} · ${esc(fmtAgo(Date.parse(r.t)))}</small>${checks('rq')}<div class="frm">${roleSel}<button class="btn primary" data-act="admApprove">Duyệt</button><button class="btn ghost" data-act="admDismiss">Bỏ qua</button></div></div>`).join(''):'<p class="empty">Không có yêu cầu nào.</p>')+'</section>';
+  h+=`<section class="grant"><h4>Cấp quyền theo email</h4><div class="frm"><input type="email" id="admEmail" placeholder="email@gmail.com" autocomplete="off" spellcheck="false">${roleSel}</div>${checks('gp')}<div class="frm"><button class="btn primary" data-act="admGrant">Cấp quyền</button></div>
+    <p class="hint" style="margin-top:10px">Người mới phải có trong <b>Test users</b> của Google Cloud thì mới đăng nhập được: <a href="https://console.cloud.google.com/auth/audience" target="_blank" rel="noopener">mở trang Test users ↗</a>. Người được cấp quyền sẽ nhận email mời kèm link dự án.</p></section>`;
+  h+=`<section><h4>Ai đang xem dự án nào</h4><p class="hint">Đánh dấu <b>Cá nhân</b> để khóa dự án: không chọn được khi cấp quyền, chỉ mình bạn thấy.</p>`+(projs.map(p=>{ const ppl=p.perms.filter(x=>isUserPerm(x)&&!rootSet.has(normEmail(x.emailAddress)));
+    return `<div class="proj" data-pid="${esc(p.id)}"><div class="ph"><b>${esc(p.name)}</b><label><input type="checkbox" data-personal${p.personal?' checked':''}>Cá nhân</label></div>${p.personal&&ppl.length?`<div class="warn" style="margin:6px 0 0">Dự án cá nhân nhưng vẫn đang chia sẻ cho ${ppl.length} người. Bấm Thu hồi bên dưới.</div>`:''}<div class="ppl">${p.err?'<span class="empty">Không đọc được quyền.</span>':ppl.length?ppl.map(personRow).join(''):'<span class="empty">Chỉ mình bạn.</span>'}</div></div>`; }).join('')||'<p class="empty">Chưa có dự án.</p>')+'</section>';
+  const rootUsers=adm.rootPerms.filter(isUserPerm);
+  if(rootUsers.length) h+=`<section data-pid="${esc(DRIVE.root)}"><h4>Có quyền ở thư mục chính (thấy tất cả dự án)</h4><p class="hint">Những người này thấy mọi dự án, kể cả dự án cá nhân. Thu hồi rồi cấp lại theo từng dự án nếu cần.</p><div class="ppl">${rootUsers.map(personRow).join('')}</div></section>`;
+  b.innerHTML=h;
+}
+function openAdmin(){ if(!isAdmin) return; $('#adm').classList.add('show'); adm.projects=[]; loadAdmin(); }
+async function grantAccess(email,role,ids){
+  email=(email||'').trim().toLowerCase();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Email chưa đúng.');
+  if(!ids.length) throw new Error('Hãy chọn ít nhất 1 dự án.');
+  if(adm.rootPerms.some(x=>isUserPerm(x)&&normEmail(x.emailAddress)===normEmail(email))) throw new Error('Người này đã có quyền ở thư mục chính (thấy tất cả dự án).');
+  let n=0;
+  for(const id of ids){ const p=adm.projects.find(x=>x.id===id); if(!p||p.personal) continue;
+    const ex=p.perms.find(x=>x.type==='user'&&normEmail(x.emailAddress)===normEmail(email));
+    if(ex){ if(ex.role!==role&&ex.role!=='owner') await gapi('PATCH',`${GAPI}/${id}/permissions/${ex.id}?supportsAllDrives=true&fields=id`,{role}); }
+    else { const note=`Bạn được mời xem dự án "${p.name}" trên Bảng trắng. Mở link sau và đăng nhập bằng ${email}: ${boardLink(id)}`;
+      await gapi('POST',`${GAPI}/${id}/permissions?supportsAllDrives=true&sendNotificationEmail=true&emailMessage=${encodeURIComponent(note)}&fields=id`,{type:'user',role,emailAddress:email}); }
+    if(role==='writer') gapi('PATCH',`${GAPI}/${id}?supportsAllDrives=true&fields=id`,{writersCanShare:false}).catch(()=>{});
+    n++; }
+  return n;
+}
+async function admRun(btn,fn){ if(btn) btn.disabled=true; try{ await fn(); }catch(e){ toast(e.status!=null?upErrMsg(e):e.message,null,6000); } finally{ if(btn) btn.disabled=false; } }
+function admAction(a,b){
+  const picked=(root,n)=>[...root.querySelectorAll(`input[name=${n}]:checked`)].map(i=>i.value);
+  if(a==='admApprove'){ const row=b.closest('.req'); admRun(b,async()=>{ const n=await grantAccess(row.dataset.email,row.querySelector('[data-role]').value,picked(row,'rq')); toast(`Đã duyệt ${row.dataset.email} · ${n} dự án`,null,2500); await loadAdmin(); }); }
+  else if(a==='admDismiss'){ const row=b.closest('.req'); reqDismissed.add(row.dataset.req); try{ localStorage.setItem('wb-reqdis',JSON.stringify([...reqDismissed])); }catch{} adm.reqs=adm.reqs.filter(r=>r.id!==row.dataset.req); renderAdmin(); }
+  else if(a==='admGrant'){ const sec=b.closest('.grant'); admRun(b,async()=>{ const em=$('#admEmail').value; const n=await grantAccess(em,sec.querySelector('[data-role]').value,picked(sec,'gp')); toast(`Đã cấp quyền cho ${em.trim()} · ${n} dự án`,null,2500); await loadAdmin(); }); }
+  else if(a==='admRevoke'){ const pid=b.closest('[data-pid]').dataset.pid, perm=b.closest('[data-perm]').dataset.perm;
+    admRun(b,async()=>{ await gapi('DELETE',`${GAPI}/${pid}/permissions/${perm}?supportsAllDrives=true`); toast('Đã thu hồi quyền',null,2000); await loadAdmin(); }); }
+  else if(a==='admUnpublic') admRun(b,async()=>{
+    for(const x of adm.rootPerms.filter(isPublicPerm)) await gapi('DELETE',`${GAPI}/${DRIVE.root}/permissions/${x.id}?supportsAllDrives=true`);
+    for(const p of adm.projects){ let ps; try{ ps=await listPerms(p.id); }catch{ continue; } for(const x of ps.filter(isPublicPerm)) await gapi('DELETE',`${GAPI}/${p.id}/permissions/${x.id}?supportsAllDrives=true`).catch(e=>console.warn(e)); }
+    toast('Đã tắt chia sẻ công khai',null,2500); await loadAdmin(); });
+}
+$('#admBody').addEventListener('change',e=>{ if(!e.target.matches('[data-personal]')) return; const cb=e.target, pid=cb.closest('[data-pid]').dataset.pid, on=cb.checked;
+  admRun(cb,async()=>{ await gapi('PATCH',`${GAPI}/${pid}?supportsAllDrives=true&fields=id`,{appProperties:{wbPersonal:on?'1':null,wbRoot:DRIVE.root}});
+    for(const p of [...adm.projects,...hubData]) if(p.id===pid) p.personal=on; renderAdmin(); renderHub(); }).then(()=>{ cb.checked=!!adm.projects.find(p=>p.id===pid)?.personal; }); });
 function openNewProject(){
   const auto=!!DRIVE.clientId; $('#npAuto').style.display=auto?'':'none'; $('#npManual').style.display=auto?'none':'';
   $('#npDrive').href=`https://drive.google.com/drive/folders/${DRIVE.root}`; $('#npMsg').textContent=''; $('#npName').value='';
@@ -1219,7 +1436,7 @@ async function createProject(){
   try{
     if(!tokenValid()) await signIn();
     const r=await fetch(`${GAPI}?supportsAllDrives=true&fields=id,name`,{method:'POST',headers:{Authorization:'Bearer '+gTok.t,'Content-Type':'application/json; charset=UTF-8'},
-      body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[DRIVE.root]})});
+      body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[DRIVE.root],appProperties:{wbRoot:DRIVE.root}})});
     if(!r.ok) throw upErr(r.status,await r.text());
     const f=await r.json(); msg.style.color='#23894f'; msg.textContent='Đã tạo, đang mở dự án…';
     setTimeout(()=>{ location.href=boardLink(f.id); },400);
@@ -1265,31 +1482,45 @@ const UPFIELDS='id,name,mimeType,size,modifiedTime,md5Checksum,thumbnailLink,ima
 const upLimit=limiter(2);
 const driveKeyOf=f=>`d~${f.id}~${verOf(f)}`;
 function registerDriveFile(f,kind,key){ driveEntries.set(f.id,{f,kind,key}); hidden.delete(f.id); saveHidden(); }
-let gTok=null; try{ const t=JSON.parse(sessionStorage.getItem('wb-gtok')||'null'); if(t&&t.exp>Date.now()) gTok=t; }catch{}
+let gTok=null; try{ const t=JSON.parse(localStorage.getItem('wb-gtok')||'null'); if(t&&t.exp>Date.now()) gTok=t; }catch{}
+const lastMe=()=>{ try{ return JSON.parse(localStorage.getItem('wb-me')||'null'); }catch{ return null; } };
 const tokenValid=()=>gTok&&gTok.exp>Date.now()+60000;
 let gisP=null;
 function loadGIS(){ return gisP ||= new Promise((res,rej)=>{ if(window.google?.accounts?.oauth2) return res();
   const sc=document.createElement('script'); sc.src='https://accounts.google.com/gsi/client'; sc.async=true; sc.onload=()=>res(); sc.onerror=()=>{ gisP=null; rej(new Error('gis')); }; document.head.appendChild(sc); }); }
 let tokClient=null;
-function signIn(){ // must be called from a click
+let gateRes=null;
+function showGate(msg){ // màn hình bắt buộc đăng nhập (chế độ riêng tư)
+  document.body.classList.add('gate','drive'); const lm=lastMe();
+  $('#gateBtn').textContent=lm?`Tiếp tục với ${lm.email}`:'Đăng nhập Google'; $('#gateOther').style.display=lm?'':'none';
+  $('#gateMsg').textContent=msg||''; loadGIS().catch(()=>{});
+  return new Promise(r=>{ gateRes=r; });
+}
+function gateLogin(other){
+  $('#gateMsg').textContent=''; if(other){ try{ localStorage.removeItem('wb-me'); }catch{} me=null; }
+  signIn(other).then(()=>{ document.body.classList.remove('gate'); const r=gateRes; gateRes=null; r?.(); })
+    .catch(e=>{ $('#gateMsg').textContent=/access_denied|verif/i.test(e.message)?'Google chặn đăng nhập: tài khoản này chưa có trong danh sách được phép dùng app (Test users). Hãy nhờ admin thêm email của bạn.':e.message; });
+}
+function signIn(pick=false){ // must be called from a click
   return new Promise((res,rej)=>{
     if(!window.google?.accounts?.oauth2){ loadGIS().catch(()=>{}); return rej(Object.assign(new Error('Chưa tải xong phần đăng nhập Google, bấm lại sau vài giây.'),{upload:true})); }
     tokClient=google.accounts.oauth2.initTokenClient({ client_id:DRIVE.clientId, scope:'https://www.googleapis.com/auth/drive',
       callback:r=>{ if(r.error) return rej(Object.assign(new Error(r.error_description||r.error),{upload:true}));
-        gTok={t:r.access_token,exp:Date.now()+((+r.expires_in||3600)*1000)}; try{ sessionStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{}
+        gTok={t:r.access_token,exp:Date.now()+((+r.expires_in||3600)*1000)}; try{ localStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{}
         fetchMe().then(async()=>{ await onLogin(); res(gTok); }).catch(e=>rej(Object.assign(e,{upload:true}))); },
       error_callback:e=>rej(Object.assign(new Error(e?.type==='popup_closed'?'Bạn đã đóng cửa sổ đăng nhập.':e?.type==='popup_failed_to_open'?'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên (popup).':'Đăng nhập thất bại.'),{upload:true})) });
-    tokClient.requestAccessToken({prompt:'', login_hint:me?.email||undefined});
+    tokClient.requestAccessToken(pick?{prompt:'select_account'}:{prompt:'', login_hint:(me||lastMe())?.email||undefined});
   });
 }
 async function fetchMe(){ const r=await fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress,displayName)',{headers:{Authorization:'Bearer '+gTok.t}});
   if(!r.ok) throw upErr(r.status,await r.text()); const j=await r.json(); const email=(j.user?.emailAddress||'').toLowerCase(); if(!email) throw new Error('Không lấy được email');
   if(me&&me.email!==email){ for(const [id,it] of [...S.items]) if(isNote(it)&&it.own===me.email){ S.items.delete(id); removeEl(id); } rs.notesId=null; rs.notesVer=null; rs.lastNotes=null; }
-  me={email,name:j.user.displayName||email}; try{ sessionStorage.setItem('wb-me',JSON.stringify(me)); }catch{} }
-function signOut(){ if(gTok&&window.google?.accounts?.oauth2) try{ google.accounts.oauth2.revoke(gTok.t,()=>{}); }catch{} gTok=null; me=null; try{ sessionStorage.removeItem('wb-gtok'); sessionStorage.removeItem('wb-me'); }catch{}
+  me={email,name:j.user.displayName||email}; try{ localStorage.setItem('wb-me',JSON.stringify(me)); }catch{} }
+function signOut(){ if(gTok&&window.google?.accounts?.oauth2) try{ google.accounts.oauth2.revoke(gTok.t,()=>{}); }catch{} gTok=null; me=null; try{ localStorage.removeItem('wb-gtok'); localStorage.removeItem('wb-me'); }catch{}
+  if(PRIV){ location.href=boardLink(null); return; }
   if(editing) finishEdit(); applyOwnership(); setAuthNeeded(false); updateRoUI(); requestRender(); toast('Đã đăng xuất Google',null,1500); }
-try{ const m=JSON.parse(sessionStorage.getItem('wb-me')||'null'); if(m&&gTok) me=m; }catch{}
-function upErr(status,body){ let m=''; try{ m=JSON.parse(body).error?.message||''; }catch{} const e=new Error(m||('HTTP '+status)); e.status=status; e.upload=true; if(status===401){ gTok=null; try{ sessionStorage.removeItem('wb-gtok'); }catch{} } return e; }
+{ const m=lastMe(); if(m&&gTok) me=m; }
+function upErr(status,body){ let m=''; try{ m=JSON.parse(body).error?.message||''; }catch{} const e=new Error(m||('HTTP '+status)); e.status=status; e.upload=true; if(status===401){ gTok=null; try{ localStorage.removeItem('wb-gtok'); }catch{} } return e; }
 function upErrMsg(e){
   if(e.status===401) return 'Phiên đăng nhập Google đã hết hạn, hãy thêm lại tệp để đăng nhập lại.';
   if(e.status===403||e.status===404) return 'Tài khoản Google này không có quyền sửa thư mục. Hãy đăng nhập bằng tài khoản chủ thư mục, hoặc được chia sẻ quyền Người chỉnh sửa.';
@@ -1709,8 +1940,14 @@ document.addEventListener('click',e=>{
   else if(a==='drvOpen') openDrv();
   else if(a==='upLogin'){ const pu=pendingUp; $('#upm').classList.remove('show'); signIn().then(()=>{ pendingUp=null; if(pu) importFiles(pu.list,pu.at,'drive'); else toast(`Đã đăng nhập: ${me?.email||''}`,null,2200); }).catch(e=>{ toast(e.message,null,6000); }); }
   else if(a==='upLocal'){ const pu=pendingUp; pendingUp=null; $('#upm').classList.remove('show'); if(pu) importFiles(pu.list,pu.at,'local'); }
+  else if(a==='gIn'&&hubMode) signIn().then(()=>showHub()).catch(e=>toast(e.message,null,6000));
   else if(a==='gIn') signIn().then(()=>toast(`Đã đăng nhập: ${me?.email||''}. Giờ bạn có thể ghi chú.`,null,2500)).catch(e=>toast(e.message,null,6000));
-  else if(a==='gOut') signOut();
+  else if(a==='gOut'||a==='gOutHub') signOut();
+  else if(a==='gateIn'||a==='gateOther') gateLogin(a==='gateOther');
+  else if(a==='reqSend') sendRequest();
+  else if(a==='admOpen') openAdmin();
+  else if(a==='admClose') $('#adm').classList.remove('show');
+  else if(a.startsWith('adm')) admAction(a,b);
   else if(a==='hub') location.href=boardLink(null);
   else if(a==='files') { const f=$('#files'); const was=f.classList.contains('show')&&!f.classList.contains('people'); f.classList.toggle('show',!was); setTab('files'); }
   else if(a==='notesPanel') { const f=$('#files'); const was=f.classList.contains('show')&&f.classList.contains('people'); f.classList.toggle('show',!was); setTab('people'); }
@@ -1809,8 +2046,12 @@ function toast(text, frac, hideMs){
 
 // ================== Boot ==================
 renderPenbar(); renderMenuDrive(); resizeOv();
-document.addEventListener('visibilitychange',()=>{ if(DRIVE && !hubMode && !importing && document.visibilityState==='visible' && Date.now()-lastSync>30000) driveSync(true); });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=='visible'||!DRIVE) return;
+  if(PRIV&&hubMode&&!tokenValid()&&!gateRes){ showGate('Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.').then(()=>showHub()); return; }
+  if(PRIV&&me&&!tokenValid()&&!rs.authNeeded) setAuthNeeded(true);
+  if(!hubMode && !importing && Date.now()-lastSync>30000) driveSync(true); });
 (async()=>{
+  if(PRIV&&!tokenValid()){ setMeta(); await showGate(); }
   const ok=await restore();
   updateCount(); requestRender(); updateLODSoon();
   if(ok && !DRIVE) toast('Đã mở lại bảng đã lưu',null,1800);
@@ -1818,8 +2059,8 @@ document.addEventListener('visibilitychange',()=>{ if(DRIVE && !hubMode && !impo
     if(DRIVE.clientId){ loadGIS().catch(()=>{}); document.querySelectorAll('#actions .lbl').forEach(l=>l.textContent='Tải lên Drive'); }
     let pre=null;
     if(!DRIVE.project){ await showHub(); return; }
-    await loadHidden(); await loadRs(); applyOwnership(); updateRoUI(); await driveSync(false,pre);
-    setInterval(()=>{ if(!hubMode && document.visibilityState==='visible' && !drag && !editing && !toggling && !importing && Date.now()-lastSync>(me?25000:55000)) driveSync(true); },5000);
+    await loadHidden(); await loadRs(); applyOwnership(); updateRoUI(); booted=true; await driveSync(false,pre);
+    setInterval(()=>{ if(PRIV&&me&&!tokenValid()&&!rs.authNeeded) setAuthNeeded(true); if(!hubMode && document.visibilityState==='visible' && !drag && !editing && !toggling && !importing && Date.now()-lastSync>(me?25000:55000)) driveSync(true); },5000);
   }
   try{ await DB.put('meta','probe',1); }catch{ storageOK=false; metaState='err'; setMeta(); }
 })();
