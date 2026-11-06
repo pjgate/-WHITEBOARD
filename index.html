@@ -459,7 +459,7 @@ body.relogin #loginBtn{background:#e0a92b}
 <script type="module">
 // ================== Config ==================
 // Muốn gắn sẵn thư mục Drive vào phần mềm (không cần ?folder=...&key=... trên link), điền 2 dòng này:
-const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyDDObnWu794A3-O9uMJo7PBaOZgVS8KZyQ', clientId: '249929611709-vbbe7mi31ftt3rq5c9a7d6fg84vv5bgc.apps.googleusercontent.com',  // clientId: để tải tệp lên Drive (không bắt buộc)
+const CONFIG = { folder: '1PHc_WrHNJjMZJhZlKQc13EQtY1qZmEgx', apiKey: 'AIzaSyDDObnWu794A3-O9uMJo7PBaOZgVS8KZyQ', clientId: '815013146430-cjh67feg7j7k5asaq72qrkrn3i70048r.apps.googleusercontent.com',  // clientId: để tải tệp lên Drive (không bắt buộc)
   requireLogin: true,              // true: phải đăng nhập Google mới xem được; mỗi người chỉ thấy dự án được chia sẻ cho mình
   admin: 'sangkt0510@gmail.com' }; // email nhận yêu cầu xin quyền (admin thật sự = chủ sở hữu thư mục chính trên Drive)
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/';
@@ -888,7 +888,7 @@ function placePdf(key,sizes,L,x0,y0){
 // ================== Google Drive ==================
 const GAPI='https://www.googleapis.com/drive/v3/files';
 const GEXPORT=new Set(['application/vnd.google-apps.document','application/vnd.google-apps.presentation','application/vnd.google-apps.spreadsheet','application/vnd.google-apps.drawing']);
-const kQ=()=>'key='+encodeURIComponent(DRIVE.key)+'&supportsAllDrives=true';
+const kQ=()=>(tokenValid()?'':'key='+encodeURIComponent(DRIVE.key)+'&')+'supportsAllDrives=true';
 async function gget(url){ // đọc Drive: có đăng nhập thì đọc bằng quyền của người đó
   const auth=tokenValid()?{Authorization:'Bearer '+gTok.t}:undefined;
   let r; try{ r=await fetch(url,auth?{headers:auth}:undefined); }catch(e){ const er=new Error('network'); er.status=0; throw er; }
@@ -1485,7 +1485,7 @@ const UPFIELDS='id,name,mimeType,size,modifiedTime,md5Checksum,thumbnailLink,ima
 const upLimit=limiter(2);
 const driveKeyOf=f=>`d~${f.id}~${verOf(f)}`;
 function registerDriveFile(f,kind,key){ driveEntries.set(f.id,{f,kind,key}); hidden.delete(f.id); saveHidden(); }
-let gTok=null; try{ const t=JSON.parse(localStorage.getItem('wb-gtok')||'null'); if(t&&t.exp>Date.now()) gTok=t; }catch{}
+let gTok=null; try{ const t=JSON.parse(localStorage.getItem('wb-gtok')||'null'); if(t&&t.exp>Date.now()&&t.cid===DRIVE?.clientId) gTok=t; }catch{}
 const lastMe=()=>{ try{ return JSON.parse(localStorage.getItem('wb-me')||'null'); }catch{ return null; } };
 const tokenValid=()=>gTok&&gTok.exp>Date.now()+60000;
 let gisP=null;
@@ -1509,7 +1509,7 @@ function signIn(pick=false){ // must be called from a click
     if(!window.google?.accounts?.oauth2){ loadGIS().catch(()=>{}); return rej(Object.assign(new Error('Chưa tải xong phần đăng nhập Google, bấm lại sau vài giây.'),{upload:true})); }
     tokClient=google.accounts.oauth2.initTokenClient({ client_id:DRIVE.clientId, scope:'https://www.googleapis.com/auth/drive',
       callback:r=>{ if(r.error) return rej(Object.assign(new Error(r.error_description||r.error),{upload:true}));
-        gTok={t:r.access_token,exp:Date.now()+((+r.expires_in||3600)*1000)}; try{ localStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{}
+        gTok={t:r.access_token,exp:Date.now()+((+r.expires_in||3600)*1000),cid:DRIVE.clientId}; try{ localStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{}
         fetchMe().then(async()=>{ await onLogin(); res(gTok); }).catch(e=>rej(Object.assign(e,{upload:true}))); },
       error_callback:e=>rej(Object.assign(new Error(e?.type==='popup_closed'?'Bạn đã đóng cửa sổ đăng nhập.':e?.type==='popup_failed_to_open'?'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên (popup).':'Đăng nhập thất bại.'),{upload:true})) });
     tokClient.requestAccessToken(pick?{prompt:'select_account'}:{prompt:'', login_hint:(me||lastMe())?.email||undefined});
