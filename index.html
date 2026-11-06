@@ -138,7 +138,33 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 #top .ib{width:32px;height:32px} #top .ib svg{width:18px;height:18px}
 #backBtn,#filesBtn{display:none}
 body.proj #backBtn{display:grid} body.drive #filesBtn{display:inline-flex}
-#filesBtn{height:32px;padding:0 10px;font-size:13px;background:#f1f1ee;border-radius:8px}
+#filesBtn,#notesBtn{height:32px;padding:0 10px;font-size:13px;background:#f1f1ee;border-radius:8px}
+#notesBtn{display:inline-flex} #notesBtn b{background:var(--accent);color:#fff;border-radius:9px;font-size:11px;padding:0 6px;line-height:17px;font-weight:600}
+#notesBtn b:empty{display:none}
+/* comment tracking */
+body.focusing #world .item{opacity:.16;transition:opacity .18s}
+body.focusing #world .item.hl{opacity:1}
+#world .item.hl:not(.t-pen):not(.t-arrow){outline:calc(3px * var(--iz,1)) solid var(--hl);outline-offset:calc(3px * var(--iz,1))}
+#world .item.hl.t-pen svg,#world .item.hl.t-arrow svg{filter:drop-shadow(0 0 calc(3px * var(--iz,1)) var(--hl))}
+#world .item.flash{animation:flash 1.4s ease-out}
+@keyframes flash{0%,40%{outline:calc(6px * var(--iz,1)) solid #ffb703;outline-offset:calc(6px * var(--iz,1))}100%{outline:calc(6px * var(--iz,1)) solid transparent;outline-offset:calc(14px * var(--iz,1))}}
+.pgrp{border-radius:10px;margin-bottom:2px}
+.pgrp.focus{background:var(--accent-soft)}
+.pgrp .pn{cursor:pointer}
+.pgrp .exp{width:28px;height:28px;flex:none;transition:transform .15s}
+.pgrp .exp svg{width:16px;height:16px}
+.pgrp.open .exp{transform:rotate(90deg)}
+.plist{display:none;padding:0 6px 8px 50px}
+.pgrp.open .plist{display:block}
+.pitem{display:flex;gap:8px;align-items:flex-start;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:12.5px}
+.pitem:hover{background:rgba(0,0,0,.05)}
+.pitem i{flex:none;width:10px;height:10px;border-radius:3px;margin-top:4px;border:1px solid rgba(0,0,0,.15)}
+.pitem div{flex:1;min-width:0} .pitem div span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .pitem small{color:var(--muted);font-size:11px}
+#focusChip{left:50%;top:calc(66px + env(safe-area-inset-top));transform:translateX(-50%);padding:6px 6px 6px 12px;display:none;align-items:center;gap:8px;font-size:13px;z-index:6;max-width:calc(100vw - 24px)}
+#focusChip.show{display:flex} #focusChip .dot{width:10px;height:10px;border-radius:50%;flex:none}
+#focusChip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#focusChip .ib{width:28px;height:28px} #focusChip .ib svg{width:15px;height:15px}
+@media (max-width:640px){ #focusChip{top:calc(110px + env(safe-area-inset-top))} #notesBtn .lbl2{display:none} }
 #filesBtn:hover{background:#e8e8e3}
 /* files drawer */
 #files{right:12px;top:62px;bottom:12px;width:330px;display:none;flex-direction:column;z-index:7;overflow:hidden}
@@ -249,7 +275,8 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="btn primary" data-act="upload"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Chọn tệp</button>
 </div></div>
 
-<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button></div>
+<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button><button class="btn" id="notesBtn" data-act="notesPanel" title="Theo dõi ghi chú theo người"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl2">Ghi chú</span><b id="notesCnt"></b></button></div>
+<div id="focusChip" class="panel"></div>
 
 <div id="actions" class="panel">
   <button class="btn primary" data-act="upload" title="Thêm ảnh hoặc PDF"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><span class="lbl">Thêm ảnh / PDF</span></button>
@@ -309,7 +336,7 @@ body.relogin #loginBtn{background:#e0a92b}
 <div id="ctx" class="panel"></div>
 <div id="files" class="panel">
   <div class="fh"><b id="fhTitle">Tệp trong dự án</b><span id="fcount"></span><button class="ib" data-act="filesClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-  <div class="ftabs"><button data-tab="files" class="on">Tệp</button><button data-tab="people">Ghi chú</button></div>
+  <div class="ftabs"><button data-tab="files" class="on">Tệp</button><button data-tab="people">Ghi chú theo người</button></div>
   <div id="filesPane"><input id="fsearch" placeholder="Tìm tệp…" autocomplete="off">
   <div class="fbtns"><button data-act="fAll">Hiện tất cả</button><button data-act="fNone">Ẩn tất cả</button></div>
   <div id="flist"></div></div>
@@ -493,6 +520,7 @@ function distC(it){ const c=toWorld(innerWidth/2,innerHeight/2); return Math.hyp
 let rafId=0;
 function requestRender(){ if(!rafId) rafId=requestAnimationFrame(frame); }
 function frame(){
+  world.style.setProperty('--iz',(1/cam.z).toFixed(4));
   rafId=0;
   world.style.transform=`translate(${cam.x}px,${cam.y}px) scale(${cam.z})`;
   let g=24*cam.z; while(g<12) g*=4; while(g>96) g/=4;
@@ -592,10 +620,11 @@ function drawArrowEl(it,el){
 }
 function itemAt(sp,exclude){ for(const el of document.elementsFromPoint(sp.x,sp.y)){ const ie=el.closest?.('#world .item'); if(!ie) continue; const id=ie.dataset.id, t=S.items.get(id);
     if(t&&id!==exclude&&t.type!=='arrow') return t; } return null; }
-function createItem(p){ const it={id:uid(), z:++zTop, ...p}; if(isNote(it)&&DRIVE?.clientId&&me){ it.own=me.email; it.by=me.name; delete it.ro; } S.items.set(it.id,it); buildEl(it); onItemsChanged(); return it; }
+function createItem(p){ const it={id:uid(), z:++zTop, ...p}; if(isNote(it)&&!it.t) it.t=Date.now(); if(isNote(it)&&DRIVE?.clientId&&me){ it.own=me.email; it.by=me.name; delete it.ro; } S.items.set(it.id,it); buildEl(it); onItemsChanged(); return it; }
 function removeEl(id){ const r=els.get(id); if(!r) return; r.el.remove(); els.delete(id); }
 function deleteItems(ids){ if(!ids.length) return; for(const id of ids){ S.items.delete(id); removeEl(id); S.sel.delete(id); } if(DRIVE) recomputeHidden(); onItemsChanged(); renderCtx(); if(DRIVE) saveNow(); }
-function onItemsChanged(){ updateArrows(); requestRender(); saveSoon(); updateCount(); updateLODSoon(); }
+let rpT=0; function renderPeopleSoon(){ clearTimeout(rpT); rpT=setTimeout(renderPeople,300); }
+function onItemsChanged(){ updateArrows(); applyFocus(); renderPeopleSoon(); requestRender(); saveSoon(); updateCount(); updateLODSoon(); }
 function updateCount(){
   const n=S.items.size; $('#empty').classList.toggle('hide', n>0);
   let img=0,pdf=0; for(const it of S.items.values()){ if(it.type==='image') img++; else if(it.type==='pdf') pdf++; }
@@ -1033,20 +1062,72 @@ async function onLogin(){
 }
 // ----- People pane -----
 const avColor=e=>{ let h=2166136261; for(const c of e){ h^=c.charCodeAt(0); h=Math.imul(h,16777619)>>>0; } return `hsl(${(h%24)*15} 58% 46%)`; };
+// ----- Comment tracking (ghi chú theo người) -----
+let focusKey=null; const openGroups=new Set();
+const authorKey=it=>it.own||'_local';
+const keyColor=k=>k==='_local'?'#3b5bfd':avColor(k);
+function fmtAgo(t){ if(!t) return ''; const d=(Date.now()-t)/1000; if(d<60) return 'vừa xong'; if(d<3600) return Math.floor(d/60)+' phút trước'; if(d<86400) return Math.floor(d/3600)+' giờ trước';
+  const x=new Date(t); return x.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'})+' '+x.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}); }
+function noteLabel(it){ const tx=(it.text||'').trim().replace(/\s+/g,' ');
+  if(tx) return tx; return {pen:'Nét vẽ',arrow:'Mũi tên',sticky:'Giấy ghi chú trống',text:'Chữ',shape:it.shape==='ellipse'?'Hình tròn':'Hình chữ nhật'}[it.type]||'Ghi chú'; }
+function noteGroups(){
+  const g=new Map(); const add=(key,name,email,isMe,hiddenFlag)=>{ if(!g.has(key)) g.set(key,{key,name,email,isMe,hidden:hiddenFlag,items:[]}); return g.get(key); };
+  if(me) add(me.email,me.name,me.email,true,false);
+  for(const it of S.items.values()){ if(!isNote(it)) continue; const k=authorKey(it);
+    const grp=g.get(k)||add(k,k==='_local'?'Ghi chú trên máy này':(it.by||k),k==='_local'?'':k,me&&k===me.email,false); grp.items.push(it); }
+  for(const [email,c] of remoteNotes){ const grp=g.get(email)||add(email,c.name,email,false,hiddenAuthors.has(email)); grp.name=c.name; grp.hidden=hiddenAuthors.has(email); if(grp.hidden) grp.items=c.items.slice(); }
+  for(const grp of g.values()) grp.items.sort((a,b)=>(b.t||0)-(a.t||0));
+  return [...g.values()].sort((a,b)=>(b.isMe-a.isMe)||((b.items[0]?.t||0)-(a.items[0]?.t||0)));
+}
 function renderPeople(){
-  const pane=$('#peoplePane'); if(!pane||!DRIVE?.clientId){ document.querySelector('.ftabs')?.style.setProperty('display',DRIVE?.clientId?'':'none'); return; }
-  const cnt=new Map(); for(const it of S.items.values()) if(isNote(it)&&it.own) cnt.set(it.own,(cnt.get(it.own)||0)+1);
-  if($('#files').classList.contains('people')) $('#fcount').textContent=`${remoteNotes.size+(me?1:0)} người`;
-  const rows=[]; const row=(email,name,n,isMe,on)=>`<div class="prow"><input type="checkbox" data-email="${esc(email)}"${on?' checked':''}${isMe?' disabled title="Ghi chú của bạn luôn hiện"':''}><div class="av" style="background:${avColor(email)}">${esc((name||email).trim()[0]||'?').toUpperCase()}</div><div class="pn"><div>${esc(isMe?name+' (bạn)':name)}</div><small>${esc(email)} · ${n} ghi chú</small></div></div>`;
-  if(me) rows.push(row(me.email,me.name,cnt.get(me.email)||0,true,true));
-  for(const [email,c] of remoteNotes) rows.push(row(email,c.name,c.items.length,false,!hiddenAuthors.has(email)));
-  pane.innerHTML=(rows.join('')||'<p class="pnote">Chưa có ai ghi chú trong dự án này.</p>')+`<p class="pnote">${me?'Ghi chú của bạn tự lưu vào <b>'+esc(notesName(me.email))+'</b> trong thư mục dự án. Ghi chú của người khác chỉ xem được, không sửa được.':'Đăng nhập Google để thêm ghi chú của bạn.'}</p>`;
+  const pane=$('#peoplePane'); if(!pane) return;
+  const groups=noteGroups(), total=groups.reduce((n,g0)=>n+(g0.hidden?0:g0.items.length),0);
+  $('#notesCnt').textContent=total||'';
+  if($('#files').classList.contains('people')) $('#fcount').textContent=`${groups.filter(g0=>g0.items.length||g0.isMe).length} người`;
+  const chev='<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
+  const html=groups.map(g0=>{ const col=keyColor(g0.key), n=g0.items.length, last=g0.items[0]?.t;
+    const canHide=!g0.isMe&&g0.key!=='_local'&&remoteNotes.has(g0.key);
+    const list=g0.items.slice(0,200).map(it=>`<div class="pitem" data-nid="${esc(it.id)}" data-key="${esc(g0.key)}"><i style="background:${esc(it.type==='sticky'||(it.type==='shape'&&!it.nofill)?it.color:(it.stroke||it.color||'#2a2d34'))}"></i><div><span>${esc(noteLabel(it))}</span><small>${esc(fmtAgo(it.t)||'')}</small></div></div>`).join('')||'<p class="pnote" style="padding:4px 8px">Chưa có ghi chú.</p>';
+    return `<div class="pgrp${focusKey===g0.key?' focus':''}${openGroups.has(g0.key)?' open':''}" data-key="${esc(g0.key)}"><div class="prow">${canHide?`<input type="checkbox" data-email="${esc(g0.key)}"${g0.hidden?'':' checked'} title="Hiện/ẩn ghi chú của người này">`:'<span style="width:18px;flex:none"></span>'}<div class="av" style="background:${col}">${esc((g0.name||'?').trim()[0]||'?').toUpperCase()}</div><div class="pn" data-focus="${esc(g0.key)}" title="Bấm để làm nổi bật ghi chú của người này"><div>${esc(g0.isMe?g0.name+' (bạn)':g0.name)}</div><small>${n} ghi chú${last?' · mới nhất '+esc(fmtAgo(last)):''}${g0.hidden?' · đang ẩn':''}</small></div><button class="ib exp" data-exp="${esc(g0.key)}" title="Xem danh sách">${chev}</button></div><div class="plist">${list}</div></div>`; }).join('');
+  pane.innerHTML=(html||'<p class="pnote">Chưa có ghi chú nào trên bảng.</p>')+`<p class="pnote">Bấm tên một người để làm nổi bật ghi chú của họ trên bảng. Bấm từng ghi chú để bay tới đó.${DRIVE?.clientId?(me?' Ghi chú của bạn tự lưu vào <b>'+esc(notesName(me.email))+'</b>.':' Đăng nhập Google để thêm ghi chú của bạn.'):''}</p>`;
+}
+function applyFocus(){
+  document.body.classList.toggle('focusing',!!focusKey);
+  for(const [id,r] of els){ const it=S.items.get(id); const on=!!(focusKey&&it&&isNote(it)&&authorKey(it)===focusKey); r.el.classList.toggle('hl',on); if(on) r.el.style.setProperty('--hl',keyColor(focusKey)); }
+  const chip=$('#focusChip');
+  if(!focusKey){ chip.classList.remove('show'); return; }
+  const g0=noteGroups().find(x=>x.key===focusKey); const n=g0?g0.items.length:0;
+  chip.innerHTML=`<i class="dot" style="background:${keyColor(focusKey)}"></i><span>Ghi chú của <b>${esc(g0?(g0.isMe?'bạn':g0.name):focusKey)}</b> · ${n}</span><button class="ib" data-act="focusOff" title="Bỏ làm nổi bật (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`;
+  chip.classList.add('show');
+}
+function setFocus(key){
+  focusKey=key&&focusKey!==key?key:null;
+  if(focusKey&&hiddenAuthors.has(focusKey)){ hiddenAuthors.delete(focusKey); try{ localStorage.setItem('wb-ha-'+DRIVE.folder,JSON.stringify([...hiddenAuthors])); }catch{} rebuildAuthor(focusKey); onItemsChanged(); }
+  if(focusKey) openGroups.add(focusKey);
+  applyFocus(); renderPeople();
+  if(focusKey){ const its=[...S.items.values()].filter(i=>isNote(i)&&authorKey(i)===focusKey); if(its.length) fitTo(its,1.5); }
+}
+function goToNote(id,key){
+  let it=S.items.get(id);
+  if(!it&&key&&hiddenAuthors.has(key)){ hiddenAuthors.delete(key); try{ localStorage.setItem('wb-ha-'+DRIVE.folder,JSON.stringify([...hiddenAuthors])); }catch{} rebuildAuthor(key); onItemsChanged(); renderPeople(); it=S.items.get(id); }
+  if(!it) return; fitTo([it],Math.max(cam.z,1.2)); if(canEdit(it)&&!it.locked) setSel([it.id]);
+  const el=els.get(it.id)?.el; if(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1500); }
+  if(innerWidth<640) $('#files').classList.remove('show');
 }
 $('#peoplePane').addEventListener('change',e=>{ const em=e.target.dataset.email; if(!em) return; e.target.checked?hiddenAuthors.delete(em):hiddenAuthors.add(em);
+  if(!e.target.checked&&focusKey===em){ focusKey=null; }
   try{ localStorage.setItem('wb-ha-'+DRIVE.folder,JSON.stringify([...hiddenAuthors])); }catch{} rebuildAuthor(em); onItemsChanged(); renderPeople(); });
-document.querySelector('.ftabs').addEventListener('click',e=>{ const t=e.target.closest('[data-tab]'); if(!t) return;
-  document.querySelectorAll('.ftabs button').forEach(b=>b.classList.toggle('on',b===t)); $('#files').classList.toggle('people',t.dataset.tab==='people');
-  $('#fhTitle').textContent=t.dataset.tab==='people'?'Ghi chú theo người':'Tệp trong dự án'; renderFiles(); renderPeople(); });
+$('#peoplePane').addEventListener('click',e=>{
+  if(e.target.closest('input')) return;
+  const ex=e.target.closest('[data-exp]'); if(ex){ const k=ex.dataset.exp; openGroups.has(k)?openGroups.delete(k):openGroups.add(k); renderPeople(); return; }
+  const fc=e.target.closest('[data-focus]'); if(fc){ setFocus(fc.dataset.focus); return; }
+  const pi=e.target.closest('[data-nid]'); if(pi) goToNote(pi.dataset.nid,pi.dataset.key);
+});
+function setTab(t){ if(!DRIVE&&t==='files') t='people';
+  document.querySelectorAll('.ftabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t)); $('#files').classList.toggle('people',t==='people');
+  document.querySelector('.ftabs [data-tab=files]').style.display=DRIVE?'':'none';
+  $('#fhTitle').textContent=t==='people'?'Theo dõi ghi chú':'Tệp trong dự án'; renderFiles(); renderPeople(); }
+document.querySelector('.ftabs').addEventListener('click',e=>{ const t=e.target.closest('[data-tab]'); if(t) setTab(t.dataset.tab); });
 
 // ----- Files drawer (bảng con) -----
 const fmtSize=n=>!n?'':n>1e6?(n/1e6).toFixed(1)+' MB':Math.max(1,Math.round(n/1e3))+' KB';
@@ -1279,7 +1360,7 @@ function finishEdit(){
   if(!editing) return; const {id}=editing; editing=null;
   const it=S.items.get(id), r=els.get(id); if(!it||!r) return;
   r.txt.onblur=null; r.txt.oninput=null; r.txt.contentEditable='false'; r.el.classList.remove('editing');
-  it.text=r.txt.innerText.replace(/\n$/,''); getSelection()?.removeAllRanges();
+  { const nt=r.txt.innerText.replace(/\n$/,''); if(nt!==it.text) it.t=Date.now(); it.text=nt; } getSelection()?.removeAllRanges();
   if(it.type==='text'){ if(!it.text.trim()){ deleteItems([id]); return; } fitText(it); }
   syncEl(it); saveSoon(); renderCtx(); requestRender();
 }
@@ -1582,7 +1663,7 @@ function toBack(){ if(!S.sel.size) return; checkpoint(); let mn=Math.min(...[...
   [...S.sel].map(id=>S.items.get(id)).sort((a,b)=>b.z-a.z).forEach(it=>{ it.z=--mn; syncEl(it); }); saveSoon(); }
 let clip=null;
 function cloneItems(list,dx,dy=dx){ if(!editMode()) return openLogin(); checkpoint(); const ids=[], map=new Map(), arrows=[];
-  for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,locked,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
+  for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,locked,t,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
     if(rest.type==='arrow'){ rest.a.x+=dx; rest.a.y+=dy; rest.b.x+=dx; rest.b.y+=dy; }
     const n=createItem(rest); map.set(id,n.id); ids.push(n.id); if(n.type==='arrow') arrows.push(n); }
   for(const n of arrows){ for(const k of ['a','b']) if(n[k].id&&map.has(n[k].id)) n[k].id=map.get(n[k].id); updateArrow(n); }
@@ -1622,7 +1703,9 @@ document.addEventListener('click',e=>{
   else if(a==='gIn') signIn().then(()=>toast(`Đã đăng nhập: ${me?.email||''}. Giờ bạn có thể ghi chú.`,null,2500)).catch(e=>toast(e.message,null,6000));
   else if(a==='gOut') signOut();
   else if(a==='hub') location.href=boardLink(null);
-  else if(a==='files') { const f=$('#files'); f.classList.toggle('show'); renderFiles(); }
+  else if(a==='files') { const f=$('#files'); const was=f.classList.contains('show')&&!f.classList.contains('people'); f.classList.toggle('show',!was); setTab('files'); }
+  else if(a==='notesPanel') { const f=$('#files'); const was=f.classList.contains('show')&&f.classList.contains('people'); f.classList.toggle('show',!was); setTab('people'); }
+  else if(a==='focusOff') setFocus(null);
   else if(a==='filesClose') $('#files').classList.remove('show');
   else if((a==='fAll'||a==='fNone')&&!editMode()) openLogin();
   else if(a==='fAll') setFilesShown([...hidden].filter(f=>driveEntries.has(f)),true);
@@ -1666,7 +1749,7 @@ addEventListener('keydown',e=>{
   if(mod&&k==='0'){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,1/cam.z); return; }
   if(mod) return;
   if(k==='delete'||k==='backspace'){ e.preventDefault(); deleteSel(); return; }
-  if(k==='escape'){ setSel([]); setTool('select'); closeMenus(); return; }
+  if(k==='escape'){ if(focusKey){ setFocus(null); return; } setSel([]); setTool('select'); closeMenus(); return; }
   if(e.shiftKey&&e.code==='Digit1'){ fitTo([...S.items.values()]); return; }
   if(e.shiftKey&&e.code==='Digit2'){ fitTo([...S.sel].map(id=>S.items.get(id)).filter(Boolean),12); return; }
   if(k==='enter'&&S.sel.size===1){ const id=[...S.sel][0]; if(els.get(id)?.txt){ e.preventDefault(); startEdit(id); } return; }
