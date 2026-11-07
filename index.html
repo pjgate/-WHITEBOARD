@@ -156,6 +156,7 @@ body.focusing #world .item.hl{opacity:1}
 #world .item.hl:not(.t-pen):not(.t-arrow){outline:calc(3px * var(--iz,1)) solid var(--hl);outline-offset:calc(3px * var(--iz,1))}
 #world .item.hl.t-pen svg,#world .item.hl.t-arrow svg{filter:drop-shadow(0 0 calc(3px * var(--iz,1)) var(--hl))}
 #world .item.flash{animation:flash 1.4s ease-out}
+body.hide-mine #world .item.mine{display:none!important}
 @keyframes flash{0%,40%{outline:calc(6px * var(--iz,1)) solid #ffb703;outline-offset:calc(6px * var(--iz,1))}100%{outline:calc(6px * var(--iz,1)) solid transparent;outline-offset:calc(14px * var(--iz,1))}}
 .pgrp{border-radius:10px;margin-bottom:2px}
 .pgrp.focus{background:var(--accent-soft)}
@@ -382,6 +383,7 @@ body.relogin #loginBtn{background:#e0a92b}
 <div id="menu" class="panel">
   <button data-act="fit"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Xem toàn bộ bảng</button>
   <button data-act="selall"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/></svg>Chọn tất cả</button>
+  <button data-act="hideMine" id="hmBtn"><svg viewBox="0 0 24 24"><path d="M3 12s3.5-6.5 9-6.5 9 6.5 9 6.5-3.5 6.5-9 6.5S3 12 3 12z"/><circle cx="12" cy="12" r="2.6"/></svg><span>Ẩn ghi chú của tôi</span></button>
   <div id="menuDrive"></div>
   <button data-act="lockMedia"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Khóa tất cả ảnh &amp; PDF</button>
   <button data-act="unlockAll"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>Mở khóa tất cả</button>
@@ -423,6 +425,8 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Nhân bản</td><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td></tr>
     <tr><td>Xóa</td><td><kbd>Delete</kbd></td></tr>
     <tr><td>Xoay</td><td>Kéo nút tròn phía trên (<kbd>Shift</kbd>: bước 15°)</td></tr>
+    <tr><td>Nhóm / bỏ nhóm</td><td><kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd></td></tr>
+    <tr><td>Chọn 1 đối tượng trong nhóm</td><td>Bấm thêm lần nữa vào nó</td></tr>
     <tr><td>Khóa / mở khóa</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td></tr>
     <tr><td>Mũi tên nối đối tượng</td><td><kbd>A</kbd> rồi kéo</td></tr>
     <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>P</kbd></td></tr>
@@ -704,7 +708,7 @@ function buildEl(it){
 function syncPos(it){ const s=els.get(it.id)?.el.style; if(!s) return; s.transform=`translate(${it.x}px,${it.y}px)`+(it.rot?` rotate(${it.rot}deg)`:''); s.width=it.w+'px'; s.height=it.h+'px'; }
 function syncEl(it){
   const r=els.get(it.id); if(!r) return; const el=r.el, s=el.style;
-  syncPos(it); s.zIndex=it.z;
+  syncPos(it); s.zIndex=it.z; el.classList.toggle('mine',isMine(it));
   if(it.type==='image'){ const a=assets.get(it.key); if(a?.thumbUrl && !r.img.getAttribute('src')){ r.img.src=a.thumbUrl; r.level='t'; } }
   else if(it.type==='pdf'){ const u=pdfThumbs.get(it.key+'#'+it.page); if(u && !r.img.getAttribute('src')){ r.img.src=u; el.classList.add('ready'); } }
   else if(it.type==='sticky'){ s.background=it.color; s.fontSize=it.fs+'px'; if(editing?.id!==it.id) r.txt.textContent=it.text||''; }
@@ -747,7 +751,7 @@ function drawArrowEl(it,el){
 }
 function itemAt(sp,exclude){ for(const el of document.elementsFromPoint(sp.x,sp.y)){ const ie=el.closest?.('#world .item'); if(!ie) continue; const id=ie.dataset.id, t=S.items.get(id);
     if(t&&id!==exclude&&t.type!=='arrow') return t; } return null; }
-function createItem(p){ const it={id:uid(), z:++zTop, ...p}; if(isNote(it)&&!it.t) it.t=Date.now(); if(isNote(it)&&DRIVE?.clientId&&me){ it.own=me.email; it.by=me.name; delete it.ro; } S.items.set(it.id,it); buildEl(it); onItemsChanged(); return it; }
+function createItem(p){ if(hideMine&&NOTE_T.has(p.type)) setHideMine(false); const it={id:uid(), z:++zTop, ...p}; if(isNote(it)&&!it.t) it.t=Date.now(); if(isNote(it)&&DRIVE?.clientId&&me){ it.own=me.email; it.by=me.name; delete it.ro; } S.items.set(it.id,it); buildEl(it); onItemsChanged(); return it; }
 function removeEl(id){ const r=els.get(id); if(!r) return; r.el.remove(); els.delete(id); }
 function deleteItems(ids){ if(!ids.length) return; for(const id of ids){ S.items.delete(id); removeEl(id); S.sel.delete(id); } if(DRIVE) recomputeHidden(); onItemsChanged(); renderCtx(); if(DRIVE) saveNow(); }
 let rpT=0; function renderPeopleSoon(){ clearTimeout(rpT); rpT=setTimeout(renderPeople,300); }
@@ -1020,7 +1024,9 @@ function recomputeHidden(){ // after a user change: every Drive file not on the 
   if(!driveEntries.size||syncing) return; const pres=new Set([...S.items.values()].map(fidOf).filter(Boolean));
   hidden=new Set([...driveEntries.keys()].filter(f=>!pres.has(f))); saveHidden(); renderFiles(); }
 async function driveSync(quiet=false, preFiles=null){
-  if(!DRIVE||syncing) return; syncing=true; lastSync=Date.now();
+  if(!DRIVE||syncing) return;
+  if(rs.saving){ setTimeout(()=>driveSync(quiet,preFiles),800); return; } // đang ghi lên Drive: đợi ghi xong rồi mới đọc, tránh đọc phải bản cũ
+  syncing=true; lastSync=Date.now(); let retry=false;
   try{
     if(!quiet) toast('Đang đọc thư mục Google Drive…');
     const authed=tokenValid();
@@ -1039,17 +1045,19 @@ async function driveSync(quiet=false, preFiles=null){
         assets.set(key,a); }
     }
     driveEntries=byId;
-    let changed=false, applied=false;
+    let changed=false, applied=false, layoutFail=false;
     // shared layout (board.json)
     if(boardFile){
       rs.layoutId=boardFile.id;
       const done=await DB.get('meta','boardjson').catch(()=>null), v=boardFile.id+'~'+verOf(boardFile);
       if(done!==v||!rs.layoutOk){ try{ const j=await (await gget(`${GAPI}/${boardFile.id}?alt=media&${kQ()}`)).json();
-          if(applyBoardJson(j,byId)){ applied=changed=true; rs.lastLayout=JSON.stringify(layoutPayload()); rs.layoutVer=v; rs.layoutOk=true; } await DB.put('meta','boardjson',v).catch(()=>{}); }
-        catch(e){ console.warn('board.json',e); } }
+          if(!j||!Array.isArray(j.items)) throw new Error('board.json lỗi');
+          if(busy()){ layoutFail=retry=true; } // đang kéo/sửa: không thay bố cục giữa chừng, thử lại sau
+          else { if(applyRemoteLayout(j,byId)) applied=changed=true; rs.layoutVer=v; rs.layoutOk=true; await DB.put('meta','boardjson',v).catch(()=>{}); } }
+        catch(e){ console.warn('board.json',e); layoutFail=true; } }
     } else rs.layoutOk=true;
     // notes per email
-    if(DRIVE.clientId){ if(await syncNotes(noteFiles)) changed=true; }
+    if(DRIVE.clientId){ if(busy()) retry=true; else if(await syncNotes(noteFiles)) changed=true; }
     const present=new Set(), del=[];
     for(const it of S.items.values()){
       const fid=fidOf(it); if(!fid) continue; const e=byId.get(fid);
@@ -1059,7 +1067,7 @@ async function driveSync(quiet=false, preFiles=null){
     }
     if(del.length){ for(const id of del){ S.items.delete(id); removeEl(id); S.sel.delete(id); } changed=true; }
     let hc=false; for(const f of [...hidden]) if(!byId.has(f)||present.has(f)){ hidden.delete(f); hc=true; } if(hc) saveHidden();
-    const fresh=[...byId.values()].filter(e=>!present.has(e.f.id)&&!hidden.has(e.f.id));
+    const fresh=layoutFail?[]:[...byId.values()].filter(e=>!present.has(e.f.id)&&!hidden.has(e.f.id)); // chưa đọc được bố cục chung thì không tự xếp tệp (tránh xếp lại lung tung)
     let added=[];
     if(fresh.length){ added=await placeDriveFiles(fresh); changed=true; }
     const live=new Set([...byId.values()].map(e=>e.key));
@@ -1072,7 +1080,7 @@ async function driveSync(quiet=false, preFiles=null){
     const msg=applied?'Đã cập nhật bố cục chung':added.length?`Đã thêm ${added.length} mục mới từ Google Drive`:del.length?'Đã cập nhật theo Google Drive':'Đã đồng bộ với Google Drive';
     if(!quiet||changed) toast(msg, null, 2600);
   }catch(e){ console.warn(e); if(!quiet){ driveName='lỗi kết nối'; setMeta(); toast(driveErrMsg(e), null, 9000); } }
-  finally{ syncing=false; }
+  finally{ syncing=false; if(retry) setTimeout(()=>driveSync(true),1500); }
 }
 async function openRevisions(){
   if(!editMode()) return openLogin(); const box=$('#revList'); $('#revm').classList.add('show');
@@ -1086,7 +1094,7 @@ async function openRevisions(){
 async function useRevision(id,btn){
   if(btn) btn.disabled=true;
   try{ const j=await (await gget(`${GAPI}/${rs.layoutId}/revisions/${id}?alt=media&${kQ()}`)).json();
-    checkpoint(); if(!applyBoardJson(j,driveEntries)) throw new Error('Bản này không đọc được.');
+    if(!j||!Array.isArray(j.items)) throw new Error('Bản này không đọc được.'); checkpoint(); const R=normLayout(j,driveEntries); applyItems(fidOf,R.items); hidden=new Set(R.hidden); saveHidden(); afterApply();
     $('#revm').classList.remove('show'); onItemsChanged(); renderCtx(); refreshVisible(); renderFiles(); fitTo([...S.items.values()]);
     rs.layoutOk=true; scheduleRemoteSave(); toast('Đã khôi phục bố cục, đang lưu lên Drive cho mọi người…',null,3000);
   }catch(e){ if(btn) btn.disabled=false; toast(e.status!=null?driveErrMsg(e):e.message,null,6000); }
@@ -1120,18 +1128,56 @@ async function placeDriveFiles(entries){
   }
   return created;
 }
-function applyBoardJson(j,byId){ // shared layout: only Drive-file items + hidden list
-  if(!j||!Array.isArray(j.items)) return false;
-  for(const [id,it] of [...S.items]) if(fidOf(it)){ S.items.delete(id); removeEl(id); S.sel.delete(id); }
-  for(const src of j.items){ if(!src||!src.id||!src.key?.startsWith('d~')) continue; const e=byId.get(src.key.split('~')[1]); if(!e) continue;
-    const it={...src,key:e.key}; delete it.ro; S.items.set(it.id,it); buildEl(it); }
-  hidden=new Set(Array.isArray(j.hidden)?j.hidden:[]); saveHidden();
-  zTop=Math.max(1,...[...S.items.values()].map(i=>i.z||0)); undoS.length=0; redoS.length=0;
-  return true;
+// ----- Bố cục chung: gộp 3 chiều, không làm mất thao tác của máy này -----
+const busy=()=>!!(editing||(drag&&drag.type!=='pan'&&drag.type!=='pinch'));
+const stab=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((r,x)=>(r[x]=v[x],r),{}):v);
+const sameIt=(a,b)=>(!a&&!b)||(!!a&&!!b&&stab(clean(a))===stab(clean(b)));
+function merge3(base,local,remote){ // từng đối tượng: máy này đã đổi so với bản gốc -> giữ của máy này; chưa đổi -> lấy bản trên Drive
+  const B=new Map(base.map(i=>[i.id,i])), L=new Map(local.map(i=>[i.id,i])), R=new Map(remote.map(i=>[i.id,i])), out=new Map();
+  for(const id of new Set([...B.keys(),...L.keys(),...R.keys()])){ const b=B.get(id), l=L.get(id), r=R.get(id);
+    const v=sameIt(l,b)?r:sameIt(r,b)?l:(l||r); if(v) out.set(id,v); }
+  return out;
+}
+function normLayout(j,byId){ const items=[];
+  for(const src of (j.items||[])){ if(!src||!src.id||!src.key?.startsWith('d~')) continue; const e=byId.get(src.key.split('~')[1]); if(!e) continue;
+    const it={...src,key:e.key}; delete it.ro; items.push(it); }
+  return {items, hidden:Array.isArray(j.hidden)?j.hidden:[]};
+}
+const layoutStr=(items,hid)=>JSON.stringify({app:'bang-trang',v:2,kind:'layout',items:items.map(clean).sort((a,b)=>a.id<b.id?-1:1),hidden:[...hid].sort()});
+function applyItems(pred,list){ // cập nhật tại chỗ: đối tượng không đổi thì giữ nguyên (không dựng lại, không nhảy)
+  const keep=new Set(); let ch=false;
+  for(const it of list){ keep.add(it.id); const old=S.items.get(it.id);
+    if(old&&els.has(it.id)&&sameIt(old,it)&&!!old.ro===!!it.ro) continue;
+    ch=true;
+    if(old&&els.has(it.id)&&old.type===it.type){ const kc=old.key!==it.key; S.items.set(it.id,it); if(kc) resetMedia(it); syncEl(it); }
+    else { if(old) removeEl(it.id); S.items.set(it.id,it); buildEl(it); } }
+  for(const [id,it] of [...S.items]) if(pred(it)&&!keep.has(id)){ S.items.delete(id); removeEl(id); S.sel.delete(id); ch=true; }
+  return ch;
+}
+function afterApply(){ zTop=Math.max(1,...[...S.items.values()].map(i=>i.z||0)); for(const id of [...S.sel]) if(!S.items.has(id)) S.sel.delete(id); }
+function applyRemoteLayout(j,byId){
+  const R=normLayout(j,byId); let items=R.items, hid=new Set(R.hidden);
+  let base=null; try{ base=rs.lastLayout?JSON.parse(rs.lastLayout):null; }catch{}
+  if(base&&Array.isArray(base.items)&&me&&editMode()){
+    const loc=[...S.items.values()].filter(fidOf).map(clean);
+    const m=merge3(base.items,loc,R.items);
+    // cùng một tệp được 2 máy tự xếp với id khác nhau -> dùng bản trên Drive
+    const bIds=new Set(base.items.map(i=>i.id)), rIds=new Set(R.items.map(i=>i.id)), rF=new Set(R.items.map(fidOf));
+    for(const it of loc) if(!bIds.has(it.id)&&!rIds.has(it.id)&&rF.has(fidOf(it))) m.delete(it.id);
+    items=[...m.values()];
+    const bH=new Set(base.hidden||[]); for(const f of hidden) if(!bH.has(f)) hid.add(f); for(const f of bH) if(!hidden.has(f)) hid.delete(f);
+  }
+  const pres=new Set(items.map(fidOf)); for(const f of [...hid]) if(pres.has(f)) hid.delete(f);
+  const ch=applyItems(fidOf,items);
+  const hc=stab([...hid].sort())!==stab([...hidden].sort()); hidden=hid; saveHidden();
+  afterApply(); if(ch) { undoS.length=0; redoS.length=0; }
+  rs.lastLayout=layoutStr(R.items,R.hidden); // bản gốc = bản đang có trên Drive; phần khác (của máy này) sẽ được lưu lên
+  persistRs(); saveNow();
+  return ch||hc;
 }
 const clean=it=>{ const {ro,...x}=it; return x; };
 function layoutPayload(){ return {app:'bang-trang',v:2,kind:'layout',items:[...S.items.values()].filter(fidOf).map(clean).sort((a,b)=>a.id<b.id?-1:1),hidden:[...hidden].sort()}; }
-function notesPayload(){ return {app:'bang-trang',v:2,kind:'notes',email:me?.email,name:me?.name,items:[...S.items.values()].filter(i=>isNote(i)&&me&&i.own===me.email).map(clean).sort((a,b)=>a.id<b.id?-1:1)}; }
+function notesPayload(list){ return {app:'bang-trang',v:2,kind:'notes',email:me?.email,name:me?.name,items:(list||[...S.items.values()].filter(i=>isNote(i)&&me&&i.own===me.email)).map(clean).sort((a,b)=>a.id<b.id?-1:1)}; }
 function exportBoard(){
   const blob=new Blob([JSON.stringify(layoutPayload())],{type:'application/json'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='board.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -1142,6 +1188,17 @@ function exportBoard(){
 // ----- Accounts, per-email notes, remote save -----
 const NOTE_T=new Set(['sticky','text','shape','pen','arrow']);
 function isNote(it){ return !!it&&NOTE_T.has(it.type); }
+// ----- Ẩn ghi chú của chính mình (chỉ trên máy này, không xóa gì) -----
+let hideMine=false; try{ hideMine=localStorage.getItem('wb-hm-'+(DRIVE?.folder||''))==='1'; }catch{}
+const isMine=it=>isNote(it)&&!it.ro;
+const hidMine=it=>hideMine&&isMine(it);
+function markMine(it){ els.get(it.id)?.el.classList.toggle('mine',isMine(it)); }
+function setHideMine(v,quiet){ hideMine=!!v; try{ localStorage.setItem('wb-hm-'+(DRIVE?.folder||''),hideMine?'1':'0'); }catch{}
+  document.body.classList.toggle('hide-mine',hideMine); for(const it of S.items.values()) markMine(it);
+  const b=document.querySelector('#hmBtn span'); if(b) b.textContent=hideMine?'Hiện ghi chú của tôi':'Ẩn ghi chú của tôi';
+  if(hideMine&&focusKey&&me&&focusKey===me.email) focusKey=null;
+  setSel([...S.sel]); applyFocus(); renderPeople(); requestRender();
+  if(!quiet) toast(hideMine?'Đã ẩn ghi chú của bạn (chỉ trên máy này). Bật lại trong menu ⋯ hoặc mục Ghi chú theo người.':'Đã hiện lại ghi chú của bạn',null,hideMine?4000:1800); }
 function needLogin(){ return !!(DRIVE&&DRIVE.clientId&&!hubMode); }
 function editMode(){ return !needLogin()||(!!me&&canWrite); }
 function canEdit(it){ return !!it&&!it.ro&&editMode(); }
@@ -1153,24 +1210,25 @@ const notesName=e=>`notes-${e}.json`;
 function remoteTxt(){ if(!needLogin()) return ''; if(!me) return 'chỉ xem'; if(!canWrite) return 'chỉ xem (bạn chưa có quyền ghi chú ở dự án này)'; if(rs.authNeeded) return 'chưa lưu lên Drive (cần đăng nhập lại)';
   return {saving:'đang lưu lên Drive…',ok:'đã lưu lên Drive',err:'lỗi lưu lên Drive',pending:'chờ lưu lên Drive…'}[rs.state]||''; }
 function setRemote(st){ rs.state=st; setMeta(); }
-async function persistRs(){ try{ await DB.put('meta','rs',{layoutId:rs.layoutId,lastLayout:rs.lastLayout,notesId:rs.notesId,notesVer:rs.notesVer,lastNotes:rs.lastNotes,email:me?.email}); }catch{} }
-async function loadRs(){ try{ const x=await DB.get('meta','rs'); if(x){ rs.layoutId=x.layoutId; rs.lastLayout=x.lastLayout; if(!me||x.email===me.email){ rs.notesId=x.notesId; rs.notesVer=x.notesVer; rs.lastNotes=x.lastNotes; } } }catch{} }
+async function persistRs(){ try{ await DB.put('meta','rs',{layoutId:rs.layoutId,baseL:rs.lastLayout,notesId:rs.notesId,notesVer:rs.notesVer,baseN:rs.lastNotes,email:me?.email}); }catch{} }
+async function loadRs(){ try{ const x=await DB.get('meta','rs'); if(x){ rs.layoutId=x.layoutId; rs.lastLayout=x.baseL??null; if(!me||x.email===me.email){ rs.notesId=x.notesId; rs.notesVer=x.notesVer; rs.lastNotes=x.baseN??null; } } }catch{} }
 function applyOwnership(){
   if(!DRIVE?.clientId) return;
   for(const it of S.items.values()){ if(!isNote(it)) continue;
     if(!it.own){ if(me){ it.own=me.email; it.by=me.name; } else continue; }
-    it.ro=!me||it.own!==me.email; }
+    it.ro=!me||it.own!==me.email; markMine(it); }
 }
 async function syncNotes(noteFiles){
   let changed=false; const seen=new Set();
   for(const {f,email} of noteFiles){ const v=verOf(f);
     if(me&&email===me.email){ rs.notesId=f.id;
-      if(v!==rs.notesVer){ const cur=JSON.stringify(notesPayload()); const pending=rs.lastNotes!=null&&cur!==rs.lastNotes;
-        if(!pending||rs.lastNotes==null){ try{ const j=await (await gget(`${GAPI}/${f.id}?alt=media&${kQ()}`)).json();
-            for(const [id,it] of [...S.items]) if(isNote(it)&&it.own===me.email){ S.items.delete(id); removeEl(id); S.sel.delete(id); }
-            for(const src of (j.items||[])){ if(!isNote(src)||!src.id) continue; const it={...src,own:me.email,by:me.name}; delete it.ro; S.items.set(it.id,it); buildEl(it); }
-            rs.notesVer=v; rs.lastNotes=JSON.stringify(notesPayload()); changed=true; persistRs(); }catch(e){ console.warn('my notes',e); } }
-      }
+      if(v!==rs.notesVer){ try{ const j=await (await gget(`${GAPI}/${f.id}?alt=media&${kQ()}`)).json();
+          const R=(j.items||[]).filter(src=>isNote(src)&&src.id).map(src=>{ const it={...src,own:me.email,by:me.name}; delete it.ro; return it; });
+          let base=null; try{ base=rs.lastNotes?JSON.parse(rs.lastNotes).items:null; }catch{}
+          const mine=i=>isNote(i)&&i.own===me.email;
+          const fin=Array.isArray(base)?[...merge3(base,[...S.items.values()].filter(mine).map(clean),R).values()].map(it=>{ delete it.ro; return it; }):R;
+          if(applyItems(mine,fin)) changed=true; afterApply();
+          rs.notesVer=v; rs.lastNotes=JSON.stringify(notesPayload(R)); persistRs(); }catch(e){ console.warn('my notes',e); } }
       continue; }
     seen.add(email);
     const c=remoteNotes.get(email);
@@ -1195,6 +1253,7 @@ function scheduleRemoteSave(){
 async function remoteSave(){
   if(!me||!rs.synced||!canWrite) return;
   if(rs.saving){ rs.again=true; return; }
+  if(syncing||busy()){ clearTimeout(rsT); rsT=setTimeout(remoteSave,1000); return; } // đang đọc từ Drive / đang kéo: lưu sau
   const L=JSON.stringify(layoutPayload()), N=JSON.stringify(notesPayload());
   const needL=rs.layoutOk&&L!==rs.lastLayout, needN=N!==rs.lastNotes;
   if(!needL&&!needN){ setRemote('ok'); return; }
@@ -1241,9 +1300,9 @@ function noteLabel(it){ const tx=(it.text||'').trim().replace(/\s+/g,' ');
   if(tx) return tx; return {pen:'Nét vẽ',arrow:'Mũi tên',sticky:'Giấy ghi chú trống',text:'Chữ',shape:it.shape==='ellipse'?'Hình tròn':'Hình chữ nhật'}[it.type]||'Ghi chú'; }
 function noteGroups(){
   const g=new Map(); const add=(key,name,email,isMe,hiddenFlag)=>{ if(!g.has(key)) g.set(key,{key,name,email,isMe,hidden:hiddenFlag,items:[]}); return g.get(key); };
-  if(me) add(me.email,me.name,me.email,true,false);
+  if(me) add(me.email,me.name,me.email,true,hideMine);
   for(const it of S.items.values()){ if(!isNote(it)) continue; const k=authorKey(it);
-    const grp=g.get(k)||add(k,k==='_local'?'Ghi chú trên máy này':(it.by||k),k==='_local'?'':k,me&&k===me.email,false); grp.items.push(it); }
+    const grp=g.get(k)||add(k,k==='_local'?'Ghi chú trên máy này':(it.by||k),k==='_local'?'':k,me&&k===me.email,k==='_local'&&hideMine); grp.items.push(it); }
   for(const [email,c] of remoteNotes){ const grp=g.get(email)||add(email,c.name,email,false,hiddenAuthors.has(email)); grp.name=c.name; grp.hidden=hiddenAuthors.has(email); if(grp.hidden) grp.items=c.items.slice(); }
   for(const grp of g.values()) grp.items.sort((a,b)=>(b.t||0)-(a.t||0));
   return [...g.values()].sort((a,b)=>(b.isMe-a.isMe)||((b.items[0]?.t||0)-(a.items[0]?.t||0)));
@@ -1255,9 +1314,9 @@ function renderPeople(){
   if($('#files').classList.contains('people')) $('#fcount').textContent=`${groups.filter(g0=>g0.items.length||g0.isMe).length} người`;
   const chev='<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>';
   const html=groups.map(g0=>{ const col=keyColor(g0.key), n=g0.items.length, last=g0.items[0]?.t;
-    const canHide=!g0.isMe&&g0.key!=='_local'&&remoteNotes.has(g0.key);
+    const canHide=!g0.isMe&&g0.key!=='_local'&&remoteNotes.has(g0.key), mineBox=g0.isMe||g0.key==='_local';
     const list=g0.items.slice(0,200).map(it=>`<div class="pitem" data-nid="${esc(it.id)}" data-key="${esc(g0.key)}"><i style="background:${esc(it.type==='sticky'||(it.type==='shape'&&!it.nofill)?it.color:(it.stroke||it.color||'#2a2d34'))}"></i><div><span>${esc(noteLabel(it))}</span><small>${esc(fmtAgo(it.t)||'')}</small></div></div>`).join('')||'<p class="pnote" style="padding:4px 8px">Chưa có ghi chú.</p>';
-    return `<div class="pgrp${focusKey===g0.key?' focus':''}${openGroups.has(g0.key)?' open':''}" data-key="${esc(g0.key)}"><div class="prow">${canHide?`<input type="checkbox" data-email="${esc(g0.key)}"${g0.hidden?'':' checked'} title="Hiện/ẩn ghi chú của người này">`:'<span style="width:18px;flex:none"></span>'}<div class="av" style="background:${col}">${esc((g0.name||'?').trim()[0]||'?').toUpperCase()}</div><div class="pn" data-focus="${esc(g0.key)}" title="Bấm để làm nổi bật ghi chú của người này"><div>${esc(g0.isMe?g0.name+' (bạn)':g0.name)}</div><small>${n} ghi chú${last?' · mới nhất '+esc(fmtAgo(last)):''}${g0.hidden?' · đang ẩn':''}</small></div><button class="ib exp" data-exp="${esc(g0.key)}" title="Xem danh sách">${chev}</button></div><div class="plist">${list}</div></div>`; }).join('');
+    return `<div class="pgrp${focusKey===g0.key?' focus':''}${openGroups.has(g0.key)?' open':''}" data-key="${esc(g0.key)}"><div class="prow">${canHide?`<input type="checkbox" data-email="${esc(g0.key)}"${g0.hidden?'':' checked'} title="Hiện/ẩn ghi chú của người này">`:mineBox?`<input type="checkbox" data-mine="1"${hideMine?'':' checked'} title="Hiện/ẩn ghi chú của bạn (chỉ trên máy này)">`:'<span style="width:18px;flex:none"></span>'}<div class="av" style="background:${col}">${esc((g0.name||'?').trim()[0]||'?').toUpperCase()}</div><div class="pn" data-focus="${esc(g0.key)}" title="Bấm để làm nổi bật ghi chú của người này"><div>${esc(g0.isMe?g0.name+' (bạn)':g0.name)}</div><small>${n} ghi chú${last?' · mới nhất '+esc(fmtAgo(last)):''}${g0.hidden?' · đang ẩn':''}</small></div><button class="ib exp" data-exp="${esc(g0.key)}" title="Xem danh sách">${chev}</button></div><div class="plist">${list}</div></div>`; }).join('');
   pane.innerHTML=(html||'<p class="pnote">Chưa có ghi chú nào trên bảng.</p>')+`<p class="pnote">Bấm tên một người để làm nổi bật ghi chú của họ trên bảng. Bấm từng ghi chú để bay tới đó.${DRIVE?.clientId?(me?' Ghi chú của bạn tự lưu vào <b>'+esc(notesName(me.email))+'</b>.':' Đăng nhập Google để thêm ghi chú của bạn.'):''}</p>`;
 }
 function applyFocus(){
@@ -1271,19 +1330,20 @@ function applyFocus(){
 }
 function setFocus(key){
   focusKey=key&&focusKey!==key?key:null;
+  if(focusKey&&hideMine&&(focusKey==='_local'||(me&&focusKey===me.email))) setHideMine(false,true);
   if(focusKey&&hiddenAuthors.has(focusKey)){ hiddenAuthors.delete(focusKey); try{ localStorage.setItem('wb-ha-'+DRIVE.folder,JSON.stringify([...hiddenAuthors])); }catch{} rebuildAuthor(focusKey); onItemsChanged(); }
   if(focusKey) openGroups.add(focusKey);
   applyFocus(); renderPeople();
   if(focusKey){ const its=[...S.items.values()].filter(i=>isNote(i)&&authorKey(i)===focusKey); if(its.length) fitTo(its,1.5); }
 }
 function goToNote(id,key){
-  let it=S.items.get(id);
+  let it=S.items.get(id); if(it&&hidMine(it)) setHideMine(false,true);
   if(!it&&key&&hiddenAuthors.has(key)){ hiddenAuthors.delete(key); try{ localStorage.setItem('wb-ha-'+DRIVE.folder,JSON.stringify([...hiddenAuthors])); }catch{} rebuildAuthor(key); onItemsChanged(); renderPeople(); it=S.items.get(id); }
   if(!it) return; fitTo([it],Math.max(cam.z,1.2)); if(canEdit(it)&&!it.locked) setSel([it.id]);
   const el=els.get(it.id)?.el; if(el){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'),1500); }
   if(innerWidth<640) $('#files').classList.remove('show');
 }
-$('#peoplePane').addEventListener('change',e=>{ const em=e.target.dataset.email; if(!em) return; e.target.checked?hiddenAuthors.delete(em):hiddenAuthors.add(em);
+$('#peoplePane').addEventListener('change',e=>{ if(e.target.dataset.mine){ setHideMine(!e.target.checked); return; } const em=e.target.dataset.email; if(!em) return; e.target.checked?hiddenAuthors.delete(em):hiddenAuthors.add(em);
   if(!e.target.checked&&focusKey===em){ focusKey=null; }
   try{ localStorage.setItem('wb-ha-'+DRIVE.folder,JSON.stringify([...hiddenAuthors])); }catch{} rebuildAuthor(em); onItemsChanged(); renderPeople(); });
 $('#peoplePane').addEventListener('click',e=>{
@@ -1595,6 +1655,29 @@ async function fetchMe(){ const r=await fetch('https://www.googleapis.com/drive/
   if(!r.ok) throw upErr(r.status,await r.text()); const j=await r.json(); const email=(j.user?.emailAddress||'').toLowerCase(); if(!email) throw new Error('Không lấy được email');
   if(me&&me.email!==email){ for(const [id,it] of [...S.items]) if(isNote(it)&&it.own===me.email){ S.items.delete(id); removeEl(id); } rs.notesId=null; rs.notesVer=null; rs.lastNotes=null; }
   me={email,name:j.user.displayName||email}; try{ localStorage.setItem('wb-me',JSON.stringify(me)); }catch{} }
+// Gia hạn đăng nhập tự động: token Google chỉ sống ~1 giờ. Khi sắp hết hạn (hoặc đã hết), lần bấm/chạm kế tiếp
+// sẽ xin token mới không cần chọn tài khoản (cửa sổ Google có thể chớp lên rồi tự đóng).
+let renewP=null, renewFailAt=0;
+function silentRenew(){
+  if(renewP) return renewP; if(!DRIVE?.clientId||!window.google?.accounts?.oauth2) return null;
+  const em=(me||lastMe())?.email; if(!em||Date.now()-renewFailAt<60000) return null;
+  renewP=new Promise(res=>{
+    const done=ok=>{ renewP=null; if(!ok) renewFailAt=Date.now(); res(ok); };
+    try{ google.accounts.oauth2.initTokenClient({ client_id:DRIVE.clientId, scope:'https://www.googleapis.com/auth/drive', login_hint:em,
+      callback:r=>{ if(r.error||!r.access_token) return done(false);
+        gTok={t:r.access_token,exp:Date.now()+((+r.expires_in||3600)*1000),cid:DRIVE.clientId}; try{ localStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{}
+        if(!me) me=lastMe();
+        const was=rs.authNeeded; setAuthNeeded(false); updateRoUI();
+        if(was&&booted&&!hubMode){ driveSync(true); scheduleRemoteSave(); }
+        done(true); },
+      error_callback:()=>done(false) }).requestAccessToken({prompt:'',login_hint:em});
+    }catch{ done(false); }
+  });
+  return renewP;
+}
+const needRenew=()=>!!(DRIVE?.clientId&&(me||lastMe())&&(!gTok||gTok.exp-Date.now()<15*60000));
+addEventListener('pointerup',()=>{ if(needRenew()&&!document.body.classList.contains('gate')) silentRenew(); },true);
+addEventListener('keydown',e=>{ if(e.key!=='Escape'&&needRenew()&&!document.body.classList.contains('gate')) silentRenew(); },true);
 function signOut(){ if(gTok&&window.google?.accounts?.oauth2) try{ google.accounts.oauth2.revoke(gTok.t,()=>{}); }catch{} gTok=null; me=null; try{ localStorage.removeItem('wb-gtok'); localStorage.removeItem('wb-me'); }catch{}
   if(PRIV){ location.href=boardLink(null); return; }
   if(editing) finishEdit(); applyOwnership(); setAuthNeeded(false); updateRoUI(); requestRender(); toast('Đã đăng xuất Google',null,1500); }
@@ -1664,7 +1747,14 @@ function undo(){ if(editing) finishEdit(); if(!undoS.length) return; redoS.push(
 function redo(){ if(!redoS.length) return; undoS.push(snapshot()); applySnap(redoS.pop()); }
 
 // ================== Selection & text editing ==================
-function setSel(ids){ S.sel=new Set([...ids].filter(id=>canEdit(S.items.get(id)))); renderCtx(); requestRender(); }
+function setSel(ids){ S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it); })); renderCtx(); requestRender(); }
+// ----- Nhóm (group) -----
+function withGroups(ids){ const s=new Set(ids), gs=new Set(); for(const id of s){ const g=S.items.get(id)?.g; if(g) gs.add(g); }
+  if(gs.size) for(const it of S.items.values()) if(it.g&&gs.has(it.g)) s.add(it.id); return s; }
+function selGroup(){ const its=selItems(); if(its.length<2) return null; const g=its[0].g; if(!g||!its.every(i=>i.g===g)) return null;
+  const n=[...S.items.values()].filter(i=>i.g===g&&canEdit(i)&&!hidMine(i)).length; return n===its.length?g:null; }
+function groupSel(){ const its=selItems(); if(its.length<2){ toast('Chọn từ 2 đối tượng trở lên để nhóm',null,1800); return; } checkpoint(); const g='g'+uid(); its.forEach(i=>{ i.g=g; }); saveSoon(); renderCtx(); requestRender(); toast(`Đã nhóm ${its.length} đối tượng · Ctrl+Shift+G để bỏ nhóm`,null,2200); }
+function ungroupSel(){ const its=selItems().filter(i=>i.g); if(!its.length) return; checkpoint(); its.forEach(i=>{ delete i.g; }); saveSoon(); renderCtx(); requestRender(); toast('Đã bỏ nhóm',null,1500); }
 function startEdit(id){
   const it=S.items.get(id), r=els.get(id); if(!it||!r?.txt||!canEdit(it)||it.locked) return;
   checkpoint(); editing={id}; r.el.classList.add('editing');
@@ -1739,10 +1829,11 @@ vp.addEventListener('pointerdown',e=>{
       if(h.k==='rot'){ const c={x:b.x+b.w/2,y:b.y+b.h/2}; drag={type:'grot', its, orig, c, a0:Math.atan2(wp.y-c.y,wp.x-c.x)}; return; }
       const cs=[{x:b.x,y:b.y},{x:b.x+b.w,y:b.y},{x:b.x+b.w,y:b.y+b.h},{x:b.x,y:b.y+b.h}];
       drag={type:'gscale', its, orig, anchor:cs[(h.i+2)%4], sx:(h.i===1||h.i===2)?1:-1, sy:h.i>=2?1:-1, w0:b.w, h0:b.h}; return; }
-    if(hid){ if(e.shiftKey){ const s=new Set(S.sel); s.has(hid)?s.delete(hid):s.add(hid); setSel(s); }
-      else if(!S.sel.has(hid)) setSel([hid]);
+    if(hid){ let fresh=false; const grp=withGroups([hid]);
+      if(e.shiftKey){ const s=new Set(S.sel); if(s.has(hid)) grp.forEach(id=>s.delete(id)); else grp.forEach(id=>s.add(id)); setSel(s); fresh=true; }
+      else if(!S.sel.has(hid)){ setSel(grp); fresh=true; }
       if(S.items.get(hid)?.locked){ drag={type:'pan', last:sp}; vp.classList.add('panning'); return; }
-      drag={type:'move', start:sp, moved:false, hid}; }
+      drag={type:'move', start:sp, moved:false, hid, fresh}; }
     else { if(!e.shiftKey) setSel([]); drag={type:'marquee', start:wp, cur:wp, base:new Set(S.sel)}; }
     return;
   }
@@ -1784,8 +1875,8 @@ addEventListener('pointermove',e=>{
       updateArrows(); requestRender(); break; }
     case 'marquee':{ drag.cur=toWorld(sp.x,sp.y); const a=drag.start,b=drag.cur;
       const r={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)};
-      const s=new Set(drag.base); for(const it of S.items.values()) if(hit(it,r)&&canEdit(it)&&!it.locked) s.add(it.id);
-      S.sel=s; requestRender(); break; }
+      const s=new Set(drag.base); for(const it of S.items.values()) if(hit(it,r)&&canEdit(it)&&!it.locked&&!hidMine(it)) s.add(it.id);
+      S.sel=new Set([...withGroups(s)].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it); })); requestRender(); break; }
     case 'resize':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it, mn=8/cam.z, A=d.anchor;
       const vx=wp.x-A.x, vy=wp.y-A.y; let w=Math.max(mn,(vx*d.ux.x+vy*d.ux.y)*d.sx), h=Math.max(mn,(vx*d.uy.x+vy*d.uy.y)*d.sy);
       if(ASPECT.has(it.type)!==e.shiftKey){ const s=Math.max(w/d.w0,h/d.h0); w=d.w0*s; h=d.h0*s; if(d.fs0) it.fs=d.fs0*s; }
@@ -1825,7 +1916,7 @@ function endPointer(e){
   if(drag.type==='pinch'){ if(pointers.size===1){ drag={type:'pan', last:[...pointers.values()][0]}; } else if(!pointers.size){ drag=null; } return; }
   if(pointers.size) return;
   const d=drag; drag=null; vp.classList.remove('panning');
-  if(d.type==='move'){ if(d.moved) saveSoon(); else if(!e.shiftKey && S.sel.size>1 && d.hid) setSel([d.hid]); }
+  if(d.type==='move'){ if(d.moved) saveSoon(); else if(!e.shiftKey && !d.fresh && S.sel.size>1 && d.hid) setSel([d.hid]); } // bấm lần nữa: chọn riêng 1 đối tượng trong nhóm
   else if(d.type==='pen'){ if(d.pts.length>1||true) createPen(d.pts); }
   else if(d.type==='create'){ const it=d.it; if(it.w*cam.z<6 && it.h*cam.z<6){ const w=160/cam.z, h=(it.shape==='ellipse'?160:110)/cam.z; it.x=d.start.x-w/2; it.y=d.start.y-h/2; it.w=w; it.h=h; syncEl(it); }
     setTool('select'); setSel([it.id]); saveSoon(); }
@@ -1879,7 +1970,9 @@ function sRect(it){ const a=toScreen(it.x,it.y); return {x:a.x,y:a.y,w:it.w*cam.
 function drawOverlay(){
   const d=DPR(); ov.setTransform(d,0,0,d,0,0); ov.clearRect(0,0,innerWidth,innerHeight);
   const A='#3b5bfd';
-  if(hoverId && !drag && !S.sel.has(hoverId)){ const it=S.items.get(hoverId); if(it){ const r=sRect(aabb(it)); ov.strokeStyle=it.ro?'rgba(120,120,130,.5)':'rgba(59,91,253,.55)'; ov.lineWidth=1.5; if(it.type!=='arrow'){ const cs=corners(it).map(p=>toScreen(p.x,p.y)); ov.beginPath(); cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); }
+  if(hoverId && !drag && !S.sel.has(hoverId)){ const it=S.items.get(hoverId);
+    if(it?.g){ const mem=[...S.items.values()].filter(i=>i.g===it.g&&!hidMine(i)); if(mem.length>1){ const b=sRect(bbox(mem)); ov.save(); ov.setLineDash([5,4]); ov.strokeStyle='rgba(59,91,253,.45)'; ov.lineWidth=1; ov.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8); ov.restore(); } }
+    if(it){ const r=sRect(aabb(it)); ov.strokeStyle=it.ro?'rgba(120,120,130,.5)':'rgba(59,91,253,.55)'; ov.lineWidth=1.5; if(it.type!=='arrow'){ const cs=corners(it).map(p=>toScreen(p.x,p.y)); ov.beginPath(); cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); }
     if(isNote(it)&&it.by&&DRIVE?.clientId){ const t=it.by+(it.ro?' · chỉ xem':''); ov.font='500 11px "Be Vietnam Pro",system-ui'; const tw=ov.measureText(t).width+12; ov.fillStyle=avColor(it.own||''); ov.beginPath(); ov.roundRect?ov.roundRect(r.x,r.y-24,tw,20,5):ov.rect(r.x,r.y-24,tw,20); ov.fill(); ov.fillStyle='#fff'; ov.fillText(t,r.x+6,r.y-10); } } }
   if(S.sel.size){
     ov.strokeStyle=A; ov.lineWidth=1.5; const list=[];
@@ -1887,7 +1980,8 @@ function drawOverlay(){
       if(it.type==='arrow'){ const a=toScreen(it.a.x,it.a.y), b=toScreen(it.b.x,it.b.y); ov.save(); ov.globalAlpha=.35; ov.lineWidth=Math.max(6,(it.sw||2)*cam.z+6); ov.lineCap='round'; ov.beginPath(); ov.moveTo(a.x,a.y); ov.lineTo(b.x,b.y); ov.stroke(); ov.restore(); continue; }
       const cs=corners(it).map(p=>toScreen(p.x,p.y)); ov.beginPath(); cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); }
     const g=(!drag||['resize','rotate','grot','gscale','aend'].includes(drag.type))?handleGeom():null;
-    if(g&&g.group){ ov.setLineDash([5,4]); ov.lineWidth=1; ov.beginPath(); g.cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); ov.setLineDash([]); }
+    if(g&&g.group){ ov.setLineDash([5,4]); ov.lineWidth=1; ov.beginPath(); g.cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); ov.setLineDash([]);
+      if(selGroup()){ const t=`Nhóm · ${list.length}`; ov.font='600 11px "Be Vietnam Pro",system-ui'; const tw=ov.measureText(t).width+12; ov.fillStyle=A; ov.beginPath(); ov.roundRect?ov.roundRect(g.cs[0].x,g.cs[0].y-24,tw,20,5):ov.rect(g.cs[0].x,g.cs[0].y-24,tw,20); ov.fill(); ov.fillStyle='#fff'; ov.fillText(t,g.cs[0].x+6,g.cs[0].y-10); ov.strokeStyle=A; ov.lineWidth=1.5; } }
     if(g){ ov.fillStyle='#fff'; ov.lineWidth=1.5; ov.strokeStyle=A;
       if(g.arrow){ for(const p of [g.a,g.b]){ ov.beginPath(); ov.arc(p.x,p.y,6,0,Math.PI*2); ov.fill(); ov.stroke(); } }
       else { for(const p of g.cs){ ov.beginPath(); ov.rect(p.x-5,p.y-5,10,10); ov.fill(); ov.stroke(); }
@@ -1925,7 +2019,9 @@ const ICON={
   hNone:'<path d="M4 12h16"/>',
   lock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
   unlock:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/>',
-  zoom:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M11 8.5v5M8.5 11h5"/>'
+  zoom:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M11 8.5v5M8.5 11h5"/>',
+  group:'<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2.5"/><rect x="6.5" y="6.5" width="6" height="6" rx="1"/><rect x="11.5" y="11.5" width="6" height="6" rx="1"/>',
+  ungroup:'<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.2"/><path d="M14 4h6v6M4 14v6h6" stroke-dasharray="2 2"/>'
 };
 const ctx=$('#ctx');
 function renderCtx(){
@@ -1943,6 +2039,8 @@ function renderCtx(){
   if(its.length===1 && els.get(its[0].id)?.txt) h+=btn('edit','Sửa chữ (nhấp đúp)');
   if(its.length===1 && its[0].type==='arrow'){ const hd=its[0].head||'end'; h+=btn(hd==='end'?'hEnd':hd==='both'?'hBoth':'hNone','Đổi kiểu đầu mũi tên'); }
   if(its.some(i=>i.rot)) h+=btn('rot0','Về góc 0°');
+  if(its.length>1&&!selGroup()) h+=btn('group','Nhóm lại (Ctrl G)');
+  if(its.some(i=>i.g)) h+=btn('ungroup','Bỏ nhóm (Ctrl Shift G)');
   h+=btn('lock','Khóa: không di chuyển, co giãn, xoay (Ctrl Shift L)')+btn('front','Đưa lên trên ( ] )')+btn('back','Đưa xuống dưới ( [ )')+btn('dup','Nhân bản (Ctrl D)')+btn('del','Xóa (Delete)');
   ctx.innerHTML=h; ctx.classList.add('show'); positionCtx();
 }
@@ -1966,6 +2064,8 @@ ctx.addEventListener('click',e=>{
   else if(b.dataset.cx==='lock'||b.dataset.cx==='unlock') return toggleLock();
   else if(['hEnd','hBoth','hNone'].includes(b.dataset.cx)){ checkpoint(); const it=its[0]; it.head={end:'both',both:'none',none:'end'}[it.head||'end']; syncEl(it); }
   else if(b.dataset.cx==='rot0'){ checkpoint(); its.forEach(i=>{ if(i.rot){ i.rot=0; syncPos(i); } }); updateArrows(); }
+  else if(b.dataset.cx==='group') return groupSel();
+  else if(b.dataset.cx==='ungroup') return ungroupSel();
   else if(b.dataset.cx==='del') return deleteSel();
   else if(b.dataset.cx==='dup') return duplicate();
   else if(b.dataset.cx==='front') toFront();
@@ -1981,8 +2081,9 @@ function toFront(){ if(!S.sel.size) return; checkpoint(); [...S.sel].map(id=>S.i
 function toBack(){ if(!S.sel.size) return; checkpoint(); let mn=Math.min(...[...S.items.values()].map(i=>i.z));
   [...S.sel].map(id=>S.items.get(id)).sort((a,b)=>b.z-a.z).forEach(it=>{ it.z=--mn; syncEl(it); }); saveSoon(); }
 let clip=null;
-function cloneItems(list,dx,dy=dx){ if(!editMode()) return openLogin(); checkpoint(); const ids=[], map=new Map(), arrows=[];
+function cloneItems(list,dx,dy=dx){ if(!editMode()) return openLogin(); checkpoint(); const ids=[], map=new Map(), arrows=[], gmap=new Map();
   for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,locked,t,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
+    if(rest.g){ if(!gmap.has(rest.g)) gmap.set(rest.g,'g'+uid()); rest.g=gmap.get(rest.g); }
     if(rest.type==='arrow'){ rest.a.x+=dx; rest.a.y+=dy; rest.b.x+=dx; rest.b.y+=dy; }
     const n=createItem(rest); map.set(id,n.id); ids.push(n.id); if(n.type==='arrow') arrows.push(n); }
   for(const n of arrows){ for(const k of ['a','b']) if(n[k].id&&map.has(n[k].id)) n[k].id=map.get(n[k].id); updateArrow(n); }
@@ -2015,6 +2116,7 @@ document.addEventListener('click',e=>{
   else if(a==='selall') { setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); }
   else if(a==='lockMedia'||a==='unlockAll'){ if(!editMode()) return openLogin(); const lock=a==='lockMedia'; const list=[...S.items.values()].filter(i=>canEdit(i)&&(lock?(i.type==='image'||i.type==='pdf')&&!i.locked:i.locked));
     if(!list.length){ toast(lock?'Không có ảnh/PDF nào cần khóa':'Không có gì đang khóa',null,1800); return; } checkpoint(); list.forEach(i=>{ if(lock) i.locked=true; else delete i.locked; }); setSel([]); saveSoon(); requestRender(); toast(lock?`Đã khóa ${list.length} ảnh/trang PDF`:`Đã mở khóa ${list.length} đối tượng`,null,2000); }
+  else if(a==='hideMine') setHideMine(!hideMine);
   else if(a==='clear') $('#modal').classList.add('show');
   else if(a==='mcancel') $('#modal').classList.remove('show');
   else if(a==='mok') { $('#modal').classList.remove('show'); clearBoard(); }
@@ -2073,6 +2175,7 @@ addEventListener('keydown',e=>{
   if(mod&&k==='y'){ e.preventDefault(); redo(); return; }
   if(mod&&k==='a'){ e.preventDefault(); setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); return; }
   if(mod&&e.shiftKey&&k==='l'){ e.preventDefault(); toggleLock(); return; }
+  if(mod&&k==='g'){ e.preventDefault(); e.shiftKey?ungroupSel():groupSel(); return; }
   if(mod&&k==='d'){ e.preventDefault(); duplicate(); return; }
   if(mod&&(k==='='||k==='+')){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,1.25); return; }
   if(mod&&k==='-'){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,0.8); return; }
@@ -2209,7 +2312,7 @@ async function aiSend(text,withImg){
     AI.view.push({role:'assistant',text:j.text||'(AI không trả lời gì)'});
   }catch(e){
     const m=e instanceof TypeError?'Không kết nối được cổng AI. Kiểm tra mạng hoặc địa chỉ aiUrl.':e.message;
-    AI.view.push({role:'assistant',err:true,text:m}); if(/đăng nhập/i.test(m)){ gTok=null; try{ localStorage.removeItem('wb-gtok'); }catch{} }
+    AI.view.push({role:'assistant',err:true,text:m}); if(/hết hạn|expired|invalid.?token|401/i.test(m)){ gTok=null; try{ localStorage.removeItem('wb-gtok'); }catch{} }
   }finally{ AI.busy=false; aiRender(); }
 }
 function aiToBoard(i){
@@ -2239,7 +2342,7 @@ function aiAction(a){
 }
 
 // ================== Boot ==================
-renderPenbar(); renderMenuDrive(); resizeOv();
+renderPenbar(); renderMenuDrive(); resizeOv(); if(hideMine) setHideMine(true,true);
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=='visible'||!DRIVE) return;
   if(PRIV&&hubMode&&!tokenValid()&&!gateRes){ showGate('Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.').then(()=>showHub()); return; }
   if(PRIV&&me&&!tokenValid()&&!rs.authNeeded) setAuthNeeded(true);
