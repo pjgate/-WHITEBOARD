@@ -21,6 +21,27 @@ gọi Gemini từ Cloudflare hay bị lỗi "User location is not supported" vì
 Sửa danh sách email / model: vào Project Settings → Script Properties, sửa là có hiệu lực ngay (không cần Deploy lại).
 Sửa **code** thì phải Deploy → **Manage deployments** → ✏ → Version: **New version** → Deploy (giữ nguyên URL).
 
+### Bật "đăng nhập nhiều ngày" (dùng chung cổng Apps Script này)
+Bình thường Google chỉ cho app trên trình duyệt một vé đăng nhập ~1 giờ. Khi cổng có mã bí mật của OAuth Client,
+app nhận thêm **refresh token** và tự lấy vé mới ở chế độ nền, không bật cửa sổ Google.
+1. Dán lại toàn bộ `ai-worker/apps-script.gs` mới vào `Code.gs` → 💾 Lưu.
+2. Lấy mã bí mật: https://console.cloud.google.com (tài khoản **duli3ucanhan**, đúng dự án có Client ID `815013146430-…`)
+   → **APIs & Services → Credentials** (hoặc Google Auth Platform → **Clients**) → bấm vào OAuth client của Bảng trắng
+   → mục **Client secrets**. Google chỉ hiện mã đầy đủ lúc vừa tạo: nếu không xem được thì bấm **Add secret**
+   rồi sao chép ngay mã `GOCSPX-…` mới tạo. (Mã cũ vẫn dùng được, không cần xóa.)
+3. Project Settings → Script Properties → thêm `GOOGLE_CLIENT_SECRET` = mã `GOCSPX-…` → Save.
+4. Deploy → **Manage deployments** → ✏ → Version: **New version** → Deploy (giữ nguyên URL).
+5. Kiểm tra: mở URL `…/exec` thấy `"auth":true`.
+6. Trên Bảng trắng: **Đăng xuất rồi đăng nhập lại 1 lần** (Google hiện màn hình đồng ý quyền → Cho phép). Từ đó app tự gia hạn.
+
+Lưu ý:
+- App OAuth đang ở chế độ **Testing** → Google cho refresh token sống tối đa **7 ngày**, sau đó phải đăng nhập lại 1 lần.
+  Muốn lâu hơn: Google Auth Platform → **Audience** → **Publish app** (In production). Khi đó không cần danh sách Test users nữa
+  (ai có tài khoản Google cũng bấm đăng nhập được, nhưng vẫn chỉ xem được dự án được chia sẻ trên Drive); vì app chưa được
+  Google xác minh nên màn hình đăng nhập sẽ có cảnh báo "Google hasn't verified this app" (bấm Advanced → tiếp tục) và giới hạn 100 người dùng.
+- Mã bí mật chỉ nằm trong Script Properties, không đưa vào `index.html`. Refresh token lưu trên máy người dùng (localStorage `wb-grt`);
+  bấm **Đăng xuất** sẽ xóa nó. Nếu lộ mã bí mật: vào Client secrets xóa mã đó, tạo mã mới và cập nhật Script Properties.
+
 ---
 
 ## Cách B – Cloudflare Worker

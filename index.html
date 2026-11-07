@@ -951,7 +951,7 @@ async function gget(url){ // đọc Drive: có đăng nhập thì đọc bằng 
   const auth=tokenValid()?{Authorization:'Bearer '+gTok.t}:undefined;
   let r; try{ r=await fetch(url,auth?{headers:auth}:undefined); }catch(e){ const er=new Error('network'); er.status=0; throw er; }
   if(!r.ok){ let m=''; try{ m=(await r.json()).error?.message||''; }catch{} const er=new Error(`Drive ${r.status}: ${m}`); er.status=r.status;
-    if(r.status===401&&auth){ gTok=null; try{ localStorage.removeItem('wb-gtok'); }catch{} if(me&&!hubMode) setAuthNeeded(true); }
+    if(r.status===401&&auth){ gTok=null; try{ localStorage.removeItem('wb-gtok'); }catch{} if(me&&!hubMode) setAuthNeeded(true); if(getRT()) refreshLong(); }
     throw er; }
   return r;
 }
@@ -1624,6 +1624,30 @@ function registerDriveFile(f,kind,key){ driveEntries.set(f.id,{f,kind,key}); hid
 let gTok=null; try{ const t=JSON.parse(localStorage.getItem('wb-gtok')||'null'); if(t&&t.exp>Date.now()&&t.cid===DRIVE?.clientId) gTok=t; }catch{}
 const lastMe=()=>{ try{ return JSON.parse(localStorage.getItem('wb-me')||'null'); }catch{ return null; } };
 const tokenValid=()=>gTok&&gTok.exp>Date.now()+60000;
+function storeTok(t,sec){ gTok={t,exp:Date.now()+((+sec||3600)*1000),cid:DRIVE.clientId}; try{ localStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{} }
+// ----- Đăng nhập nhiều ngày (refresh token đổi qua cổng Apps Script, xem ai-worker/HUONG-DAN.md) -----
+const AUTH_URL=(()=>{ const u=(CONFIG.authUrl||CONFIG.aiUrl||'').trim(); return /^https:\/\/script\.google\.com\//.test(u)?u:''; })();
+async function authCall(body){
+  const r=await fetch(AUTH_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),redirect:'follow'});
+  const j=await r.json().catch(()=>({error:'Cổng đăng nhập trả về dữ liệu lạ (HTTP '+r.status+').'}));
+  if(j.error) throw Object.assign(new Error(j.error),{relogin:!!j.relogin}); return j; }
+let longOK=null; // cổng có hỗ trợ đăng nhập nhiều ngày không (null = chưa biết)
+try{ const x=JSON.parse(localStorage.getItem('wb-long')||'null'); if(x&&x.u===AUTH_URL&&Date.now()-x.t<(x.ok?864e5:6e5)) longOK=x.ok; }catch{}
+async function pingLong(){ if(!AUTH_URL||!DRIVE?.clientId) return longOK=false; if(longOK!==null) return longOK;
+  try{ longOK=!!(await authCall({action:'auth_ping'})).auth; }catch{ longOK=false; }
+  try{ localStorage.setItem('wb-long',JSON.stringify({ok:longOK,t:Date.now(),u:AUTH_URL})); }catch{} return longOK; }
+function getRT(){ try{ const x=JSON.parse(localStorage.getItem('wb-grt')||'null'); return x&&x.rt&&x.cid===DRIVE?.clientId?x:null; }catch{ return null; } }
+function setRT(rt,email){ try{ rt?localStorage.setItem('wb-grt',JSON.stringify({rt,cid:DRIVE.clientId,email})):localStorage.removeItem('wb-grt'); }catch{} }
+let refP=null;
+function refreshLong(){ // lấy vé mới bằng refresh token, không cần bấm gì
+  if(refP) return refP; const x=getRT(); if(!x||!AUTH_URL) return Promise.resolve(false);
+  refP=authCall({action:'auth_refresh',refresh_token:x.rt}).then(async j=>{
+      storeTok(j.access_token,j.expires_in); if(!me){ me=lastMe(); if(!me) await fetchMe(); }
+      onRenewed(); return true; })
+    .catch(e=>{ console.warn('refresh',e); if(e.relogin) setRT(null); return false; })
+    .finally(()=>{ refP=null; });
+  return refP; }
+function onRenewed(){ if(typeof rs==='undefined') return; const was=rs.authNeeded; setAuthNeeded(false); if(booted&&!hubMode){ updateRoUI(); if(was){ driveSync(true); scheduleRemoteSave(); } } }
 let gisP=null;
 function loadGIS(){ return gisP ||= new Promise((res,rej)=>{ if(window.google?.accounts?.oauth2) return res();
   const sc=document.createElement('script'); sc.src='https://accounts.google.com/gsi/client'; sc.async=true; sc.onload=()=>res(); sc.onerror=()=>{ gisP=null; rej(new Error('gis')); }; document.head.appendChild(sc); }); }
@@ -1643,6 +1667,18 @@ function gateLogin(other){
 function signIn(pick=false){ // must be called from a click
   return new Promise((res,rej)=>{
     if(!window.google?.accounts?.oauth2){ loadGIS().catch(()=>{}); return rej(Object.assign(new Error('Chưa tải xong phần đăng nhập Google, bấm lại sau vài giây.'),{upload:true})); }
+    const errCb=e=>rej(Object.assign(new Error(e?.type==='popup_closed'?'Bạn đã đóng cửa sổ đăng nhập.':e?.type==='popup_failed_to_open'?'Trình duyệt chặn cửa sổ đăng nhập. Hãy cho phép cửa sổ bật lên (popup).':'Đăng nhập thất bại.'),{upload:true}));
+    if(longOK===true){ // đăng nhập nhiều ngày: lấy mã -> cổng Apps Script đổi ra vé + refresh token
+      const hint=pick?undefined:(me||lastMe())?.email||undefined;
+      google.accounts.oauth2.initCodeClient({ client_id:DRIVE.clientId, scope:'https://www.googleapis.com/auth/drive', ux_mode:'popup',
+        ...(hint?{login_hint:hint}:{}), prompt:pick?'select_account consent':'consent', // 'consent': Google mới cấp refresh token
+        callback:async r=>{ if(r.error) return rej(Object.assign(new Error(r.error_description||r.error),{upload:true}));
+          try{ const j=await authCall({action:'auth_code',code:r.code}); storeTok(j.access_token,j.expires_in);
+            await fetchMe(); if(j.refresh_token) setRT(j.refresh_token,me.email); else if(!getRT()||getRT().email!==me.email) setRT(null);
+            await onLogin(); res(gTok); }
+          catch(e){ rej(Object.assign(e,{upload:true})); } },
+        error_callback:errCb }).requestCode();
+      return; }
     tokClient=google.accounts.oauth2.initTokenClient({ client_id:DRIVE.clientId, scope:'https://www.googleapis.com/auth/drive',
       callback:r=>{ if(r.error) return rej(Object.assign(new Error(r.error_description||r.error),{upload:true}));
         gTok={t:r.access_token,exp:Date.now()+((+r.expires_in||3600)*1000),cid:DRIVE.clientId}; try{ localStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{}
@@ -1659,17 +1695,14 @@ async function fetchMe(){ const r=await fetch('https://www.googleapis.com/drive/
 // sẽ xin token mới không cần chọn tài khoản (cửa sổ Google có thể chớp lên rồi tự đóng).
 let renewP=null, renewFailAt=0;
 function silentRenew(){
+  if(getRT()) return refreshLong();
   if(renewP) return renewP; if(!DRIVE?.clientId||!window.google?.accounts?.oauth2) return null;
   const em=(me||lastMe())?.email; if(!em||Date.now()-renewFailAt<60000) return null;
   renewP=new Promise(res=>{
     const done=ok=>{ renewP=null; if(!ok) renewFailAt=Date.now(); res(ok); };
     try{ google.accounts.oauth2.initTokenClient({ client_id:DRIVE.clientId, scope:'https://www.googleapis.com/auth/drive', login_hint:em,
       callback:r=>{ if(r.error||!r.access_token) return done(false);
-        gTok={t:r.access_token,exp:Date.now()+((+r.expires_in||3600)*1000),cid:DRIVE.clientId}; try{ localStorage.setItem('wb-gtok',JSON.stringify(gTok)); }catch{}
-        if(!me) me=lastMe();
-        const was=rs.authNeeded; setAuthNeeded(false); updateRoUI();
-        if(was&&booted&&!hubMode){ driveSync(true); scheduleRemoteSave(); }
-        done(true); },
+        storeTok(r.access_token,r.expires_in); if(!me) me=lastMe(); onRenewed(); done(true); },
       error_callback:()=>done(false) }).requestAccessToken({prompt:'',login_hint:em});
     }catch{ done(false); }
   });
@@ -1678,7 +1711,7 @@ function silentRenew(){
 const needRenew=()=>!!(DRIVE?.clientId&&(me||lastMe())&&(!gTok||gTok.exp-Date.now()<15*60000));
 addEventListener('pointerup',()=>{ if(needRenew()&&!document.body.classList.contains('gate')) silentRenew(); },true);
 addEventListener('keydown',e=>{ if(e.key!=='Escape'&&needRenew()&&!document.body.classList.contains('gate')) silentRenew(); },true);
-function signOut(){ if(gTok&&window.google?.accounts?.oauth2) try{ google.accounts.oauth2.revoke(gTok.t,()=>{}); }catch{} gTok=null; me=null; try{ localStorage.removeItem('wb-gtok'); localStorage.removeItem('wb-me'); }catch{}
+function signOut(){ if(gTok&&window.google?.accounts?.oauth2) try{ google.accounts.oauth2.revoke(gTok.t,()=>{}); }catch{} gTok=null; me=null; setRT(null); try{ localStorage.removeItem('wb-gtok'); localStorage.removeItem('wb-me'); }catch{}
   if(PRIV){ location.href=boardLink(null); return; }
   if(editing) finishEdit(); applyOwnership(); setAuthNeeded(false); updateRoUI(); requestRender(); toast('Đã đăng xuất Google',null,1500); }
 { const m=lastMe(); if(m&&gTok) me=m; }
@@ -2291,7 +2324,7 @@ function aiRender(){
 function aiOpen(){ if(!AI_ON) return; $('#files').classList.remove('show'); $('#ai').classList.add('show'); aiRender(); if(!IS_TOUCH) setTimeout(()=>$('#aiText').focus(),50); }
 async function aiSend(text,withImg){
   text=(text||'').trim(); if(!text||AI.busy) return;
-  if(!tokenValid()){ try{ await signIn(); }catch(e){ toast(e.message,null,5000); return; } }
+  if(!tokenValid()&&!(await refreshLong())){ try{ await signIn(); }catch(e){ toast(e.message,null,5000); return; } }
   const items=withImg?aiMediaItems():[];
   if(withImg&&!items.length) toast('Không thấy ảnh/PDF nào đang chọn hoặc đang hiện trên màn hình — AI sẽ chỉ đọc ghi chú.',null,3500);
   const att=items.map(aiName).join(', ');
@@ -2344,11 +2377,14 @@ function aiAction(a){
 // ================== Boot ==================
 renderPenbar(); renderMenuDrive(); resizeOv(); if(hideMine) setHideMine(true,true);
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=='visible'||!DRIVE) return;
+  if(getRT()&&(!gTok||gTok.exp-Date.now()<5*60000)){ refreshLong().then(ok=>{ if(ok&&hubMode) showHub(); }); if(!tokenValid()) return; }
   if(PRIV&&hubMode&&!tokenValid()&&!gateRes){ showGate('Phiên đăng nhập đã hết hạn, hãy đăng nhập lại.').then(()=>showHub()); return; }
   if(PRIV&&me&&!tokenValid()&&!rs.authNeeded) setAuthNeeded(true);
   if(!hubMode && !importing && Date.now()-lastSync>30000) driveSync(true); });
 (async()=>{
-  if(PRIV&&!tokenValid()){ setMeta(); await showGate(); }
+  pingLong();
+  setInterval(()=>{ if(getRT()&&(!gTok||gTok.exp-Date.now()<5*60000)) refreshLong(); },20000); // gia hạn trước khi vé hết hạn
+  if(PRIV&&!tokenValid()&&!(await refreshLong())){ setMeta(); await showGate(); }
   const ok=await restore();
   updateCount(); requestRender(); updateLODSoon();
   if(ok && !DRIVE) toast('Đã mở lại bảng đã lưu',null,1800);

@@ -6,6 +6,8 @@
 //   ALLOWED_EMAILS   (nên có)    email được dùng AI, cách nhau bằng dấu phẩy. Có thể ghi cả tên miền, vd. @truongthang.vn
 //   MODEL            (tùy chọn)  mặc định gemini-3.5-flash-lite
 //   MAX_TOKENS       (tùy chọn)  mặc định 8192
+//   GOOGLE_CLIENT_SECRET (tùy chọn) mã bí mật của OAuth Client ID -> bật "đăng nhập nhiều ngày" cho Bảng trắng
+//                    (Google Cloud Console → APIs & Services → Credentials → OAuth client của Bảng trắng → Client secrets)
 // Triển khai: Deploy → New deployment → Web app → Execute as: Me → Who has access: Anyone.
 
 const CLIENT_ID = '815013146430-cjh67feg7j7k5asaq72qrkrn3i70048r.apps.googleusercontent.com';
@@ -16,14 +18,18 @@ function out_(obj) { return ContentService.createTextOutput(JSON.stringify(obj))
 function fail_(msg) { throw new Error(msg); }
 
 function doGet() {
-  return out_({ ok: true, service: 'bang-trang-ai', provider: 'gemini', model: prop_('MODEL') || DEFAULT_MODEL, configured: !!prop_('GEMINI_API_KEY') });
+  return out_({ ok: true, service: 'bang-trang-ai', provider: 'gemini', model: prop_('MODEL') || DEFAULT_MODEL, configured: !!prop_('GEMINI_API_KEY'), auth: !!prop_('GOOGLE_CLIENT_SECRET') });
 }
 
 function doPost(e) {
   try {
-    if (!prop_('GEMINI_API_KEY')) fail_('Cổng AI chưa có GEMINI_API_KEY (Script Properties).');
     let body;
     try { body = JSON.parse(e.postData.contents); } catch (x) { fail_('Dữ liệu gửi lên không hợp lệ.'); }
+    // đăng nhập nhiều ngày: đổi mã đăng nhập lấy refresh token, và dùng refresh token lấy vé mới
+    if (body.action === 'auth_ping') return out_({ auth: !!prop_('GOOGLE_CLIENT_SECRET') });
+    if (body.action === 'auth_code') return out_(authCode_(body));
+    if (body.action === 'auth_refresh') return out_(authRefresh_(body));
+    if (!prop_('GEMINI_API_KEY')) fail_('Cổng AI chưa có GEMINI_API_KEY (Script Properties).');
     const email = checkUser_(body.token);
     if (!Array.isArray(body.messages) || !body.messages.length) fail_('Thiếu nội dung câu hỏi.');
     const system = typeof body.system === 'string' ? body.system.slice(0, 60000) : '';
@@ -86,4 +92,34 @@ function askGemini_(system, messages) {
   const text = ((cand.content || {}).parts || []).filter(function (p) { return p.text && !p.thought; }).map(function (p) { return p.text; }).join('').trim();
   if (!text) fail_(cand.finishReason === 'MAX_TOKENS' ? 'Câu trả lời quá dài, bị cắt hết. Tăng MAX_TOKENS hoặc hỏi ngắn hơn.' : 'Gemini không trả lời (' + (cand.finishReason || 'trống') + ').');
   return text + (cand.finishReason === 'MAX_TOKENS' ? '\n…(bị cắt do quá dài)' : '');
+}
+
+// ================== Đăng nhập nhiều ngày ==================
+// App gửi mã đăng nhập (code) lên đây; script dùng mã bí mật (chỉ nằm ở Script Properties) để đổi lấy
+// access token (~1 giờ) + refresh token. App giữ refresh token và nhờ script đổi lấy vé mới khi hết hạn, không cần bật cửa sổ Google.
+function tokenCall_(params) {
+  const secret = prop_('GOOGLE_CLIENT_SECRET');
+  if (!secret) fail_('Cổng chưa có GOOGLE_CLIENT_SECRET (Script Properties).');
+  params.client_id = CLIENT_ID; params.client_secret = secret;
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', { method: 'post', payload: params, muteHttpExceptions: true });
+  let j = {};
+  try { j = JSON.parse(r.getContentText()); } catch (x) {}
+  if (r.getResponseCode() !== 200) {
+    if (j.error === 'invalid_grant') return { error: 'Phiên đăng nhập dài hạn đã hết hạn hoặc bị thu hồi, hãy đăng nhập lại.', relogin: true };
+    if (j.error === 'invalid_client') fail_('GOOGLE_CLIENT_SECRET sai (không khớp với Client ID).');
+    fail_('Google báo lỗi đăng nhập: ' + (j.error_description || j.error || ('HTTP ' + r.getResponseCode())));
+  }
+  return j;
+}
+function authCode_(b) {
+  if (!b.code) fail_('Thiếu mã đăng nhập.');
+  const j = tokenCall_({ code: String(b.code), grant_type: 'authorization_code', redirect_uri: 'postmessage' });
+  if (j.error) return j;
+  return { access_token: j.access_token, expires_in: j.expires_in, refresh_token: j.refresh_token || '' };
+}
+function authRefresh_(b) {
+  if (!b.refresh_token) fail_('Thiếu refresh token.');
+  const j = tokenCall_({ refresh_token: String(b.refresh_token), grant_type: 'refresh_token' });
+  if (j.error) return j;
+  return { access_token: j.access_token, expires_in: j.expires_in };
 }
