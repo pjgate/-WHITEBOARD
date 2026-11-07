@@ -443,6 +443,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Thêm ô nối bên phải / bên dưới</td><td><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> (hoặc <kbd>Alt</kbd>+mũi tên)</td></tr>
     <tr><td>In đậm / nghiêng / gạch dưới</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td></tr>
     <tr><td>Định dạng một đoạn chữ</td><td>Đang gõ, bôi đen đoạn đó → thanh nhỏ hiện ra (đậm, nghiêng, gạch, cỡ, màu chữ, tô nền)</td></tr>
+    <tr><td>Khung viền</td><td>Chọn ô chữ → nút khung trên thanh công cụ (liền / đứt / bo tròn); hoặc bôi đen một đoạn → nút khung</td></tr>
     <tr><td>Gạch ngang đoạn đang bôi đen</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td></tr>
     <tr><td>Chữ to / nhỏ hơn</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>&gt;</kbd> / <kbd>&lt;</kbd></td></tr>
     <tr><td>Gạch đầu dòng, đánh số</td><td>Gõ <kbd>-</kbd> rồi cách, hoặc <kbd>1.</kbd> rồi cách; <kbd>Enter</kbd> tự nối tiếp</td></tr>
@@ -748,6 +749,9 @@ function applyTxtStyle(it,r){ const ts=r.txt.style;
   ts.fontWeight=it.b?'700':''; ts.fontStyle=it.it?'italic':''; ts.textDecoration=it.u?'underline':'';
   const isList=!it.al&&it.type!=='text'&&/(^|\n)\s*(•|☐|☑|\d+[.)])\s/.test(editing?.id===it.id?readRich(r.txt).text:(it.text||''));
   ts.textAlign=it.al==='l'||isList?'left':it.al==='r'?'right':it.al==='c'?'center':'';
+  if(it.type==='text'){ const es=r.el.style, f=it.fs||20;
+    if(it.fr){ es.border=`${Math.max(1,f*.08)}px ${it.fr==='d'?'dashed':'solid'} ${it.color||'#1f2228'}`; es.padding=`${f*.35}px ${f*.55}px`; es.borderRadius=(it.fr==='r'?f*.6:f*.15)+'px'; }
+    else es.border=es.padding=es.borderRadius=''; }
   if(it.type==='sticky'||it.type==='shape'){ r.el.style.padding=(Math.min(it.w,it.h)*(it.type==='sticky'?.09:it.shape==='ellipse'?.16:.08))+'px'; autoFit(it,r); } }
 function autoFit(it,r){ const t=r.txt, el=r.el; if(!t||!it.fs) return;
   const key=[editing?.id===it.id?t.innerHTML:it.text+JSON.stringify(it.runs||''),it.w,it.h,it.fs,it.b,it.it,it.bw].join('|');
@@ -1853,9 +1857,9 @@ function finishEdit(){
 
 // ----- Gõ chữ thông minh (dàn ý, ô tích, định dạng) -----
 // Mô hình chữ: text thuần + runs [{s,e,b,i,u,k,c,h,z}] (k = gạch ngang, c = màu chữ, h = tô nền, z = tỉ lệ cỡ chữ)
-const RK=['b','i','u','k','c','h','z'];
+const RK=['b','i','u','k','c','h','z','x'];
 function spanStyle(st){ const d=[st.u?'underline':'',st.k?'line-through':''].filter(Boolean).join(' ');
-  return (st.b?'font-weight:700;':'')+(st.i?'font-style:italic;':'')+(d?'text-decoration:'+d+';':'')+(st.c?'color:'+st.c+';':'')+(st.h?'background:'+st.h+';border-radius:.15em;box-decoration-break:clone;-webkit-box-decoration-break:clone;':'')+(st.z?'font-size:'+st.z+'em;':''); }
+  return (st.b?'font-weight:700;':'')+(st.i?'font-style:italic;':'')+(d?'text-decoration:'+d+';':'')+(st.c?'color:'+st.c+';':'')+(st.h?'background:'+st.h+';border-radius:.15em;box-decoration-break:clone;-webkit-box-decoration-break:clone;':'')+(st.z?'font-size:'+st.z+'em;':'')+(st.x?'border:.08em solid currentColor;border-radius:.25em;padding:0 .18em;box-decoration-break:clone;-webkit-box-decoration-break:clone;':''); }
 function styleOf(n,t){ const st={}; for(let x=n.parentNode;x&&x!==t;x=x.parentNode){ const d=x.dataset; if(!d) continue;
     for(const k of RK) if(d[k]!==undefined&&st[k]===undefined) st[k]=k==='z'?+d[k]:(k==='c'||k==='h')?d[k]:true; } return st; }
 const stKey=st=>RK.map(k=>st[k]??'').join('|');
@@ -1893,7 +1897,7 @@ function shiftRuns(runs,a,b,len){ const d=len-(b-a), m=(p,isEnd)=>p<a?p:p>=b?p+d
 function editReplace(t,a,b,str,keep){ const x=getTE(t), d=str.length-(b-a); setTE(t,x.text.slice(0,a)+str+x.text.slice(b),!keep?a+str.length:x.s<=a?x.s:x.s>=b?x.s+d:a+str.length,shiftRuns(x.runs,a,b,str.length)); }
 // Định dạng đoạn đang bôi đen
 function fmtRange(t,key,val){ const x=getTE(t); if(x.s===x.e) return false; const ch=charsFromRuns(x.runs,x.text.length);
-  if(key==='b'||key==='i'||key==='u'||key==='k'){ let all=true; for(let i=x.s;i<x.e;i++) if(x.text[i]!=='\n'&&!ch[i]?.[key]){ all=false; break; } val=!all; }
+  if(key==='b'||key==='i'||key==='u'||key==='k'||key==='x'){ let all=true; for(let i=x.s;i<x.e;i++) if(x.text[i]!=='\n'&&!ch[i]?.[key]){ all=false; break; } val=!all; }
   for(let i=x.s;i<x.e;i++){ if(x.text[i]==='\n') continue; const st={...(ch[i]||{})};
     if(key==='z'){ const z=Math.min(4,Math.max(.4,(st.z||1)*val)); if(Math.abs(z-1)<.02) delete st.z; else st.z=Math.round(z*100)/100; }
     else if(key==='clear'){ for(const k of RK) delete st[k]; }
@@ -2178,6 +2182,10 @@ function drawOverlay(){
 
 // ================== Context toolbar ==================
 const ICON={
+  frame:'<rect x="3.5" y="6" width="17" height="12" rx="2"/><path d="M8 12h8"/>',
+  frameS:'<rect x="3.5" y="6" width="17" height="12" rx="1"/><path d="M8 12h8"/>',
+  frameD:'<rect x="3.5" y="6" width="17" height="12" rx="1" stroke-dasharray="3 2.4"/><path d="M8 12h8"/>',
+  frameR:'<rect x="3.5" y="6" width="17" height="12" rx="6"/><path d="M8 12h8"/>',
   fsDn:'<path d="M3 18l4.5-12L12 18M4.7 14h5.6M15 12h6"/>',
   fsUp:'<path d="M3 18l4.5-12L12 18M4.7 14h5.6M15 12h6M18 9v6"/>',
   bold:'<path d="M7 5h6a3.5 3.5 0 0 1 0 7H7zM7 12h7a3.5 3.5 0 0 1 0 7H7z"/>',
@@ -2221,6 +2229,7 @@ function renderCtx(){
   if(tx.length){ const t0=tx[0], al=t0.al||(t0.type==='text'?'l':'c');
     h+='<div class="vsep"></div>'+btn('fsDn','Chữ nhỏ hơn (Ctrl Shift <)')+btn('fsUp','Chữ to hơn (Ctrl Shift >)')+btnOn('bold','In đậm (Ctrl B)',!!t0.b)+btnOn('ital','In nghiêng (Ctrl I)',!!t0.it)+btnOn('under','Gạch dưới (Ctrl U)',!!t0.u)
       +(tx.some(i=>i.type!=='arrow')?btn('al'+al.toUpperCase(),'Căn lề: '+({l:'trái',c:'giữa',r:'phải'})[al]):''); }
+  const txo=its.filter(i=>i.type==='text'&&!i.locked); if(txo.length){ const fr=txo[0].fr; h+=btnOn(fr==='d'?'frameD':fr==='r'?'frameR':fr?'frameS':'frame','Khung viền chữ: '+({s:'nét liền',d:'nét đứt',r:'bo tròn'}[fr]||'không có')+' (bấm để đổi)',!!fr); }
   if(its.length===1&&['sticky','shape','text'].includes(its[0].type)&&!its[0].locked) h+='<div class="vsep"></div>'+btn('nextR','Thêm ô nối bên phải (Tab)')+btn('nextD','Thêm ô nối bên dưới (Shift Tab)');
   if(its.length===1 && its[0].type==='arrow'){ const hd=its[0].head||'end'; h+=btn(hd==='end'?'hEnd':hd==='both'?'hBoth':'hNone','Đổi kiểu đầu mũi tên'); }
   if(its.some(i=>i.rot)) h+=btn('rot0','Về góc 0°');
@@ -2238,12 +2247,12 @@ const rtb=$('#rtb');
 ICON.strike='<path d="M5 12h14M16 6.5A4 3 0 0 0 12 5c-2.2 0-4 1.2-4 3 0 1.4 1 2.3 2.6 2.9M8 17.5A4.5 3 0 0 0 12 19c2.5 0 4.4-1.2 4.4-3.1 0-.8-.3-1.5-.9-2"/>';
 ICON.clr='<path d="M6 19h12M8 15l7-10 4 3-7 10zM5 5l14 14"/>';
 function renderRtb(){ let h=btn('rB','In đậm (Ctrl B)').replace('data-cx','data-rt')+btn('rI','Nghiêng (Ctrl I)').replace('data-cx','data-rt')+btn('rU','Gạch dưới (Ctrl U)').replace('data-cx','data-rt')+btn('rK','Gạch ngang (Ctrl Shift X)').replace('data-cx','data-rt')
-    +btn('rDn','Nhỏ hơn (Ctrl Shift <)').replace('data-cx','data-rt')+btn('rUp','To hơn (Ctrl Shift >)').replace('data-cx','data-rt')+'<div class="vsep"></div>'
+    +btn('rX','Khung viền quanh đoạn này').replace('data-cx','data-rt')+btn('rDn','Nhỏ hơn (Ctrl Shift <)').replace('data-cx','data-rt')+btn('rUp','To hơn (Ctrl Shift >)').replace('data-cx','data-rt')+'<div class="vsep"></div>'
     +INKS.map(c=>`<button class="sw" data-rc="${c}" style="background:${c}" title="Màu chữ"></button>`).join('')+'<div class="vsep"></div>'
     +HLS.map(c=>`<button class="sw hl" data-rh="${c}" style="background:${c}" title="Tô nền"></button>`).join('')+`<button class="sw hl nofill" data-rh="" title="Bỏ tô nền"></button>`
     +'<div class="vsep"></div>'+btn('clr','Xóa định dạng đoạn này').replace('data-cx','data-rt');
   rtb.innerHTML=h; }
-Object.assign(ICON,{rB:ICON.bold,rI:ICON.ital,rU:ICON.under,rK:ICON.strike,rDn:ICON.fsDn,rUp:ICON.fsUp});
+Object.assign(ICON,{rX:ICON.frame,rB:ICON.bold,rI:ICON.ital,rU:ICON.under,rK:ICON.strike,rDn:ICON.fsDn,rUp:ICON.fsUp});
 function hideRtb(){ rtb.classList.remove('show'); }
 function updRtb(){ if(!editing) return hideRtb(); const r=els.get(editing.id), sl=getSelection();
   if(!r?.txt||!sl.rangeCount||sl.isCollapsed||!r.txt.contains(sl.anchorNode)||!r.txt.contains(sl.focusNode)) return hideRtb();
@@ -2255,7 +2264,7 @@ rtb.addEventListener('pointerdown',e=>{ e.preventDefault(); e.stopPropagation();
   const b=e.target.closest('button'); if(!b) return; const t=r.txt, rt=b.dataset.rt;
   if(b.dataset.rc!==undefined) fmtRange(t,'c',b.dataset.rc);
   else if(b.dataset.rh!==undefined) fmtRange(t,'h',b.dataset.rh||null);
-  else if(rt) ({rB:()=>fmtRange(t,'b'),rI:()=>fmtRange(t,'i'),rU:()=>fmtRange(t,'u'),rK:()=>fmtRange(t,'k'),rDn:()=>fmtRange(t,'z',.8),rUp:()=>fmtRange(t,'z',1.25),clr:()=>fmtRange(t,'clear')})[rt]?.();
+  else if(rt) ({rB:()=>fmtRange(t,'b'),rI:()=>fmtRange(t,'i'),rU:()=>fmtRange(t,'u'),rK:()=>fmtRange(t,'k'),rX:()=>fmtRange(t,'x'),rDn:()=>fmtRange(t,'z',.8),rUp:()=>fmtRange(t,'z',1.25),clr:()=>fmtRange(t,'clear')})[rt]?.();
   afterEditMut(it,r); updRtb(); });
 
 function positionCtx(){
@@ -2280,6 +2289,7 @@ ctx.addEventListener('click',e=>{
   else if(b.dataset.cx==='fsDn'||b.dataset.cx==='fsUp'){ checkpoint(); its.filter(i=>TXT_T.has(i.type)).forEach(i=>stepFs(i,b.dataset.cx==='fsUp'?1:-1)); }
   else if(['bold','ital','under'].includes(b.dataset.cx)){ checkpoint(); const key={bold:'b',ital:'it',under:'u'}[b.dataset.cx], tx=its.filter(i=>TXT_T.has(i.type)); setFmt(tx,key,!tx[0]?.[key]); }
   else if(b.dataset.cx.startsWith('al')){ checkpoint(); const nx={L:'c',C:'r',R:'l'}[b.dataset.cx.slice(2)]; setFmt(its.filter(i=>TXT_T.has(i.type)&&i.type!=='arrow'),'al',nx); }
+  else if(b.dataset.cx.startsWith('frame')){ checkpoint(); const tx=its.filter(i=>i.type==='text'), nx={'':'s',s:'d',d:'r',r:''}[tx[0]?.fr||'']; setFmt(tx,'fr',nx||undefined); tx.forEach(i=>{ if(!i.fr) delete i.fr; }); updateArrows(); }
   else if(b.dataset.cx==='nextR'||b.dataset.cx==='nextD') return addNext(its[0],b.dataset.cx==='nextR'?'r':'d');
   else if(b.dataset.cx==='group') return groupSel();
   else if(b.dataset.cx==='ungroup') return ungroupSel();
