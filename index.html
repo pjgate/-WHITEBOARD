@@ -443,6 +443,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Thêm ô nối bên phải / bên dưới</td><td><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd> (hoặc <kbd>Alt</kbd>+mũi tên)</td></tr>
     <tr><td>In đậm / nghiêng / gạch dưới</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td></tr>
     <tr><td>Định dạng một đoạn chữ</td><td>Đang gõ, bôi đen đoạn đó → thanh nhỏ hiện ra (đậm, nghiêng, gạch, cỡ, màu chữ, tô nền)</td></tr>
+    <tr><td>Đổi kích thước khung chữ / ghi chú / hình</td><td>Kéo nút giữa cạnh (ngang hoặc dọc) hoặc góc; chữ giữ nguyên cỡ. Giữ <kbd>Shift</kbd> khi kéo góc để phóng to cả chữ</td></tr>
     <tr><td>Khung viền</td><td>Chọn ô chữ → nút khung trên thanh công cụ (liền / đứt / bo tròn); hoặc bôi đen một đoạn → nút khung</td></tr>
     <tr><td>Gạch ngang đoạn đang bôi đen</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td></tr>
     <tr><td>Chữ to / nhỏ hơn</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>&gt;</kbd> / <kbd>&lt;</kbd></td></tr>
@@ -1844,7 +1845,7 @@ function startEdit(id){
   r.txt.onblur=()=>finishEdit();
   renderCtx(); requestRender();
 }
-function fitText(it){ const r=els.get(it.id); if(!r) return; r.el.style.height='auto'; const h=r.el.offsetHeight; it.h=Math.max(h,it.fs*1.4); r.el.style.height=it.h+'px'; }
+function fitText(it){ const r=els.get(it.id); if(!r) return; r.el.style.height='auto'; const h=r.el.offsetHeight; it.h=Math.max(h,it.fs*1.4,it.hm||0); r.el.style.height=it.h+'px'; }
 function finishEdit(){
   if(!editing) return; const {id}=editing; editing=null;
   const it=S.items.get(id), r=els.get(id); if(!it||!r) return;
@@ -1956,15 +1957,18 @@ function handleGeom(){ // screen-space handle positions for the current selectio
   if(its.length===1){ const it=its[0]; cs=corners(it).map(p=>toScreen(p.x,p.y)); const a=rad(it); up={x:Math.sin(a),y:-Math.cos(a)}; }
   else { const b=bbox(its); cs=[{x:b.x,y:b.y},{x:b.x+b.w,y:b.y},{x:b.x+b.w,y:b.y+b.h},{x:b.x,y:b.y+b.h}].map(p=>toScreen(p.x,p.y)); up={x:0,y:-1}; }
   const tm={x:(cs[0].x+cs[1].x)/2,y:(cs[0].y+cs[1].y)/2};
-  return {its, cs, tm, rot:{x:tm.x+up.x*28,y:tm.y+up.y*28}, group:its.length>1};
+  const es=its.length===1&&FREE_RS.has(its[0].type)?[0,1,2,3].map(i=>({x:(cs[i].x+cs[(i+1)%4].x)/2,y:(cs[i].y+cs[(i+1)%4].y)/2})):null;
+  return {its, cs, tm, es, rot:{x:tm.x+up.x*28,y:tm.y+up.y*28}, group:its.length>1};
 }
 function hitHandle(sp){
   const g=handleGeom(); if(!g) return null; const near=(p,r=10)=>Math.abs(sp.x-p.x)<=r&&Math.abs(sp.y-p.y)<=r;
   if(g.arrow){ if(near(g.b,9)) return {k:'end',w:'b'}; if(near(g.a,9)) return {k:'end',w:'a'}; return null; }
   if(near(g.rot,10)) return {k:'rot'};
   for(let i=0;i<4;i++) if(near(g.cs[i])) return {k:'corner',i};
+  if(g.es) for(let i=0;i<4;i++) if(near(g.es[i],9)) return {k:'edge',i};
   return null;
 }
+const FREE_RS=new Set(['text','sticky','shape']);
 const ASPECT=new Set(['image','pdf','sticky','text','pen']);
 vp.addEventListener('pointerdown',e=>{
   if(e.target.closest('.editing')) return;
@@ -1997,7 +2001,9 @@ vp.addEventListener('pointerdown',e=>{
       if(its.length===1){ const it=its[0];
         if(h.k==='rot'){ const c=ctr(it); drag={type:'rotate', it, c, a0:Math.atan2(wp.y-c.y,wp.x-c.x), r0:it.rot||0}; return; }
         const cs=corners(it), a=rad(it);
-        drag={type:'resize', it, anchor:cs[(h.i+2)%4], ux:{x:Math.cos(a),y:Math.sin(a)}, uy:{x:-Math.sin(a),y:Math.cos(a)}, sx:(h.i===1||h.i===2)?1:-1, sy:h.i>=2?1:-1, w0:it.w, h0:it.h, fs0:it.fs}; return; }
+        if(h.k==='edge'){ const o=(h.i+2)%4, A={x:(cs[o].x+cs[(o+1)%4].x)/2,y:(cs[o].y+cs[(o+1)%4].y)/2};
+          drag={type:'eresize', it, i:h.i, anchor:A, ux:{x:Math.cos(a),y:Math.sin(a)}, uy:{x:-Math.sin(a),y:Math.cos(a)}, s:(h.i===1||h.i===2)?1:-1, w0:it.w, h0:it.h}; return; }
+        drag={type:'resize', it, anchor:cs[(h.i+2)%4], ux:{x:Math.cos(a),y:Math.sin(a)}, uy:{x:-Math.sin(a),y:Math.cos(a)}, sx:(h.i===1||h.i===2)?1:-1, sy:h.i>=2?1:-1, w0:it.w, h0:it.h, fs0:it.fs, hm0:it.hm}; return; }
       const b=bbox(its), orig=its.map(it=>JSON.parse(JSON.stringify(it)));
       if(h.k==='rot'){ const c={x:b.x+b.w/2,y:b.y+b.h/2}; drag={type:'grot', its, orig, c, a0:Math.atan2(wp.y-c.y,wp.x-c.x)}; return; }
       const cs=[{x:b.x,y:b.y},{x:b.x+b.w,y:b.y},{x:b.x+b.w,y:b.y+b.h},{x:b.x,y:b.y+b.h}];
@@ -2031,7 +2037,7 @@ addEventListener('pointermove',e=>{
     const hid=(e.target.closest&&e.target.closest('#vp .item'))?.dataset.id||null;
     if(hid!==hoverId){ hoverId=hid; requestRender(); }
     const h=tool==='select'?hitHandle(sp):null;
-    vp.style.cursor=h===null?'':h.k==='rot'?'grab':h.k==='end'?'crosshair':(h.i%2===0?'nwse-resize':'nesw-resize');
+    vp.style.cursor=h===null?'':h.k==='rot'?'grab':h.k==='end'?'crosshair':h.k==='edge'?(h.i%2===0?'ns-resize':'ew-resize'):(h.i%2===0?'nwse-resize':'nesw-resize');
     return;
   }
   switch(drag.type){
@@ -2052,10 +2058,21 @@ addEventListener('pointermove',e=>{
       S.sel=new Set([...withGroups(s)].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it); })); requestRender(); break; }
     case 'resize':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it, mn=8/cam.z, A=d.anchor;
       const vx=wp.x-A.x, vy=wp.y-A.y; let w=Math.max(mn,(vx*d.ux.x+vy*d.ux.y)*d.sx), h=Math.max(mn,(vx*d.uy.x+vy*d.uy.y)*d.sy);
-      if(ASPECT.has(it.type)!==e.shiftKey){ const s=Math.max(w/d.w0,h/d.h0); w=d.w0*s; h=d.h0*s; if(d.fs0) it.fs=d.fs0*s; }
+      const asp=FREE_RS.has(it.type)?e.shiftKey:ASPECT.has(it.type)!==e.shiftKey;
+      if(asp){ const s=Math.max(w/d.w0,h/d.h0); w=d.w0*s; h=d.h0*s; if(d.fs0) it.fs=d.fs0*s; if(it.type==='text'&&d.hm0) it.hm=d.hm0*s; }
+      else if(FREE_RS.has(it.type)&&d.fs0&&it.fs!==d.fs0) it.fs=d.fs0;
+      if(it.type==='text'&&!asp) it.hm=h;
       const cx=A.x+d.ux.x*d.sx*w/2+d.uy.x*d.sy*h/2, cy=A.y+d.ux.y*d.sx*w/2+d.uy.y*d.sy*h/2;
       it.w=w; it.h=h; it.x=cx-w/2; it.y=cy-h/2;
-      syncEl(it); updateArrows(); requestRender(); break; }
+      syncEl(it); if(it.type==='text') fitText(it); updateArrows(); requestRender(); break; }
+    case 'eresize':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it, mn=Math.max(12/cam.z,(it.fs||0)*1.2), A=d.anchor;
+      const vx=wp.x-A.x, vy=wp.y-A.y, horiz=d.i===1||d.i===3; let w=d.w0, h=d.h0;
+      if(horiz) w=Math.max(mn,(vx*d.ux.x+vy*d.ux.y)*d.s); else h=Math.max(mn,(vx*d.uy.x+vy*d.uy.y)*d.s);
+      if(it.type==='text'&&!horiz) it.hm=h;
+      const u=horiz?d.ux:d.uy, L=horiz?w:h, cx=A.x+u.x*d.s*L/2, cy=A.y+u.y*d.s*L/2;
+      it.w=w; it.h=h; it.x=cx-w/2; it.y=cy-h/2;
+      syncEl(it); if(it.type==='text'){ fitText(it); if(it.h!==h){ const c2x=A.x+u.x*d.s*(horiz?w:it.h)/2, c2y=A.y+u.y*d.s*(horiz?w:it.h)/2; if(!horiz){ it.x=c2x-it.w/2; it.y=c2y-it.h/2; syncPos(it); } } }
+      updateArrows(); requestRender(); break; }
     case 'rotate':{ const wp=toWorld(sp.x,sp.y), d=drag; let r=d.r0+(Math.atan2(wp.y-d.c.y,wp.x-d.c.x)-d.a0)*180/Math.PI;
       if(e.shiftKey) r=Math.round(r/15)*15; r=((r%360)+540)%360-180; if(Math.abs(r)<.01) r=0; d.it.rot=+r.toFixed(2);
       syncPos(d.it); updateArrows(); requestRender(); break; }
@@ -2093,7 +2110,7 @@ function endPointer(e){
   else if(d.type==='pen'){ if(d.pts.length>1||true) createPen(d.pts); }
   else if(d.type==='create'){ const it=d.it; if(it.w*cam.z<6 && it.h*cam.z<6){ const w=160/cam.z, h=(it.shape==='ellipse'?160:110)/cam.z; it.x=d.start.x-w/2; it.y=d.start.y-h/2; it.w=w; it.h=h; syncEl(it); }
     setTool('select'); setSel([it.id]); saveSoon(); }
-  else if(d.type==='resize'){ const it=d.it; if(it.type==='text') fitText(it); saveSoon(); updateLODSoon(); }
+  else if(d.type==='resize'||d.type==='eresize'){ const it=d.it; if(it.type==='text') fitText(it); updateArrows(); saveSoon(); updateLODSoon(); }
   else if(d.type==='rotate'||d.type==='grot'){ saveSoon(); updateLODSoon(); }
   else if(d.type==='gscale'){ d.its.forEach(it=>{ if(it.type==='text') fitText(it); }); updateArrows(); saveSoon(); updateLODSoon(); }
   else if(d.type==='aend'){ const it=d.it;
@@ -2153,12 +2170,14 @@ function drawOverlay(){
     for(const id of S.sel){ const it=S.items.get(id); if(!it) continue; list.push(it);
       if(it.type==='arrow'){ const a=toScreen(it.a.x,it.a.y), b=toScreen(it.b.x,it.b.y); ov.save(); ov.globalAlpha=.35; ov.lineWidth=Math.max(6,(it.sw||2)*cam.z+6); ov.lineCap='round'; ov.beginPath(); ov.moveTo(a.x,a.y); ov.lineTo(b.x,b.y); ov.stroke(); ov.restore(); continue; }
       const cs=corners(it).map(p=>toScreen(p.x,p.y)); ov.beginPath(); cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); }
-    const g=(!drag||['resize','rotate','grot','gscale','aend'].includes(drag.type))?handleGeom():null;
+    const g=(!drag||['resize','eresize','rotate','grot','gscale','aend'].includes(drag.type))?handleGeom():null;
     if(g&&g.group){ ov.setLineDash([5,4]); ov.lineWidth=1; ov.beginPath(); g.cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); ov.setLineDash([]);
       if(selGroup()){ const t=`Nhóm · ${list.length}`; ov.font='600 11px "Be Vietnam Pro",system-ui'; const tw=ov.measureText(t).width+12; ov.fillStyle=A; ov.beginPath(); ov.roundRect?ov.roundRect(g.cs[0].x,g.cs[0].y-24,tw,20,5):ov.rect(g.cs[0].x,g.cs[0].y-24,tw,20); ov.fill(); ov.fillStyle='#fff'; ov.fillText(t,g.cs[0].x+6,g.cs[0].y-10); ov.strokeStyle=A; ov.lineWidth=1.5; } }
     if(g){ ov.fillStyle='#fff'; ov.lineWidth=1.5; ov.strokeStyle=A;
       if(g.arrow){ for(const p of [g.a,g.b]){ ov.beginPath(); ov.arc(p.x,p.y,6,0,Math.PI*2); ov.fill(); ov.stroke(); } }
       else { for(const p of g.cs){ ov.beginPath(); ov.rect(p.x-5,p.y-5,10,10); ov.fill(); ov.stroke(); }
+        if(g.es){ const c=g.cs, len=(a,b)=>Math.hypot(b.x-a.x,b.y-a.y); g.es.forEach((p,i)=>{ if(len(c[i],c[(i+1)%4])<44) return; const ang=Math.atan2(c[(i+1)%4].y-c[i].y,c[(i+1)%4].x-c[i].x);
+          ov.save(); ov.translate(p.x,p.y); ov.rotate(ang); ov.beginPath(); ov.roundRect?ov.roundRect(-8,-3.5,16,7,3.5):ov.rect(-8,-3.5,16,7); ov.fill(); ov.stroke(); ov.restore(); }); }
         ov.beginPath(); ov.moveTo(g.tm.x,g.tm.y); ov.lineTo(g.rot.x,g.rot.y); ov.stroke();
         ov.beginPath(); ov.arc(g.rot.x,g.rot.y,7,0,Math.PI*2); ov.fill(); ov.stroke();
         ov.beginPath(); ov.arc(g.rot.x,g.rot.y,3.2,-Math.PI*.9,Math.PI*.4); ov.stroke(); }
