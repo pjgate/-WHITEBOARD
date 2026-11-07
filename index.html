@@ -50,6 +50,9 @@ html,body{-webkit-text-size-adjust:100%}
 .t-pen,.t-arrow{pointer-events:none}
 .t-arrow svg{width:100%;height:100%;display:block;overflow:visible}
 .t-arrow .hit{pointer-events:stroke;stroke:transparent}
+.t-arrow .txt{position:absolute;width:auto;max-width:none;max-height:none;overflow:visible;white-space:pre;text-align:center;transform:translate(-50%,-50%);background:var(--bg);padding:.1em .4em;border-radius:.3em;pointer-events:auto;line-height:1.25}
+.t-arrow .txt:empty{display:none}
+.t-arrow.editing .txt{display:block;min-width:2em;min-height:1.25em;box-shadow:0 0 0 1px var(--line)}
 .t-pen svg{width:100%;height:100%;display:block;overflow:visible}
 .t-pen .hit{pointer-events:stroke;stroke:transparent}
 #ov{position:fixed;inset:0;pointer-events:none}
@@ -384,6 +387,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button data-act="fit"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>Xem toàn bộ bảng</button>
   <button data-act="selall"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="3 3"/></svg>Chọn tất cả</button>
   <button data-act="hideMine" id="hmBtn"><svg viewBox="0 0 24 24"><path d="M3 12s3.5-6.5 9-6.5 9 6.5 9 6.5-3.5 6.5-9 6.5S3 12 3 12z"/><circle cx="12" cy="12" r="2.6"/></svg><span>Ẩn ghi chú của tôi</span></button>
+  <button data-act="copyClaude"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="7" height="5" rx="1"/><rect x="14" y="4" width="7" height="5" rx="1"/><rect x="8.5" y="15" width="7" height="5" rx="1"/><path d="M6.5 9l4 6M17.5 9l-4 6"/></svg>Sao chép sơ đồ cho Claude</button>
   <div id="menuDrive"></div>
   <button data-act="lockMedia"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Khóa tất cả ảnh &amp; PDF</button>
   <button data-act="unlockAll"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>Mở khóa tất cả</button>
@@ -429,6 +433,8 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Chọn 1 đối tượng trong nhóm</td><td>Bấm thêm lần nữa vào nó</td></tr>
     <tr><td>Khóa / mở khóa</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td></tr>
     <tr><td>Mũi tên nối đối tượng</td><td><kbd>A</kbd> rồi kéo</td></tr>
+    <tr><td>Ghi chữ lên mũi tên</td><td>Bấm đúp vào mũi tên</td></tr>
+    <tr><td>Sao chép sơ đồ cho Claude</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd></td></tr>
     <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>P</kbd></td></tr>
   </table>
 </div>
@@ -701,7 +707,7 @@ function buildEl(it){
   const r={el, vis:null, level:null};
   if(it.type==='image'||it.type==='pdf'){ const img=document.createElement('img'); img.alt=''; img.draggable=false; img.decoding='async'; el.appendChild(img); r.img=img; }
   if(it.type==='sticky'||it.type==='text'||it.type==='shape'){ const t=document.createElement('div'); t.className='txt'; t.spellcheck=false; el.appendChild(t); r.txt=t; }
-  if(it.type==='arrow'){ el.innerHTML='<svg><path class="hit" fill="none" stroke-linecap="round"/><path class="ink" fill="none" stroke-linecap="round"/><path class="hd" stroke-linejoin="round"/></svg>'; }
+  if(it.type==='arrow'){ el.innerHTML='<svg><path class="hit" fill="none" stroke-linecap="round"/><path class="ink" fill="none" stroke-linecap="round"/><path class="hd" stroke-linejoin="round"/></svg><div class="txt" spellcheck="false"></div>'; r.txt=el.lastChild; }
   if(it.type==='pen'){ el.innerHTML='<svg preserveAspectRatio="none"><path class="hit" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path class="ink" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
   els.set(it.id,r); world.appendChild(el); syncEl(it); return r;
 }
@@ -748,6 +754,7 @@ function drawArrowEl(it,el){
   const d=`M${s0.x} ${s0.y}L${s1.x} ${s1.y}`; ln.setAttribute('d',d); hp.setAttribute('d',`M${A.x} ${A.y}L${B.x} ${B.y}`);
   ln.setAttribute('stroke',it.color); ln.setAttribute('stroke-width',sw); hp.setAttribute('stroke-width',Math.max(sw*4,14/Math.max(cam.z,.05)));
   hd.setAttribute('d',(hE?head(B,ux,uy):'')+(hS?head(A,-ux,-uy):'')); hd.setAttribute('fill',it.color); hd.setAttribute('stroke',it.color); hd.setAttribute('stroke-width',sw*.6);
+  const tx=el.lastChild; if(tx?.classList?.contains('txt')){ const ts=tx.style; ts.left=((A.x+B.x)/2)+'px'; ts.top=((A.y+B.y)/2)+'px'; ts.fontSize=Math.max(sw*5.6,8)+'px'; ts.color=it.color; if(editing?.id!==it.id) tx.textContent=it.text||''; }
 }
 function itemAt(sp,exclude){ for(const el of document.elementsFromPoint(sp.x,sp.y)){ const ie=el.closest?.('#world .item'); if(!ie) continue; const id=ie.dataset.id, t=S.items.get(id);
     if(t&&id!==exclude&&t.type!=='arrow') return t; } return null; }
@@ -1980,6 +1987,7 @@ vp.addEventListener('dblclick',e=>{
   if(tool!=='select') return; const id=document.elementFromPoint(e.clientX,e.clientY)?.closest('.item')?.dataset.id; if(!id) return;
   const it=S.items.get(id); if(!it) return;
   if((it.type==='sticky'||it.type==='text'||it.type==='shape')&&canEdit(it)&&!it.locked){ setSel([id]); startEdit(id); }
+  else if(it.type==='arrow'&&canEdit(it)&&!it.locked){ setSel([id]); startEdit(id); }
   else if(it.type==='image'||it.type==='pdf') fitTo([it], 12);
 });
 vp.addEventListener('wheel',e=>{
@@ -2150,6 +2158,7 @@ document.addEventListener('click',e=>{
   else if(a==='lockMedia'||a==='unlockAll'){ if(!editMode()) return openLogin(); const lock=a==='lockMedia'; const list=[...S.items.values()].filter(i=>canEdit(i)&&(lock?(i.type==='image'||i.type==='pdf')&&!i.locked:i.locked));
     if(!list.length){ toast(lock?'Không có ảnh/PDF nào cần khóa':'Không có gì đang khóa',null,1800); return; } checkpoint(); list.forEach(i=>{ if(lock) i.locked=true; else delete i.locked; }); setSel([]); saveSoon(); requestRender(); toast(lock?`Đã khóa ${list.length} ảnh/trang PDF`:`Đã mở khóa ${list.length} đối tượng`,null,2000); }
   else if(a==='hideMine') setHideMine(!hideMine);
+  else if(a==='copyClaude') copyGraph();
   else if(a==='clear') $('#modal').classList.add('show');
   else if(a==='mcancel') $('#modal').classList.remove('show');
   else if(a==='mok') { $('#modal').classList.remove('show'); clearBoard(); }
@@ -2208,6 +2217,7 @@ addEventListener('keydown',e=>{
   if(mod&&k==='y'){ e.preventDefault(); redo(); return; }
   if(mod&&k==='a'){ e.preventDefault(); setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); return; }
   if(mod&&e.shiftKey&&k==='l'){ e.preventDefault(); toggleLock(); return; }
+  if(mod&&e.shiftKey&&k==='c'){ e.preventDefault(); copyGraph(); return; }
   if(mod&&k==='g'){ e.preventDefault(); e.shiftKey?ungroupSel():groupSel(); return; }
   if(mod&&k==='d'){ e.preventDefault(); duplicate(); return; }
   if(mod&&(k==='='||k==='+')){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,1.25); return; }
@@ -2280,6 +2290,7 @@ function aiNotesText(){
     if((n+=t.length)>40000){ rows.push('- …(còn nữa, đã cắt bớt)'); break; } }
   return rows.join('\n');
 }
+function aiGraph(){ try{ if(![...S.items.values()].some(it=>it.type==='arrow'&&it.a.id&&it.b.id)) return ''; const t=graphText(false); return t?'\n\nCác ô và mũi tên nối trên bảng (thể hiện quy trình / quan hệ):\n'+t.slice(0,15000):''; }catch{ return ''; } }
 function aiSystem(){
   const notes=aiNotesText();
   return `Bạn là trợ lý AI trong app "Bảng trắng" — bảng làm việc chung của một nhóm, mỗi dự án là một bảng gồm ảnh, trang PDF (bản vẽ, tài liệu) và ghi chú của nhiều người.
@@ -2289,7 +2300,7 @@ Nếu người dùng nhờ tạo/viết ghi chú để dán lên bảng, hãy vi
 Nếu thông tin không có trong ghi chú hoặc ảnh, hãy nói rõ là không thấy, đừng bịa.
 
 Các ghi chú hiện có trên bảng (${notes?notes.split('\n').length:0}):
-${notes||'(chưa có ghi chú nào)'}`;
+${notes||'(chưa có ghi chú nào)'}${aiGraph()}`;
 }
 function aiMediaItems(){
   const media=it=>it&&(it.type==='image'||it.type==='pdf');
@@ -2300,6 +2311,74 @@ function aiMediaItems(){
   return list.slice(0,4);
 }
 const vis=it=>{ const r=els.get(it.id); return !r||r.el.style.display!=='none'; };
+
+// ----- Sơ đồ dạng chữ (cho Claude / AI) -----
+const GRAPH_T=new Set(['sticky','text','shape','image','pdf']);
+function graphNodeLabel(it){ const tx=(it.text||'').trim().replace(/\s*\n\s*/g,' / ').replace(/\s+/g,' ');
+  if(tx) return tx.length>300?tx.slice(0,300)+'…':tx;
+  if(it.type==='image') return '(ảnh'+(assets.get(it.key)?.name?': '+assets.get(it.key).name:'')+')';
+  if(it.type==='pdf') return '(PDF'+(assets.get(it.key)?.name?' '+assets.get(it.key).name:'')+(it.page?', trang '+it.page:'')+')';
+  return {sticky:'(giấy ghi chú trống)',text:'(chữ trống)',shape:it.shape==='ellipse'?'(hình tròn trống)':'(ô trống)'}[it.type]||'(trống)'; }
+function graphData(onlySel){
+  let pool=[...S.items.values()].filter(it=>vis(it)&&!hidMine(it));
+  if(onlySel&&S.sel.size){ const sel=new Set(S.sel);
+    for(const id of [...sel]){ const it=S.items.get(id); if(it?.type==='arrow') for(const q of ['a','b']) if(it[q].id) sel.add(it[q].id); }
+    for(const it of pool) if(it.type==='arrow'&&it.a.id&&it.b.id&&sel.has(it.a.id)&&sel.has(it.b.id)) sel.add(it.id);
+    pool=pool.filter(it=>sel.has(it.id)); }
+  const nodes=pool.filter(it=>GRAPH_T.has(it.type)), arrows=pool.filter(it=>it.type==='arrow');
+  const linked=new Set(); for(const a of arrows) for(const q of ['a','b']) if(a[q].id) linked.add(a[q].id);
+  const cy=it=>it.y+it.h/2, cx=it=>it.x+it.w/2;
+  const byY=[...nodes].sort((a,b)=>cy(a)-cy(b)), rows=[];
+  for(const it of byY){ const r=rows[rows.length-1]; if(r&&cy(it)-r.y0<=Math.max(r.h,it.h)*.6) { r.items.push(it); r.h=Math.max(r.h,it.h); } else rows.push({y0:cy(it),h:it.h,items:[it]}); }
+  const order=[], num=new Map(), rowOf=new Map();
+  rows.forEach((r,ri)=>{ r.items.sort((a,b)=>cx(a)-cx(b)).forEach(it=>{ order.push(it); num.set(it.id,order.length); rowOf.set(it.id,ri+1); }); });
+  const edges=[]; let loose=0;
+  for(const a of arrows){ const f=num.get(a.a.id), t=num.get(a.b.id); if(!f||!t){ loose++; continue; }
+    const hd=a.head||'end', lb=(a.text||'').trim().replace(/\s+/g,' ');
+    if(hd==='none') edges.push({f,t,k:'—',lb}); else if(hd==='both') edges.push({f,t,k:'↔',lb}); else edges.push({f,t,k:'→',lb}); }
+  return {order,num,rowOf,rows:rows.length,edges,loose,pens:pool.filter(it=>it.type==='pen').length,linked};
+}
+function graphText(onlySel){
+  const G=graphData(onlySel); if(!G.order.length) return '';
+  const L=[]; const nm=driveName?` "${driveName}"`:'';
+  L.push(`Sơ đồ từ Bảng trắng${nm}${onlySel&&S.sel.size?' (vùng đang chọn)':''}: ${G.order.length} ô, ${G.edges.length} mũi tên.`);
+  L.push('Quy ước: [số] là ô, đánh số theo thứ tự đọc (trên xuống dưới, trái sang phải). "A → B" nghĩa là A dẫn tới / là đầu vào của B; "↔" là hai chiều; "—" là liên quan, không có hướng. Chữ trong ngoặc kép sau mũi tên là nhãn ghi trên mũi tên.');
+  L.push('');
+  L.push('Ô:');
+  let lastRow=0;
+  for(const it of G.order){ const r=G.rowOf.get(it.id); const pre=G.rows>1&&r!==lastRow?`(hàng ${r}) `:''; lastRow=r;
+    L.push(` [${G.num.get(it.id)}] ${pre}${graphNodeLabel(it)}`); }
+  if(G.edges.length){ L.push(''); L.push('Mũi tên:');
+    for(const e of G.edges) L.push(` [${e.f}] ${e.k} [${e.t}]${e.lb?`  "${e.lb}"`:''}`); }
+  // nhóm
+  const gm=new Map(); for(const it of G.order) if(it.g){ if(!gm.has(it.g)) gm.set(it.g,[]); gm.get(it.g).push(G.num.get(it.id)); }
+  const gl=[...gm.values()].filter(v=>v.length>1); if(gl.length){ L.push(''); L.push('Nhóm (các ô được nhóm lại với nhau):'); gl.forEach((v,i)=>L.push(` Nhóm ${i+1}: ${v.map(n=>'['+n+']').join(', ')}`)); }
+  // phân tích cấu trúc
+  if(G.edges.length){ const inn=new Map(), out=new Map(); const add=(m,k,v)=>{ if(!m.has(k)) m.set(k,new Set()); m.get(k).add(v); };
+    for(const e of G.edges){ if(e.k==='→'){ add(out,e.f,e.t); add(inn,e.t,e.f); } else { add(out,e.f,e.t); add(out,e.t,e.f); add(inn,e.t,e.f); add(inn,e.f,e.t); } }
+    const ids=[...new Set(G.edges.flatMap(e=>[e.f,e.t]))].sort((a,b)=>a-b), br=n=>'['+n+']', lst=a=>a.map(br).join(', ');
+    const dir=new Set(G.edges.filter(e=>e.k==='→').flatMap(e=>[e.f,e.t]));
+    const src=ids.filter(n=>dir.has(n)&&!G.edges.some(e=>e.k==='→'&&e.t===n)), end=ids.filter(n=>dir.has(n)&&!G.edges.some(e=>e.k==='→'&&e.f===n));
+    const merge=ids.filter(n=>(inn.get(n)?.size||0)>=2), split=ids.filter(n=>(out.get(n)?.size||0)>=2);
+    const alone=G.order.filter(it=>!G.linked.has(it.id)).map(it=>G.num.get(it.id));
+    const C=[];
+    if(src.length) C.push(` - Điểm bắt đầu (không có mũi tên vào): ${lst(src)}`);
+    if(end.length) C.push(` - Kết quả cuối (không có mũi tên ra): ${lst(end)}`);
+    merge.forEach(n=>C.push(` - ${br(n)} gộp từ ${lst([...inn.get(n)].sort((a,b)=>a-b))}`));
+    split.forEach(n=>C.push(` - ${br(n)} dùng chung cho ${lst([...out.get(n)].sort((a,b)=>a-b))}`));
+    if(alone.length) C.push(` - Ô đứng riêng, không nối: ${lst(alone)}`);
+    if(G.loose) C.push(` - Có ${G.loose} mũi tên chưa nối vào ô nào ở một hoặc hai đầu (đã bỏ qua).`);
+    if(C.length) L.push('','Cấu trúc (tự phân tích):',...C); }
+  if(G.pens) L.push(`\n(Có ${G.pens} nét vẽ tay, không đưa vào.)`);
+  return L.join('\n');
+}
+function copyText(t){ return navigator.clipboard?.writeText(t).then(()=>true,()=>false) ?? Promise.resolve(false); }
+async function copyGraph(){ closeMenus?.();
+  const sel=S.sel.size>0, t=graphText(sel); if(!t){ toast(sel?'Vùng đang chọn không có ô nào':'Bảng chưa có ô nào để sao chép',null,2200); return; }
+  let ok=await copyText(t);
+  if(!ok){ const ta=document.createElement('textarea'); ta.value=t; ta.style.cssText='position:fixed;left:-9999px;top:0'; document.body.appendChild(ta); ta.select(); try{ ok=document.execCommand('copy'); }catch{} ta.remove(); }
+  const G=graphData(sel);
+  toast(ok?`Đã sao chép sơ đồ${sel?' (vùng đang chọn)':''}: ${G.order.length} ô, ${G.edges.length} mũi tên. Dán vào chat với Claude.`:'Không sao chép được. Trình duyệt chặn bộ nhớ tạm.',null,3500); }
 const blobB64=b=>new Promise((res,rej)=>{ const fr=new FileReader(); fr.onload=()=>res(String(fr.result).split(',')[1]); fr.onerror=()=>rej(fr.error); fr.readAsDataURL(b); });
 async function aiImage(it){
   let c;
