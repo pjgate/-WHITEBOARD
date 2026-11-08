@@ -435,6 +435,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Định dạng một đoạn chữ</td><td>Đang gõ, bôi đen đoạn đó → thanh nhỏ hiện ra (đậm, nghiêng, gạch, cỡ, màu chữ, tô nền)</td></tr>
     <tr><td>Đổi kích thước khung chữ / ghi chú / hình</td><td>Kéo nút giữa cạnh (ngang hoặc dọc) hoặc góc; chữ giữ nguyên cỡ. Giữ <kbd>Shift</kbd> khi kéo góc để phóng to cả chữ</td></tr>
     <tr><td>Bảng (như Excel)</td><td><kbd>B</kbd> rồi bấm lên bảng trắng. Bấm đúp ô để gõ; <kbd>Tab</kbd>/<kbd>Shift</kbd>+<kbd>Tab</kbd> sang ô kế (Tab ở ô cuối thêm hàng). Kéo đường kẻ để đổi rộng cột / cao hàng. Chọn ô → thanh công cụ thêm/xóa hàng, cột, màu nền ô</td></tr>
+    <tr><td>Dán bảng từ Excel / Google Sheets / Word</td><td><kbd>Ctrl</kbd>+<kbd>V</kbd> trên bảng trắng → tạo bảng mới (giữ đậm, màu chữ, màu nền, căn lề, độ rộng cột). Đang chọn hoặc đang gõ trong bảng → dán vào từ ô đang chọn</td></tr>
     <tr><td>Bảng legend (mã hóa)</td><td>Chọn ô có danh sách mã (mỗi dòng: mã rồi mô tả; tô màu mã) → nút Legend. Từ trùng mã trên cả bảng tự tô màu như legend; khi gõ có gợi ý (↑↓, Enter/Tab)</td></tr>
     <tr><td>Đường gióng (căn thẳng hàng)</td><td>Tự hiện khi kéo hoặc đổi kích thước, tự hít vào mép/tâm đối tượng khác. Giữ <kbd>Alt</kbd> để tắt hít</td></tr>
     <tr><td>Khung viền</td><td>Chọn ô chữ → nút khung trên thanh công cụ (liền / đứt / bo tròn); hoặc bôi đen một đoạn → nút khung</td></tr>
@@ -1994,6 +1995,55 @@ function tableBorderAt(it,wp){ const r=els.get(it.id); if(!r?.cells) return null
 function hoverTableBorder(e){ const id=document.elementFromPoint(e.clientX,e.clientY)?.closest?.('.t-table')?.dataset.id; const it=id&&S.items.get(id); if(!it||!canEdit(it)||it.locked) return null; const b=tableBorderAt(it,toWorld(e.clientX,e.clientY)); return b?(b.k==='col'?'col-resize':'row-resize'):null; }
 function cellFromPoint(cx,cy){ const d=document.elementFromPoint(cx,cy)?.closest?.('.t-table .tc'); return d?[+d.dataset.r,+d.dataset.c]:null; }
 
+
+// ----- Dán bảng từ Excel / Google Sheets / Word -----
+function parseTSV(t){ const rows=[]; let row=[], cell='', q=false, i=0; t=t.replace(/\r\n?/g,'\n');
+  while(i<t.length){ const ch=t[i];
+    if(q){ if(ch==='"'){ if(t[i+1]==='"'){ cell+='"'; i+=2; continue; } q=false; i++; continue; } cell+=ch; i++; continue; }
+    if(ch==='"'&&cell===''){ q=true; i++; continue; }
+    if(ch==='\t'){ row.push(cell); cell=''; i++; continue; }
+    if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; i++; continue; }
+    cell+=ch; i++; }
+  if(cell!==''||row.length) { row.push(cell); rows.push(row); }
+  while(rows.length&&rows[rows.length-1].every(c=>!c.trim())) rows.pop();
+  return rows; }
+function cssColor(v){ v=(v||'').trim().toLowerCase(); if(!v||v==='windowtext'||v==='auto'||v==='inherit'||v==='transparent'||v==='none') return null;
+  const m=/#([0-9a-f]{6}|[0-9a-f]{3})\b/.exec(v); if(m) return '#'+m[1]; const r=/rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/.exec(v); if(r) return '#'+[r[1],r[2],r[3]].map(x=>(+x).toString(16).padStart(2,'0')).join('');
+  return /^[a-z]+$/.test(v)?v:null; }
+function clipTable(dt){ if(!dt) return null; const html=dt.getData('text/html')||'', txt=dt.getData('text/plain')||'';
+  if(/<table[\s>]/i.test(html)){ try{
+    const doc=new DOMParser().parseFromString(html,'text/html'), tb=doc.querySelector('table'); if(!tb) throw 0;
+    const rules={}; for(const st of doc.querySelectorAll('style')) for(const m of st.textContent.matchAll(/\.([\w-]+)\s*\{([^}]*)\}/g)) rules[m[1]]=(rules[m[1]]||'')+';'+m[2];
+    const rows=[]; for(const tr of tb.querySelectorAll('tr')){ const row=[];
+      for(const td of tr.querySelectorAll('td,th')){ const c=td.cloneNode(true); c.querySelectorAll('br').forEach(b=>b.replaceWith('\u2028')); c.querySelectorAll('p,div').forEach(b=>b.append('\u2028'));
+        const text=c.textContent.replace(/[ \t\r\n\u00a0]+/g,' ').replace(/ ?\u2028 ?/g,'\n').replace(/\n+$/,'').trim();
+        const css=[...td.classList].map(k=>rules[k]||'').join(';')+';'+(td.getAttribute('style')||'')+';'+[...td.querySelectorAll('[style]')].map(x=>x.getAttribute('style')).join(';');
+        const get=k=>{ const m=[...css.matchAll(new RegExp('(?:^|;)\\s*'+k+'\\s*:\\s*([^;]+)','gi'))]; return m.length?m[m.length-1][1]:''; };
+        const o={text}; const fw=get('font-weight'); if(/bold|[6-9]00/.test(fw)||(td.tagName==='TH')||td.querySelector('b,strong')) o.b=true;
+        if(/italic/.test(get('font-style'))||td.querySelector('i,em')) o.it=true; if(/underline/.test(get('text-decoration'))||td.querySelector('u')) o.u=true;
+        const col=cssColor(get('color'))||cssColor(td.querySelector('font[color]')?.getAttribute('color')); if(col&&!/^#0{3}(0{3})?$|^black$/.test(col)) o.c=col;
+        const bg=cssColor(get('background-color'))||cssColor(get('background'))||cssColor(td.getAttribute('bgcolor')); if(bg&&!/^#f{3}(f{3})?$|^white$/.test(bg)) o.bg=bg;
+        const al=(get('text-align')||td.getAttribute('align')||'').toLowerCase(); if(/center/.test(al)) o.al='c'; else if(/right/.test(al)) o.al='r';
+        row.push(o); const cs=+td.getAttribute('colspan')||1; for(let k=1;k<cs;k++) row.push({text:''}); }
+      if(row.length) rows.push(row); }
+    while(rows.length&&rows[rows.length-1].every(c=>!c.text)) rows.pop();
+    if(rows.length){ const C=Math.max(...rows.map(r=>r.length)); rows.forEach(r=>{ while(r.length<C) r.push({text:''}); });
+      const cols=[...tb.querySelectorAll('col')].flatMap(c=>Array(+c.getAttribute('span')||1).fill(parseFloat(c.getAttribute('width')||c.style.width)||0));
+      return {rows, cw:cols.length>=C&&cols.every(Boolean)?cols.slice(0,C):null}; } }catch{} }
+  if(txt.includes('\t')){ const rows=parseTSV(txt).map(r=>r.map(text=>({text:text.trim()}))); if(rows.length){ const C=Math.max(...rows.map(r=>r.length)); rows.forEach(r=>{ while(r.length<C) r.push({text:''}); }); return {rows,cw:null}; } }
+  return null; }
+function clipCw(T,fs){ const C=T.rows[0].length; if(T.cw) return T.cw.map(v=>Math.max(fs*3,v*fs/11));
+  return [...Array(C)].map((_,j)=>{ const L=Math.max(...T.rows.map(r=>Math.max(...(r[j].text||'').split('\n').map(x=>x.length)))); return Math.min(fs*22,Math.max(fs*4,L*fs*.62+fs)); }); }
+function tableFromClip(T,c){ const fs=16/cam.z, cw=clipCw(T,fs), R=T.rows.length;
+  const hd=R>1&&T.rows[0].every(x=>x.b||!x.text); const cells=T.rows.map((r,i)=>r.map(x=>{ const o={...x}; if(hd&&i===0) delete o.b; return o; }));
+  const w=cw.reduce((a,b)=>a+b,0); return {type:'table',x:c.x-w/2,y:c.y-R*fs,w,h:R*fs*2,cw,rh:cells.map(()=>fs*1.6),fs,color:'#1f2228',hd,cells,text:''}; }
+function pasteIntoTable(it,T,at){ checkpoint(); tableNorm(it); const [ai,aj]=at; const R=T.rows.length, C=T.rows[0].length;
+  while(it.cells.length<ai+R){ it.cells.push(it.cw.map(()=>({text:''}))); it.rh.push((it.fs||18)*1.6); }
+  const need=aj+C; if(it.cw.length<need){ const ext=clipCw(T,it.fs||18); for(let j=it.cw.length;j<need;j++) it.cw.push(ext[j-aj]||it.cw[it.cw.length-1]||120); it.cells.forEach(r=>{ while(r.length<need) r.push({text:''}); }); }
+  for(let i=0;i<R;i++) for(let j=0;j<C;j++) it.cells[ai+i][aj+j]={...T.rows[i][j]};
+  const r=els.get(it.id); if(r){ r.tkey=null; r.ac=[ai,aj]; } it.t=Date.now(); tableText(it); syncEl(it); updateArrows(); saveSoon(); renderCtx(); requestRender();
+  toast(`Đã dán ${R} hàng × ${C} cột vào bảng`,null,2000); }
+
 // ================== Pointer input ==================
 function selItems(){ return [...S.sel].map(id=>S.items.get(id)).filter(Boolean); }
 function handleGeom(){ // screen-space handle positions for the current selection
@@ -2532,8 +2582,15 @@ document.addEventListener('copy',e=>{ if(editing||!S.sel.size) return; clip=[...
 document.addEventListener('cut',e=>{ if(editing||!S.sel.size) return; clip=[...S.sel].map(id=>JSON.parse(JSON.stringify(S.items.get(id))));
   e.clipboardData.setData('text/plain','⁣wb:'+clip.length); e.preventDefault(); deleteSel(); });
 document.addEventListener('paste',e=>{
-  if(editing||e.target.matches?.('input,textarea')) return;
+  if(e.target.matches?.('input,textarea')) return;
+  if(editing){ const it=S.items.get(editing.id); if(it?.type!=='table') return; const T=clipTable(e.clipboardData); if(!T||(T.rows.length<2&&T.rows[0].length<2)) return;
+    e.preventDefault(); const r=els.get(it.id), at=r.cellEdit||[0,0]; finishEdit(); pasteIntoTable(it,T,at); return; }
   if(!editMode()){ e.preventDefault(); openLogin(); return; }
+  { const T=clipTable(e.clipboardData); if(T&&(T.rows.length>1||T.rows[0].length>1)){ e.preventDefault();
+      const sel=S.sel.size===1?S.items.get([...S.sel][0]):null;
+      if(sel?.type==='table'&&canEdit(sel)&&!sel.locked){ pasteIntoTable(sel,T,els.get(sel.id)?.ac||[0,0]); return; }
+      checkpoint(); const c=toWorld(innerWidth/2,innerHeight/2), it=createItem(tableFromClip(T,c)); setTool('select'); setSel([it.id]); const r=els.get(it.id); if(r){ r.ac=[0,0]; markCells(r); } renderCtx();
+      fitTo([it],cam.z); saveSoon(); toast(`Đã dán bảng ${T.rows.length} hàng × ${T.rows[0].length} cột`,null,2200); return; } }
   const files=[...(e.clipboardData?.files||[])];
   if(files.length){ e.preventDefault(); importFiles(files); return; }
   const t=e.clipboardData?.getData('text/plain')||'';
