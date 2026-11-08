@@ -2786,7 +2786,7 @@ function graphText(onlySel){
   return L.join('\n');
 }
 function copyText(t){ return navigator.clipboard?.writeText(t).then(()=>true,()=>false) ?? Promise.resolve(false); }
-// ----- Xuất PDF theo khung: mỗi hình (chữ nhật/elip) đang chọn = 1 trang, gồm mọi đối tượng chạm vào khung (cắt theo mép khung) -----
+// ----- Xuất PDF theo khung: mỗi hình (chữ nhật/elip) đang chọn = 1 trang, gồm mọi đối tượng chạm vào khung (cắt theo mép khung); bản thân các khung không được in -----
 // Dùng hộp thoại In của trình duyệt → "Lưu dưới dạng PDF": chữ/hình giữ dạng vector; ảnh dùng bản gốc, trang PDF vẽ lại độ phân giải cao.
 let exporting=false;
 async function exportFrames(){
@@ -2800,7 +2800,7 @@ async function exportFrames(){
     toast(`Đang chuẩn bị ${frames.length} trang PDF…`,null,0);
     $('#printRoot')?.remove(); $('#printCss')?.remove();
     const root=document.createElement('div'); root.id='printRoot';
-    const LONG=297, MM=96/25.4, urls=[], jobs=[];
+    const LONG=297, MM=96/25.4, urls=[], jobs=[], fids=new Set(frames.map(f=>f.id)); // khung chỉ để chọn vùng in, không in ra
     let css=`@media screen{#printRoot{position:fixed;left:-100000px;top:0;pointer-events:none}}
 @media print{body>*:not(#printRoot){display:none!important} html,body{background:#fff!important;overflow:visible!important;height:auto!important;width:auto!important} #printRoot{display:block}}
 #printRoot,#printRoot *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -2814,7 +2814,7 @@ async function exportFrames(){
       css+=`@page fr${i}{size:${wmm.toFixed(2)}mm ${hmm.toFixed(2)}mm;margin:0}\n#printRoot .pg${i}{page:fr${i};width:${wmm.toFixed(2)}mm;height:${hmm.toFixed(2)}mm}\n`;
       const pg=document.createElement('div'); pg.className='pg pg'+i; const pw=document.createElement('div'); pw.className='pw';
       pw.style.transform=`scale(${k}) translate(${-b.x}px,${-b.y}px)`; pg.appendChild(pw); root.appendChild(pg);
-      const inside=[...S.items.values()].filter(it=>{ if(hidMine(it)||!els.get(it.id)) return false; const a=aabb(it); return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y; }).sort((a,c)=>(a.z||0)-(c.z||0));
+      const inside=[...S.items.values()].filter(it=>{ if(fids.has(it.id)||hidMine(it)||!els.get(it.id)) return false; const a=aabb(it); return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y; }).sort((a,c)=>(a.z||0)-(c.z||0));
       for(const it of inside){ const r=els.get(it.id), c=r.el.cloneNode(true);
         c.style.display=''; c.classList.remove('hl','flash','editing','lg');
         c.querySelectorAll('canvas').forEach(x=>x.remove()); c.querySelectorAll('.ac,.cs,.ce').forEach(x=>x.classList.remove('ac','cs','ce'));
