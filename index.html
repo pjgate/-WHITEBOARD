@@ -120,6 +120,9 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 #rtb .hl{border-radius:4px}
 #ctx .ib{width:34px;height:34px}
 #ctx .ib svg{width:18px;height:18px}
+#ctx .fsin{width:46px;height:28px;margin:0 2px;padding:0 4px;border:1px solid #d6d6d0;border-radius:7px;font:inherit;font-size:13px;text-align:center;background:#fff;color:var(--ink);-moz-appearance:textfield}
+#ctx .fsin::-webkit-inner-spin-button,#ctx .fsin::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#ctx .fsin:focus{outline:none;border-color:#3b5bfd;box-shadow:0 0 0 2px rgba(59,91,253,.18)}
 .sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(0,0,0,.14);cursor:pointer;margin:0 2px;padding:0}
 .sw:hover{transform:scale(1.12)}
 .sw.on{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--accent)}
@@ -2383,8 +2386,27 @@ const ICON={
   ungroup:'<rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.2"/><rect x="13" y="13" width="7.5" height="7.5" rx="1.2"/><path d="M14 4h6v6M4 14v6h6" stroke-dasharray="2 2"/>'
 };
 const ctx=$('#ctx');
+// ----- Cỡ chữ theo px (ô nhập giữa A− và A+): áp cho mọi ô chữ / ghi chú / hình / mũi tên / bảng đang chọn, hoặc các ô bảng đang chọn -----
+const fsTargets=its=>its.filter(i=>(TXT_T.has(i.type)||i.type==='table')&&!i.locked);
+function fsCur(its){ const T=selTable(); let v;
+  if(T){ const fs=T.it.fs||18; v=tSel(T.it,T.r).map(([i,j])=>fs*(T.it.cells[i][j].z||1)); }
+  else v=fsTargets(its).map(i=>i.type==='table'?(i.fs||18):txtBase(i));
+  if(!v.length) return ''; const r=v.map(x=>Math.round(x*10)/10); return r.every(x=>x===r[0])?String(r[0]):''; }
+const fsBox=its=>{ const v=fsCur(its); return `<input class="fsin" id="fsIn" type="number" min="2" max="2000" step="1" inputmode="decimal" value="${v}" placeholder="${v?'':'—'}" title="Cỡ chữ (px, ở mức thu phóng 100%). Gõ số rồi Enter.">`; };
+function setFsPx(px){ px=+px; if(!(px>=2&&px<=2000)) return; const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean); checkpoint();
+  const T=selTable();
+  if(T){ const fs=T.it.fs||18; tSel(T.it,T.r).forEach(([i,j])=>{ const c=T.it.cells[i][j], z=Math.round(px/fs*1000)/1000; if(Math.abs(z-1)<.005) delete c.z; else c.z=z; }); T.it.t=Date.now(); T.r.tkey=null; tableText(T.it); syncEl(T.it); }
+  else for(const it of fsTargets(its)){ it.fs=px; it.t=Date.now(); const r=els.get(it.id); if(r){ r.fitKey=null; if(it.type==='table') r.tkey=null; } syncEl(it); if(it.type==='text') fitText(it); }
+  updateArrows(); saveSoon(); renderCtx(); requestRender(); }
+ctx.addEventListener('keydown',e=>{ if(e.target.id!=='fsIn') return; e.stopPropagation();
+  if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); } // blur → sự kiện change → setFsPx
+  else if(e.key==='Escape'){ e.preventDefault(); e.target.blur(); renderCtx(); }
+  else if(e.key==='ArrowUp'||e.key==='ArrowDown'){ e.preventDefault(); const v=(+e.target.value||+fsCur([...S.sel].map(id=>S.items.get(id)).filter(Boolean))||16)+(e.key==='ArrowUp'?1:-1)*(e.shiftKey?10:1); e.target.value=Math.max(2,v); setFsPx(e.target.value); setTimeout(()=>{ const n=$('#fsIn'); if(n){ n.focus(); n.select(); } }); } });
+ctx.addEventListener('change',e=>{ if(e.target.id==='fsIn'){ const v=e.target.value; setTimeout(()=>{ setFsPx(v); }); } }); // chạy sau khi ô nhập đã mất focus để thanh công cụ vẽ lại
+ctx.addEventListener('focusin',e=>{ if(e.target.id==='fsIn') e.target.select(); });
 function renderCtx(){
   if(!S.sel.size||editing){ ctx.classList.remove('show'); return; }
+  { const fi=document.activeElement; if(fi?.id==='fsIn'&&ctx.contains(fi)&&ctx._sk===[...S.sel].join()) return; } ctx._sk=[...S.sel].join(); // đang gõ cỡ chữ: không vẽ lại thanh
   const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean);
   let h='';
   if(its.every(i=>i.locked)){ if(its.length===1&&(its[0].type==='image'||its[0].type==='pdf')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
@@ -2396,13 +2418,14 @@ function renderCtx(){
   if(hasInk) h+=(hasShape?'<span class="ctxlbl">Viền</span>':'')+INKS.map(c=>`<button class="sw${curI===c?' on':''}" data-ink="${c}" style="background:${c}" title="${hasShape?'Màu viền / nét':'Màu chữ / nét'}"></button>`).join('')+'<div class="vsep"></div>';
   if(its.length===1 && (its[0].type==='image'||its[0].type==='pdf')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
   if(its.length===1 && els.get(its[0].id)?.txt) h+=btn('edit','Sửa chữ (nhấp đúp)');
-  const tx=its.filter(i=>TXT_T.has(i.type)&&!i.locked);
+  const tx=its.filter(i=>TXT_T.has(i.type)&&!i.locked), tbs=its.filter(i=>i.type==='table'&&!i.locked);
   if(tx.length){ const t0=tx[0], al=t0.al||(t0.type==='text'?'l':'c');
-    h+='<div class="vsep"></div>'+btn('fsDn','Chữ nhỏ hơn (Ctrl Shift <)')+btn('fsUp','Chữ to hơn (Ctrl Shift >)')+btnOn('bold','In đậm (Ctrl B)',!!t0.b)+btnOn('ital','In nghiêng (Ctrl I)',!!t0.it)+btnOn('under','Gạch dưới (Ctrl U)',!!t0.u)
+    h+='<div class="vsep"></div>'+btn('fsDn','Chữ nhỏ hơn (Ctrl Shift <)')+fsBox(its)+btn('fsUp','Chữ to hơn (Ctrl Shift >)')+btnOn('bold','In đậm (Ctrl B)',!!t0.b)+btnOn('ital','In nghiêng (Ctrl I)',!!t0.it)+btnOn('under','Gạch dưới (Ctrl U)',!!t0.u)
       +(tx.some(i=>i.type!=='arrow')?btn('al'+al.toUpperCase(),'Căn lề: '+({l:'trái',c:'giữa',r:'phải'})[al]):''); }
+  else if(tbs.length>1) h+='<div class="vsep"></div>'+btn('fsDn','Chữ các bảng nhỏ hơn')+fsBox(its)+btn('fsUp','Chữ các bảng to hơn');
   if(its.length===1&&its[0].type==='table'&&!its[0].locked){ const t0=its[0], r0=els.get(t0.id), tc=r0?tSel(t0,r0):[], c0=tc[0]&&t0.cells[tc[0][0]]?.[tc[0][1]], multi=tc.length>1, ink=c0&&(c0.c||t0.color||'#1f2228');
     h+='<div class="vsep"></div>'+btn('rowAdd','Thêm hàng bên dưới ô đang chọn')+btn('colAdd','Thêm cột bên phải ô đang chọn')+btn('rowDel','Xóa hàng của ô đang chọn')+btn('colDel','Xóa cột của ô đang chọn')+btnOn('hdr','Hàng tiêu đề',!!t0.hd)
-      +btn('fsDn',multi?'Chữ các ô đang chọn nhỏ hơn':'Chữ cả bảng nhỏ hơn')+btn('fsUp',multi?'Chữ các ô đang chọn to hơn':'Chữ cả bảng to hơn');
+      +btn('fsDn',multi?'Chữ các ô đang chọn nhỏ hơn':'Chữ cả bảng nhỏ hơn')+fsBox(its)+btn('fsUp',multi?'Chữ các ô đang chọn to hơn':'Chữ cả bảng to hơn');
     if(c0) h+='<div class="vsep"></div>'+(multi?`<span class="ctxlbl">${tc.length} ô</span>`:'<span class="ctxlbl">Ô</span>')
       +TBG.map(c=>`<button class="sw${(c0.bg||'#ffffff')===c?' on':''}" data-cx="tbg" data-v="${c}" style="background:${c}" title="Màu nền ô"></button>`).join('')+'<div class="vsep"></div>'
       +INKS.map(c=>`<button class="sw${ink===c?' on':''}" data-cx="tcc" data-v="${c}" style="background:${c}" title="Màu chữ ô"></button>`).join('')+'<div class="vsep"></div>'
