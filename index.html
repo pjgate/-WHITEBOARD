@@ -444,6 +444,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>In đậm / nghiêng / gạch dưới</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td></tr>
     <tr><td>Định dạng một đoạn chữ</td><td>Đang gõ, bôi đen đoạn đó → thanh nhỏ hiện ra (đậm, nghiêng, gạch, cỡ, màu chữ, tô nền)</td></tr>
     <tr><td>Đổi kích thước khung chữ / ghi chú / hình</td><td>Kéo nút giữa cạnh (ngang hoặc dọc) hoặc góc; chữ giữ nguyên cỡ. Giữ <kbd>Shift</kbd> khi kéo góc để phóng to cả chữ</td></tr>
+    <tr><td>Đường gióng (căn thẳng hàng)</td><td>Tự hiện khi kéo hoặc đổi kích thước, tự hít vào mép/tâm đối tượng khác. Giữ <kbd>Alt</kbd> để tắt hít</td></tr>
     <tr><td>Khung viền</td><td>Chọn ô chữ → nút khung trên thanh công cụ (liền / đứt / bo tròn); hoặc bôi đen một đoạn → nút khung</td></tr>
     <tr><td>Gạch ngang đoạn đang bôi đen</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd></td></tr>
     <tr><td>Chữ to / nhỏ hơn</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>&gt;</kbd> / <kbd>&lt;</kbd></td></tr>
@@ -1948,6 +1949,31 @@ function addNext(src,dir='r'){
   setSel([n.id]); startEdit(n.id); }
 
 
+
+// ----- Đường gióng (căn thẳng hàng & hít khi kéo) -----
+function guideTargets(excl){ const v=viewRect(.5), out=[];
+  for(const it of S.items.values()){ if(excl.has(it.id)||it.type==='arrow'||it.type==='pen'||!vis(it)||hidMine(it)) continue;
+    const a=aabb(it); if(a.x>v.x+v.w||a.x+a.w<v.x||a.y>v.y+v.h||a.y+a.h<v.y) continue;
+    out.push({x1:a.x,x2:a.x+a.w,cx:a.x+a.w/2,y1:a.y,y2:a.y+a.h,cy:a.y+a.h/2}); if(out.length>600) break; }
+  return out; }
+function snapD(vals,tg,ax){ const th=7/cam.z; let best=null;
+  for(const t of tg) for(const tv of ax==='x'?[t.x1,t.cx,t.x2]:[t.y1,t.cy,t.y2]) for(const v of vals){ const d=tv-v; if(Math.abs(d)<=th&&(best===null||Math.abs(d)<Math.abs(best))) best=d; }
+  return best||0; }
+function guidesFor(b,tg){ const eps=.5/cam.z, V=new Map(), H=new Map();
+  const add=(m,k,a1,a2)=>{ const key=Math.round(k*100)/100, g=m.get(key); if(g){ g[0]=Math.min(g[0],a1); g[1]=Math.max(g[1],a2); } else m.set(key,[a1,a2]); };
+  for(const t of tg){ for(const v of [b.x1,b.cx,b.x2]) for(const tv of [t.x1,t.cx,t.x2]) if(Math.abs(v-tv)<eps) add(V,v,Math.min(b.y1,t.y1),Math.max(b.y2,t.y2));
+    for(const v of [b.y1,b.cy,b.y2]) for(const tv of [t.y1,t.cy,t.y2]) if(Math.abs(v-tv)<eps) add(H,v,Math.min(b.x1,t.x1),Math.max(b.x2,t.x2)); }
+  const g=[]; V.forEach((r,x)=>g.push({x,a:r[0],b:r[1]})); H.forEach((r,y)=>g.push({y,a:r[0],b:r[1]})); return g.length?g:null; }
+function snapResize(it,d,mv,e){ d.guides=null; if(it.rot||e.altKey) return; if(!d.tg) d.tg=guideTargets(new Set([it.id]));
+  if(mv.r||mv.l){ const v=mv.r?it.x+it.w:it.x, s=snapD([v],d.tg,'x'); if(s){ if(mv.r) it.w+=s; else { it.x+=s; it.w-=s; } } }
+  if((mv.b||mv.t)&&it.type!=='text'){ const v=mv.b?it.y+it.h:it.y, s=snapD([v],d.tg,'y'); if(s){ if(mv.b) it.h+=s; else { it.y+=s; it.h-=s; } } }
+  const b={x1:it.x,x2:it.x+it.w,y1:it.y,y2:it.y+it.h,cx:it.x+it.w/2,cy:it.y+it.h/2};
+  const all=guidesFor(b,d.tg); d.guides=all&&all.filter(g=>g.x!==undefined?((mv.r&&Math.abs(g.x-b.x2)<1e-6)||(mv.l&&Math.abs(g.x-b.x1)<1e-6)):((mv.b&&Math.abs(g.y-b.y2)<1e-6)||(mv.t&&Math.abs(g.y-b.y1)<1e-6))); }
+function drawGuides(ov){ const gs=drag?.guides; if(!gs?.length) return; ov.save(); ov.strokeStyle='#e8388a'; ov.lineWidth=1; ov.setLineDash([]);
+  for(const g of gs){ ov.beginPath(); if(g.x!==undefined){ const a=toScreen(g.x,g.a), b=toScreen(g.x,g.b); ov.moveTo(Math.round(a.x)+.5,a.y-6); ov.lineTo(Math.round(b.x)+.5,b.y+6); }
+    else { const a=toScreen(g.a,g.y), b=toScreen(g.b,g.y); ov.moveTo(a.x-6,Math.round(a.y)+.5); ov.lineTo(b.x+6,Math.round(b.y)+.5); } ov.stroke(); }
+  ov.restore(); }
+
 // ================== Pointer input ==================
 function selItems(){ return [...S.sel].map(id=>S.items.get(id)).filter(Boolean); }
 function handleGeom(){ // screen-space handle positions for the current selection
@@ -2048,8 +2074,12 @@ addEventListener('pointermove',e=>{
     case 'pan': cam.x+=sp.x-drag.last.x; cam.y+=sp.y-drag.last.y; drag.last=sp; moving(); break;
     case 'move':{
       if(!drag.moved){ if(Math.hypot(sp.x-drag.start.x,sp.y-drag.start.y)<3) return; drag.moved=true; checkpoint();
-        drag.orig=[...S.sel].map(id=>S.items.get(id)).filter(it=>it&&!it.locked).map(it=>[it,it.x,it.y,it.a&&{...it.a},it.b&&{...it.b}]); }
-      const dx=(sp.x-drag.start.x)/cam.z, dy=(sp.y-drag.start.y)/cam.z;
+        drag.orig=[...S.sel].map(id=>S.items.get(id)).filter(it=>it&&!it.locked).map(it=>[it,it.x,it.y,it.a&&{...it.a},it.b&&{...it.b}]);
+        const bx=drag.orig.filter(o=>o[0].type!=='arrow').map(o=>o[0]); drag.b0=bx.length?bbox(bx):null; drag.tg=drag.b0?guideTargets(new Set(S.sel)):[]; }
+      let dx=(sp.x-drag.start.x)/cam.z, dy=(sp.y-drag.start.y)/cam.z; drag.guides=null;
+      if(drag.b0&&!e.altKey){ const b=drag.b0, bx={x1:b.x+dx,x2:b.x+b.w+dx,y1:b.y+dy,y2:b.y+b.h+dy}; bx.cx=(bx.x1+bx.x2)/2; bx.cy=(bx.y1+bx.y2)/2;
+        const sx=snapD([bx.x1,bx.cx,bx.x2],drag.tg,'x'), sy=snapD([bx.y1,bx.cy,bx.y2],drag.tg,'y'); dx+=sx; dy+=sy;
+        bx.x1+=sx; bx.x2+=sx; bx.cx+=sx; bx.y1+=sy; bx.y2+=sy; bx.cy+=sy; drag.guides=guidesFor(bx,drag.tg); }
       for(const [it,x,y,a,b] of drag.orig){ if(it.type==='arrow'){ if(!a.id){ it.a.x=a.x+dx; it.a.y=a.y+dy; } if(!b.id){ it.b.x=b.x+dx; it.b.y=b.y+dy; } } else { it.x=x+dx; it.y=y+dy; syncPos(it); } }
       updateArrows(); requestRender(); break; }
     case 'marquee':{ drag.cur=toWorld(sp.x,sp.y); const a=drag.start,b=drag.cur;
@@ -2064,6 +2094,7 @@ addEventListener('pointermove',e=>{
       if(it.type==='text'&&!asp) it.hm=h;
       const cx=A.x+d.ux.x*d.sx*w/2+d.uy.x*d.sy*h/2, cy=A.y+d.ux.y*d.sx*w/2+d.uy.y*d.sy*h/2;
       it.w=w; it.h=h; it.x=cx-w/2; it.y=cy-h/2;
+      if(!asp) snapResize(it,d,{r:d.sx>0,l:d.sx<0,b:d.sy>0,t:d.sy<0},e);
       syncEl(it); if(it.type==='text') fitText(it); updateArrows(); requestRender(); break; }
     case 'eresize':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it, mn=Math.max(12/cam.z,(it.fs||0)*1.2), A=d.anchor;
       const vx=wp.x-A.x, vy=wp.y-A.y, horiz=d.i===1||d.i===3; let w=d.w0, h=d.h0;
@@ -2071,6 +2102,7 @@ addEventListener('pointermove',e=>{
       if(it.type==='text'&&!horiz) it.hm=h;
       const u=horiz?d.ux:d.uy, L=horiz?w:h, cx=A.x+u.x*d.s*L/2, cy=A.y+u.y*d.s*L/2;
       it.w=w; it.h=h; it.x=cx-w/2; it.y=cy-h/2;
+      snapResize(it,d,{t:d.i===0,r:d.i===1,b:d.i===2,l:d.i===3},e);
       syncEl(it); if(it.type==='text'){ fitText(it); if(it.h!==h){ const c2x=A.x+u.x*d.s*(horiz?w:it.h)/2, c2y=A.y+u.y*d.s*(horiz?w:it.h)/2; if(!horiz){ it.x=c2x-it.w/2; it.y=c2y-it.h/2; syncPos(it); } } }
       updateArrows(); requestRender(); break; }
     case 'rotate':{ const wp=toWorld(sp.x,sp.y), d=drag; let r=d.r0+(Math.atan2(wp.y-d.c.y,wp.x-d.c.x)-d.a0)*180/Math.PI;
@@ -2187,6 +2219,7 @@ function drawOverlay(){
         ov.fillStyle=A; ov.beginPath(); ov.roundRect?ov.roundRect(r.x,r.y+r.h+8,tw,20,5):ov.rect(r.x,r.y+r.h+8,tw,20); ov.fill(); ov.fillStyle='#fff'; ov.fillText(t,r.x+6,r.y+r.h+22); }
     }
   }
+  drawGuides(ov);
   if(drag?.type==='marquee'){ const a=toScreen(drag.start.x,drag.start.y), b=toScreen(drag.cur.x,drag.cur.y);
     ov.fillStyle='rgba(59,91,253,.07)'; ov.strokeStyle='rgba(59,91,253,.8)'; ov.lineWidth=1;
     ov.fillRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(a.x-b.x),Math.abs(a.y-b.y));
