@@ -52,6 +52,7 @@ html,body{-webkit-text-size-adjust:100%}
 .t-table .tc.hd{background:#eef0f4;font-weight:700}
 .t-table .tc .txt{max-height:none;overflow:visible;min-height:1.35em;text-align:left}
 .t-table .tc.ac{box-shadow:inset 0 0 0 2px #3b5bfd}
+.t-table .tc.cs::after{content:'';position:absolute;inset:0;background:rgba(59,91,253,.14);pointer-events:none}
 .t-table.editing .tc.ce{box-shadow:inset 0 0 0 2px #3b5bfd;background:#fff}
 .editing .txt{user-select:text;-webkit-user-select:text;cursor:text;overflow:auto}
 .t-pen,.t-arrow{pointer-events:none}
@@ -1735,7 +1736,10 @@ function undo(){ if(editing) finishEdit(); if(!undoS.length) return; redoS.push(
 function redo(){ if(!redoS.length) return; undoS.push(snapshot()); applySnap(redoS.pop()); }
 
 // ================== Selection & text editing ==================
-function setSel(ids){ S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it); })); renderCtx(); requestRender(); }
+function setSel(ids){ const old=S.sel; S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it); }));
+  for(const id of old) if(!S.sel.has(id)){ const r=els.get(id); if(r?.cells){ r.cs?.clear(); markCells(r); } }
+  for(const id of S.sel){ const r=els.get(id); if(r?.cells) markCells(r); }
+  renderCtx(); requestRender(); }
 // ----- Nhóm (group) -----
 function withGroups(ids){ const s=new Set(ids), gs=new Set(); for(const id of s){ const g=S.items.get(id)?.g; if(g) gs.add(g); }
   if(gs.size) for(const it of S.items.values()) if(it.g&&gs.has(it.g)) s.add(it.id); return s; }
@@ -1746,7 +1750,7 @@ function ungroupSel(){ const its=selItems().filter(i=>i.g); if(!its.length) retu
 function startEdit(id,cell){
   const it=S.items.get(id), r=els.get(id); if(!it||!r) return;
   if(it.type==='table'){ if(!canEdit(it)||it.locked) return; const [ri,ci]=cell||r.ac||[0,0]; const cd=r.cells[ri]?.[ci]; if(!cd) return;
-    r.ac=[ri,ci]; r.cellEdit=[ri,ci]; r.txt=cd.firstChild; markCells(r); cd.classList.add('ce'); }
+    r.ac=[ri,ci]; r.anc=[ri,ci]; r.cs?.clear(); r.cellEdit=[ri,ci]; r.txt=cd.firstChild; markCells(r); cd.classList.add('ce'); }
   if(!r.txt||!canEdit(it)||it.locked) return;
   checkpoint(); paintTxt(r.txt,it.type==='table'?cellOf(it,r.cellEdit):it,true); editing={id}; r.el.classList.add('editing');
   r.txt.contentEditable='plaintext-only'; if(r.txt.contentEditable!=='plaintext-only') r.txt.contentEditable='true';
@@ -1956,18 +1960,31 @@ function tableNorm(it){ const R=it.cells.length, C=Math.max(1,...it.cells.map(r=
   it.cells.forEach(row=>{ while(row.length<C) row.push({text:''}); });
   while((it.cw||(it.cw=[])).length<C) it.cw.push(it.cw[it.cw.length-1]||120); it.cw.length=C;
   while((it.rh||(it.rh=[])).length<R) it.rh.push((it.fs||18)*2); it.rh.length=R; }
-function markCells(r){ r.cells?.flat().forEach(c=>c.classList.remove('ac')); const a=r.ac&&r.cells[r.ac[0]]?.[r.ac[1]]; if(a&&S.sel.size===1) a.classList.add('ac'); }
+function markCells(r){ r.cells?.flat().forEach(c=>c.classList.remove('ac','cs')); const one=S.sel.size===1&&S.sel.has(r.el?.dataset.id), a=r.ac&&r.cells[r.ac[0]]?.[r.ac[1]]; if(a&&one) a.classList.add('ac');
+  if(one&&r.cs?.size>1) for(const k of r.cs){ const [i,j]=k.split(',').map(Number); r.cells[i]?.[j]?.classList.add('cs'); } }
+// Chọn nhiều ô trong bảng: Shift+bấm = chọn vùng chữ nhật từ ô neo; Ctrl+bấm = thêm/bỏ từng ô
+const ck=(i,j)=>i+','+j;
+function tSel(it,r){ const R=it.cells?.length||0, C=it.cw?.length||0, out=[];
+  if(r.cs?.size>1) for(const k of r.cs){ const [i,j]=k.split(',').map(Number); if(i<R&&j<C) out.push([i,j]); }
+  if(!out.length&&r.ac&&r.ac[0]<R&&r.ac[1]<C) out.push(r.ac); return out; }
+function tablePick(it,r,rc,mode){
+  if(!r.cs) r.cs=new Set();
+  if(mode==='shift'){ const a=r.anc||r.ac||rc; r.cs=new Set(); for(let i=Math.min(a[0],rc[0]);i<=Math.max(a[0],rc[0]);i++) for(let j=Math.min(a[1],rc[1]);j<=Math.max(a[1],rc[1]);j++) r.cs.add(ck(i,j)); r.anc=a; }
+  else if(mode==='ctrl'){ if(!r.cs.size&&r.ac) r.cs.add(ck(r.ac[0],r.ac[1])); const k=ck(rc[0],rc[1]); if(r.cs.has(k)&&r.cs.size>1) r.cs.delete(k); else r.cs.add(k); r.anc=rc; }
+  else { r.cs.clear(); r.anc=rc; }
+  r.ac=rc; markCells(r); renderCtx(); requestRender(); }
+function selTable(){ if(S.sel.size!==1) return null; const it=S.items.get([...S.sel][0]); if(it?.type!=='table'||it.locked||!canEdit(it)) return null; const r=els.get(it.id); return r&&r.cs?.size>1?{it,r}:null; }
 function renderTable(it,r){ if(!it.cells?.length) return; tableNorm(it); const R=it.cells.length, C=it.cw.length, g=r.grid, fs=it.fs||18;
   const key=R+'x'+C;
   if(r.tkey!==key){ r.tkey=key; g.textContent=''; r.cells=[];
     for(let i=0;i<R;i++){ const row=[]; for(let j=0;j<C;j++){ const d=document.createElement('div'); d.className='tc'; d.dataset.r=i; d.dataset.c=j; const t=document.createElement('div'); t.className='txt'; t.spellcheck=false; d.appendChild(t); g.appendChild(d); row.push(d); } r.cells.push(row); }
-    if(r.ac&&!(r.ac[0]<R&&r.ac[1]<C)) r.ac=null; }
+    if(r.ac&&!(r.ac[0]<R&&r.ac[1]<C)) r.ac=null; if(r.cs) for(const k of [...r.cs]){ const [i,j]=k.split(',').map(Number); if(!(i<R&&j<C)) r.cs.delete(k); } }
   const bw=Math.max(.5,fs*.06);
   g.style.gridTemplateColumns=it.cw.map(v=>v+'px').join(' '); g.style.gridTemplateRows=it.rh.map(v=>`minmax(${v}px,auto)`).join(' ');
   g.style.borderWidth=`${bw}px 0 0 ${bw}px`; r.el.style.fontSize=fs+'px'; r.el.style.color=it.color||'#1f2228';
   for(let i=0;i<R;i++) for(let j=0;j<C;j++){ const d=r.cells[i][j], c=it.cells[i][j], st=d.style, t=d.firstChild;
     d.classList.toggle('hd',!!it.hd&&i===0); st.borderWidth=`0 ${bw}px ${bw}px 0`; st.background=c.bg||'';
-    t.style.fontWeight=c.b?'700':''; t.style.fontStyle=c.it?'italic':''; t.style.textDecoration=c.u?'underline':''; t.style.textAlign=c.al==='c'?'center':c.al==='r'?'right':''; t.style.color=c.c||'';
+    t.style.fontWeight=c.b?'700':''; t.style.fontStyle=c.it?'italic':''; t.style.textDecoration=c.u?'underline':''; t.style.textAlign=c.al==='c'?'center':c.al==='r'?'right':''; t.style.color=c.c||''; t.style.fontSize=c.z?c.z+'em':'';
     if(!(editing?.id===it.id&&r.cellEdit&&r.cellEdit[0]===i&&r.cellEdit[1]===j)) paintTxt(t,{text:c.text||'',runs:c.runs,lg:it.lg}); }
   markCells(r); fitTable(it,r); }
 function fitTable(it,r){ const g=r.grid; if(!g) return; it.w=it.cw.reduce((a,b)=>a+b,0); r.el.style.width=it.w+'px'; r.el.style.height='auto';
@@ -1977,14 +1994,18 @@ function tableMove(it,r,dir){ const R=it.cells.length, C=it.cw.length; let [i,j]
   finishEdit(); if(i>=R){ it.cells.push(it.cw.map(()=>({text:''}))); it.rh.push((it.fs||18)*2); syncEl(it); }
   startEdit(it.id,[i,j]); }
 function tableOp(it,op,v){ const r=els.get(it.id); if(!r) return; tableNorm(it); const R=it.cells.length, C=it.cw.length; const [ai,aj]=r.ac||[R-1,C-1];
+  const tc=tSel(it,r).map(([i,j])=>it.cells[i][j]), c0=tc[0]||it.cells[ai][aj]; if(/^(row|col)/.test(op)) r.cs?.clear();
   if(op==='rowAdd'||op==='rowAddUp'){ const at=op==='rowAdd'?ai+1:ai; it.cells.splice(at,0,it.cw.map(()=>({text:''}))); it.rh.splice(at,0,it.rh[ai]||(it.fs||18)*2); r.ac=[at,aj]; }
   else if(op==='colAdd'||op==='colAddL'){ const at=op==='colAdd'?aj+1:aj; it.cells.forEach(row=>row.splice(at,0,{text:''})); it.cw.splice(at,0,it.cw[aj]||120); r.ac=[ai,at]; }
   else if(op==='rowDel'){ if(R<2) return toast('Bảng cần ít nhất 1 hàng',null,1800); it.cells.splice(ai,1); it.rh.splice(ai,1); r.ac=[Math.min(ai,R-2),aj]; }
   else if(op==='colDel'){ if(C<2) return toast('Bảng cần ít nhất 1 cột',null,1800); it.cells.forEach(row=>row.splice(aj,1)); it.cw.splice(aj,1); r.ac=[ai,Math.min(aj,C-2)]; }
   else if(op==='hdr'){ it.hd=!it.hd; }
-  else if(op==='bg'){ const c=it.cells[ai][aj]; if(v&&v!=='#ffffff') c.bg=v; else delete c.bg; }
-  else if(op==='cb'){ const c=it.cells[ai][aj]; c.b=!c.b; if(!c.b) delete c.b; }
-  else if(op==='cal'){ const c=it.cells[ai][aj]; c.al={undefined:'c',c:'r',r:undefined}[c.al]; if(!c.al) delete c.al; }
+  else if(op==='bg'){ tc.forEach(c=>{ if(v&&v!=='#ffffff') c.bg=v; else delete c.bg; }); }
+  else if(op==='cb'||op==='ci'||op==='cu'){ const key={cb:'b',ci:'it',cu:'u'}[op], val=!c0[key]; tc.forEach(c=>{ if(val) c[key]=true; else delete c[key]; }); }
+  else if(op==='cal'){ const nx={undefined:'c',c:'r',r:undefined}[c0.al]; tc.forEach(c=>{ if(nx) c.al=nx; else delete c.al; }); }
+  else if(op==='tcc'){ tc.forEach(c=>{ if(v&&v!==(it.color||'#1f2228')) c.c=v; else delete c.c; }); }
+  else if(op==='cz'){ tc.forEach(c=>{ const z=Math.round(clamp((c.z||1)*(v>0?1.2:1/1.2),.4,4)*1000)/1000; if(Math.abs(z-1)<.01) delete c.z; else c.z=z; }); }
+  else if(op==='cclr'){ tc.forEach(c=>{ c.text=''; delete c.runs; }); }
   it.t=Date.now(); r.tkey=null; tableText(it); syncEl(it); updateArrows(); saveSoon(); renderCtx(); requestRender(); }
 function tableBorderAt(it,wp){ const r=els.get(it.id); if(!r?.cells) return null; const a=rad(it), c=ctr(it), dx=wp.x-c.x, dy=wp.y-c.y;
   const lx=dx*Math.cos(-a)-dy*Math.sin(-a)+it.w/2, ly=dx*Math.sin(-a)+dy*Math.cos(-a)+it.h/2, tol=5/cam.z;
@@ -2067,7 +2088,10 @@ function hitHandle(sp){
 const FREE_RS=new Set(['text','sticky','shape','table']);
 const ASPECT=new Set(['image','pdf','sticky','text','pen']);
 vp.addEventListener('pointerdown',e=>{
-  if(e.target.closest('.editing')) return;
+  if(e.target.closest('.editing')){ const te=editing&&S.items.get(editing.id);
+    if(te?.type==='table'&&(e.shiftKey||e.ctrlKey||e.metaKey)){ const rc=cellFromPoint(e.clientX,e.clientY), r=els.get(te.id);
+      if(rc&&r&&!(r.cellEdit&&rc[0]===r.cellEdit[0]&&rc[1]===r.cellEdit[1])){ e.preventDefault(); finishEdit(); tablePick(te,r,rc,e.shiftKey?'shift':'ctrl'); } }
+    return; }
   if(editing) finishEdit();
   closeMenus();
   const sp={x:e.clientX,y:e.clientY}; pointers.set(e.pointerId,sp);
@@ -2107,7 +2131,9 @@ vp.addEventListener('pointerdown',e=>{
       drag={type:'gscale', its, orig, anchor:cs[(h.i+2)%4], sx:(h.i===1||h.i===2)?1:-1, sy:h.i>=2?1:-1, w0:b.w, h0:b.h}; return; }
     if(hid){ const ti=S.items.get(hid); if(ti?.type==='table'&&canEdit(ti)&&!ti.locked){ const tb=tableBorderAt(ti,wp);
         if(tb){ checkpoint(); setSel([hid]); const r=els.get(hid); drag={type:tb.k==='col'?'tcol':'trow', it:ti, i:tb.i, start:wp, v0:tb.k==='col'?ti.cw[tb.i]:(r.rowsH?.[tb.i]||ti.rh[tb.i])}; return; }
-        const rc=cellFromPoint(e.clientX,e.clientY); if(rc){ const r=els.get(hid); r.ac=rc; markCells(r); } } }
+        const rc=cellFromPoint(e.clientX,e.clientY); if(rc){ const r=els.get(hid);
+          if((e.shiftKey||e.ctrlKey||e.metaKey)&&S.sel.size===1&&S.sel.has(hid)){ tablePick(ti,r,rc,e.shiftKey?'shift':'ctrl'); drag={type:'none'}; return; }
+          tablePick(ti,r,rc,''); } } }
     if(hid){ let fresh=false; const grp=withGroups([hid]);
       if(e.shiftKey){ const s=new Set(S.sel); if(s.has(hid)) grp.forEach(id=>s.delete(id)); else grp.forEach(id=>s.add(id)); setSel(s); fresh=true; }
       else if(!S.sel.has(hid)){ setSel(grp); fresh=true; }
@@ -2374,9 +2400,14 @@ function renderCtx(){
   if(tx.length){ const t0=tx[0], al=t0.al||(t0.type==='text'?'l':'c');
     h+='<div class="vsep"></div>'+btn('fsDn','Chữ nhỏ hơn (Ctrl Shift <)')+btn('fsUp','Chữ to hơn (Ctrl Shift >)')+btnOn('bold','In đậm (Ctrl B)',!!t0.b)+btnOn('ital','In nghiêng (Ctrl I)',!!t0.it)+btnOn('under','Gạch dưới (Ctrl U)',!!t0.u)
       +(tx.some(i=>i.type!=='arrow')?btn('al'+al.toUpperCase(),'Căn lề: '+({l:'trái',c:'giữa',r:'phải'})[al]):''); }
-  if(its.length===1&&its[0].type==='table'&&!its[0].locked){ const t0=its[0], r0=els.get(t0.id), ac=r0?.ac, c0=ac&&t0.cells[ac[0]]?.[ac[1]];
-    h+='<div class="vsep"></div>'+btn('rowAdd','Thêm hàng bên dưới ô đang chọn')+btn('colAdd','Thêm cột bên phải ô đang chọn')+btn('rowDel','Xóa hàng của ô đang chọn')+btn('colDel','Xóa cột của ô đang chọn')+btnOn('hdr','Hàng tiêu đề',!!t0.hd)+btn('fsDn','Chữ nhỏ hơn')+btn('fsUp','Chữ to hơn');
-    if(c0) h+='<div class="vsep"></div>'+TBG.map(c=>`<button class="sw${(c0.bg||'#ffffff')===c?' on':''}" data-cx="tbg" data-v="${c}" style="background:${c}" title="Màu nền ô"></button>`).join('')+btnOn('cb','In đậm ô',!!c0.b)+btn('cal'+(c0.al||'l').toUpperCase(),'Căn lề ô'); }
+  if(its.length===1&&its[0].type==='table'&&!its[0].locked){ const t0=its[0], r0=els.get(t0.id), tc=r0?tSel(t0,r0):[], c0=tc[0]&&t0.cells[tc[0][0]]?.[tc[0][1]], multi=tc.length>1, ink=c0&&(c0.c||t0.color||'#1f2228');
+    h+='<div class="vsep"></div>'+btn('rowAdd','Thêm hàng bên dưới ô đang chọn')+btn('colAdd','Thêm cột bên phải ô đang chọn')+btn('rowDel','Xóa hàng của ô đang chọn')+btn('colDel','Xóa cột của ô đang chọn')+btnOn('hdr','Hàng tiêu đề',!!t0.hd)
+      +btn('fsDn',multi?'Chữ các ô đang chọn nhỏ hơn':'Chữ cả bảng nhỏ hơn')+btn('fsUp',multi?'Chữ các ô đang chọn to hơn':'Chữ cả bảng to hơn');
+    if(c0) h+='<div class="vsep"></div>'+(multi?`<span class="ctxlbl">${tc.length} ô</span>`:'<span class="ctxlbl">Ô</span>')
+      +TBG.map(c=>`<button class="sw${(c0.bg||'#ffffff')===c?' on':''}" data-cx="tbg" data-v="${c}" style="background:${c}" title="Màu nền ô"></button>`).join('')+'<div class="vsep"></div>'
+      +INKS.map(c=>`<button class="sw${ink===c?' on':''}" data-cx="tcc" data-v="${c}" style="background:${c}" title="Màu chữ ô"></button>`).join('')+'<div class="vsep"></div>'
+      +btnOn('cb','In đậm ô (Ctrl B)',!!c0.b)+btnOn('ci','In nghiêng ô (Ctrl I)',!!c0.it)+btnOn('cu','Gạch dưới ô (Ctrl U)',!!c0.u)+btn('cal'+(c0.al||'l').toUpperCase(),'Căn lề ô')
+      +(multi?btn('cclr','Xóa chữ trong các ô đang chọn (Delete)'):''); }
   if(its.length===1&&['text','sticky','shape','table'].includes(its[0].type)&&!its[0].locked) h+=btnOn('legend',its[0].lg?'Đang là bảng legend (bấm để bỏ)':'Đặt làm bảng legend (bảng mã hóa)',!!its[0].lg);
   const txo=its.filter(i=>i.type==='text'&&!i.locked); if(txo.length){ const fr=txo[0].fr; h+=btnOn(fr==='d'?'frameD':fr==='r'?'frameR':fr?'frameS':'frame','Khung viền chữ: '+({s:'nét liền',d:'nét đứt',r:'bo tròn'}[fr]||'không có')+' (bấm để đổi)',!!fr); }
   if(its.length===1&&['sticky','shape','text'].includes(its[0].type)&&!its[0].locked) h+='<div class="vsep"></div>'+btn('nextR','Thêm ô nối bên phải (Tab)')+btn('nextD','Thêm ô nối bên dưới (Shift Tab)');
@@ -2395,6 +2426,7 @@ const HLS=['#fff3a0','#c3f0d8','#ffc9de','#c7defe','#ffd8a8'];
 const rtb=$('#rtb');
 ICON.strike='<path d="M5 12h14M16 6.5A4 3 0 0 0 12 5c-2.2 0-4 1.2-4 3 0 1.4 1 2.3 2.6 2.9M8 17.5A4.5 3 0 0 0 12 19c2.5 0 4.4-1.2 4.4-3.1 0-.8-.3-1.5-.9-2"/>';
 ICON.clr='<path d="M6 19h12M8 15l7-10 4 3-7 10zM5 5l14 14"/>';
+ICON.cclr=ICON.clr; ICON.ci=ICON.ital; ICON.cu=ICON.under;
 function renderRtb(){ let h=btn('rB','In đậm (Ctrl B)').replace('data-cx','data-rt')+btn('rI','Nghiêng (Ctrl I)').replace('data-cx','data-rt')+btn('rU','Gạch dưới (Ctrl U)').replace('data-cx','data-rt')+btn('rK','Gạch ngang (Ctrl Shift X)').replace('data-cx','data-rt')
     +btn('rX','Khung viền quanh đoạn này').replace('data-cx','data-rt')+btn('rDn','Nhỏ hơn (Ctrl Shift <)').replace('data-cx','data-rt')+btn('rUp','To hơn (Ctrl Shift >)').replace('data-cx','data-rt')+'<div class="vsep"></div>'
     +INKS.map(c=>`<button class="sw" data-rc="${c}" style="background:${c}" title="Màu chữ"></button>`).join('')+'<div class="vsep"></div>'
@@ -2435,11 +2467,13 @@ ctx.addEventListener('click',e=>{
   else if(b.dataset.cx==='lock'||b.dataset.cx==='unlock') return toggleLock();
   else if(['hEnd','hBoth','hNone'].includes(b.dataset.cx)){ checkpoint(); const it=its[0]; it.head={end:'both',both:'none',none:'end'}[it.head||'end']; syncEl(it); }
   else if(b.dataset.cx==='rot0'){ checkpoint(); its.forEach(i=>{ if(i.rot){ i.rot=0; syncPos(i); } }); updateArrows(); }
+  else if((b.dataset.cx==='fsDn'||b.dataset.cx==='fsUp')&&selTable()){ checkpoint(); return tableOp(its[0],'cz',b.dataset.cx==='fsUp'?1:-1); }
   else if(b.dataset.cx==='fsDn'||b.dataset.cx==='fsUp'){ checkpoint(); its.filter(i=>TXT_T.has(i.type)||i.type==='table').forEach(i=>stepFs(i,b.dataset.cx==='fsUp'?1:-1)); }
   else if(['bold','ital','under'].includes(b.dataset.cx)){ checkpoint(); const key={bold:'b',ital:'it',under:'u'}[b.dataset.cx], tx=its.filter(i=>TXT_T.has(i.type)); setFmt(tx,key,!tx[0]?.[key]); }
   else if(b.dataset.cx.startsWith('al')){ checkpoint(); const nx={L:'c',C:'r',R:'l'}[b.dataset.cx.slice(2)]; setFmt(its.filter(i=>TXT_T.has(i.type)&&i.type!=='arrow'),'al',nx); }
-  else if(['rowAdd','colAdd','rowDel','colDel','hdr','cb'].includes(b.dataset.cx)){ checkpoint(); return tableOp(its[0],b.dataset.cx); }
+  else if(['rowAdd','colAdd','rowDel','colDel','hdr','cb','ci','cu','cclr'].includes(b.dataset.cx)){ checkpoint(); return tableOp(its[0],b.dataset.cx); }
   else if(b.dataset.cx==='tbg'){ checkpoint(); return tableOp(its[0],'bg',b.dataset.v); }
+  else if(b.dataset.cx==='tcc'){ checkpoint(); return tableOp(its[0],'tcc',b.dataset.v); }
   else if(b.dataset.cx.startsWith('cal')){ checkpoint(); return tableOp(its[0],'cal'); }
   else if(b.dataset.cx==='legend'){ checkpoint(); const it=its[0]; if(it.lg) delete it.lg; else it.lg=true; it.t=Date.now(); syncEl(it); LG.sig=''; rebuildLegend(); saveSoon(); toast(it.lg?`Đã đặt làm bảng legend: ${parseLegend(it).length} mã. Từ trùng mã trên bảng sẽ được tô màu, khi gõ sẽ có gợi ý.`:'Đã bỏ bảng legend',null,3500); }
   else if(b.dataset.cx.startsWith('frame')){ checkpoint(); const tx=its.filter(i=>i.type==='text'), nx={'':'s',s:'d',d:'r',r:''}[tx[0]?.fr||'']; setFmt(tx,'fr',nx||undefined); tx.forEach(i=>{ if(!i.fr) delete i.fr; }); updateArrows(); }
@@ -2548,6 +2582,11 @@ addEventListener('keydown',e=>{
   if(document.querySelector('.modal.show')){ if(e.key==='Escape') document.querySelectorAll('.modal.show').forEach(m=>m.classList.remove('show')); return; }
   const mod=e.ctrlKey||e.metaKey, k=e.key.toLowerCase();
   if(e.code==='Space'){ e.preventDefault(); if(!spaceDown){ spaceDown=true; vp.classList.add('grab'); } return; }
+  { const T=selTable(); if(T){ // đang chọn nhiều ô trong bảng
+    if(mod&&!e.shiftKey&&(k==='b'||k==='i'||k==='u')){ e.preventDefault(); checkpoint(); return tableOp(T.it,{b:'cb',i:'ci',u:'cu'}[k]); }
+    if(mod&&e.shiftKey&&(e.key==='>'||e.key==='<'||k==='.'||k===',')){ e.preventDefault(); checkpoint(); return tableOp(T.it,'cz',e.key==='>'||k==='.'?1:-1); }
+    if(!mod&&(k==='delete'||k==='backspace')){ e.preventDefault(); checkpoint(); return tableOp(T.it,'cclr'); }
+    if(k==='escape'){ T.r.cs.clear(); markCells(T.r); renderCtx(); return; } } }
   if(mod&&k==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
   if(mod&&k==='y'){ e.preventDefault(); redo(); return; }
   if(mod&&k==='a'){ e.preventDefault(); setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); return; }
