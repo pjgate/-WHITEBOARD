@@ -422,7 +422,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v21</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v22</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -1268,22 +1268,33 @@ function applyOwnership(){
     if(!it.own){ if(me){ it.own=me.email; it.by=me.name; } else continue; }
     it.ro=!me||it.own!==me.email; markMine(it); }
 }
+async function readNotesGroup(files){ // nhiều tệp notes-<email>.json trùng tên (do 2 máy cùng tạo): gộp tất cả, tệp mới hơn thắng theo từng id
+  const fs=files.slice().sort((a,b)=>String(a.modifiedTime||'').localeCompare(String(b.modifiedTime||'')));
+  const js=await Promise.all(fs.map(f=>gget(`${GAPI}/${f.id}?alt=media&${kQ()}`).then(r=>r.json())));
+  const m=new Map(); let name='';
+  js.forEach(j=>{ if(j?.name) name=j.name; for(const it of (j?.items||[])) if(it&&it.id) m.set(it.id,it); });
+  return {items:[...m.values()], name, newest:fs[fs.length-1], dups:fs.slice(0,-1)};
+}
 async function syncNotes(noteFiles){
-  let changed=false; const seen=new Set();
-  for(const {f,email} of noteFiles){ const v=verOf(f);
-    if(me&&email===me.email){ rs.notesId=f.id;
-      if(v!==rs.notesVer){ try{ const j=await (await gget(`${GAPI}/${f.id}?alt=media&${kQ()}`)).json();
-          const R=(j.items||[]).filter(src=>isNote(src)&&src.id).map(src=>{ const it={...src,own:me.email,by:me.name}; delete it.ro; return it; });
+  let changed=false; const seen=new Set(), groups=new Map();
+  for(const nf of noteFiles){ if(!groups.has(nf.email)) groups.set(nf.email,[]); groups.get(nf.email).push(nf.f); }
+  for(const [email,files] of groups){ const v=files.map(verOf).sort().join('|');
+    if(me&&email===me.email){
+      if(v!==rs.notesVer){ try{ const G=await readNotesGroup(files); rs.notesId=G.newest.id;
+          const R=G.items.filter(src=>isNote(src)&&src.id).map(src=>{ const it={...src,own:me.email,by:me.name}; delete it.ro; return it; });
           let base=null; try{ base=rs.lastNotes?JSON.parse(rs.lastNotes).items:null; }catch{}
           const mine=i=>isNote(i)&&i.own===me.email;
           const fin=Array.isArray(base)?[...merge3(base,[...S.items.values()].filter(mine).map(clean),R).values()].map(it=>{ delete it.ro; return it; }):R;
           if(applyItems(mine,fin)) changed=true; afterApply();
-          rs.notesVer=v; rs.lastNotes=JSON.stringify(notesPayload(R)); persistRs(); }catch(e){ console.warn('my notes',e); toast('Không đọc được ghi chú của bạn từ Drive: '+(e.status!=null?driveErrMsg(e):e.message),null,8000); } }
+          rs.notesVer=v; rs.lastNotes=JSON.stringify(notesPayload(R));
+          if(G.dups.length){ rs.dupNotes=G.dups.map(f=>f.id); rs.lastNotes=null; } // ghi bản gộp vào 1 tệp rồi bỏ các tệp trùng
+          persistRs(); }catch(e){ console.warn('my notes',e); toast('Không đọc được ghi chú của bạn từ Drive: '+(e.status!=null?driveErrMsg(e):e.message),null,8000); } }
+      else rs.notesId=files.slice().sort((a,b)=>String(a.modifiedTime||'').localeCompare(String(b.modifiedTime||''))).pop().id;
       continue; }
     seen.add(email);
     const c=remoteNotes.get(email);
-    if(!c||c.ver!==v){ try{ const j=await (await gget(`${GAPI}/${f.id}?alt=media&${kQ()}`)).json();
-        remoteNotes.set(email,{name:j.name||email,ver:v,items:(j.items||[]).filter(isNote),fileId:f.id}); rebuildAuthor(email); changed=true; }catch(e){ console.warn('notes',email,e); toast('Không đọc được ghi chú của '+email+' từ Drive',null,6000); } }
+    if(!c||c.ver!==v){ try{ const G=await readNotesGroup(files);
+        remoteNotes.set(email,{name:G.name||email,ver:v,items:G.items.filter(isNote),fileId:G.newest.id}); rebuildAuthor(email); changed=true; }catch(e){ console.warn('notes',email,e); toast('Không đọc được ghi chú của '+email+' từ Drive',null,6000); } }
   }
   for(const email of [...remoteNotes.keys()]) if(!seen.has(email)){ remoteNotes.delete(email); rebuildAuthor(email); changed=true; }
   // notes of other authors left over locally without a file
@@ -1314,13 +1325,18 @@ async function remoteSave(){
       const m=await gget(`${GAPI}/${rs.layoutId}?fields=id,md5Checksum,modifiedTime&${kQ()}`).then(r=>r.json()).catch(()=>null);
       if(m&&rs.layoutId+'~'+verOf(m)!==rs.layoutVer){ rs.layoutOk=false; setTimeout(()=>driveSync(true),50); throw Object.assign(new Error('layout-changed'),{skip:true}); } }
     if(needL){ const r=await writeJson('board.json',L,rs.layoutId); rs.layoutId=r.id; rs.layoutVer=r.id+'~'+verOf(r); rs.lastLayout=L; await DB.put('meta','boardjson',r.id+'~'+verOf(r)).catch(()=>{}); }
-    if(needN){ const r=await writeJson(notesName(me.email),N,rs.notesId); rs.notesId=r.id; rs.notesVer=verOf(r); rs.lastNotes=N; }
+    if(needN){ const r=await writeJson(notesName(me.email),N,rs.notesId); rs.notesId=r.id; rs.notesVer=verOf(r); rs.lastNotes=N;
+      if(rs.dupNotes?.length){ const ids=rs.dupNotes.filter(id=>id!==r.id); rs.dupNotes=null; // đã gộp xong: đưa các tệp trùng vào Thùng rác Drive (khôi phục được)
+        for(const id of ids) await fetch(`${GAPI}/${id}?supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:'Bearer '+gTok.t,'Content-Type':'application/json'},body:'{"trashed":true}'}).catch(()=>{}); } }
     persistRs(); setAuthNeeded(false); setRemote('ok');
   }catch(e){ if(e.skip){ setRemote('ok'); return; } console.warn('remote save',e); if(e.status===401) setAuthNeeded(true); else { setRemote('err'); toast(upErrMsg(e),null,7000); } }
   finally{ rs.saving=false; if(rs.again){ rs.again=false; scheduleRemoteSave(); } }
 }
 async function writeJson(name,str,id){
   const auth='Bearer '+gTok.t, F='fields=id,md5Checksum,modifiedTime&supportsAllDrives=true';
+  if(!id){ try{ const q=encodeURIComponent(`'${DRIVE.folder}' in parents and name='${name.replace(/'/g,"\\'")}' and trashed=false`); // chưa biết id: tìm tệp cùng tên trước, tránh tạo tệp trùng
+      const j=await (await fetch(`${GAPI}?q=${q}&fields=files(id,modifiedTime)&orderBy=modifiedTime desc&pageSize=5&supportsAllDrives=true&includeItemsFromAllDrives=true`,{headers:{Authorization:auth}})).json();
+      if(j.files?.length) id=j.files[0].id; }catch{} }
   if(id){ const r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media&${F}`,{method:'PATCH',headers:{Authorization:auth,'Content-Type':'application/json; charset=UTF-8'},body:str});
     if(r.ok) return r.json(); if(r.status!==404) throw upErr(r.status,await r.text()); }
   const bd='wb'+uid(); const body=`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({name,parents:[DRIVE.folder],mimeType:'application/json'})}\r\n--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${str}\r\n--${bd}--`;
