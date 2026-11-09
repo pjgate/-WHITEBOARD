@@ -419,7 +419,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh</h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v20</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -1100,7 +1100,7 @@ async function driveSync(quiet=false, preFiles=null){
           if(!j||!Array.isArray(j.items)) throw new Error('board.json lỗi');
           if(busy()){ layoutFail=retry=true; } // đang kéo/sửa: không thay bố cục giữa chừng, thử lại sau
           else { if(applyRemoteLayout(j,byId)) applied=changed=true; rs.layoutVer=v; rs.layoutOk=true; await DB.put('meta','boardjson',v).catch(()=>{}); } }
-        catch(e){ console.warn('board.json',e); layoutFail=true; } }
+        catch(e){ console.warn('board.json',e); layoutFail=true; toast('Không đọc được bố cục chung (board.json) từ Drive: '+(e.status!=null?driveErrMsg(e):e.message),null,8000); } }
     } else rs.layoutOk=true;
     // notes per email
     if(DRIVE.clientId){ if(busy()) retry=true; else if(await syncNotes(noteFiles)) changed=true; }
@@ -1275,12 +1275,12 @@ async function syncNotes(noteFiles){
           const mine=i=>isNote(i)&&i.own===me.email;
           const fin=Array.isArray(base)?[...merge3(base,[...S.items.values()].filter(mine).map(clean),R).values()].map(it=>{ delete it.ro; return it; }):R;
           if(applyItems(mine,fin)) changed=true; afterApply();
-          rs.notesVer=v; rs.lastNotes=JSON.stringify(notesPayload(R)); persistRs(); }catch(e){ console.warn('my notes',e); } }
+          rs.notesVer=v; rs.lastNotes=JSON.stringify(notesPayload(R)); persistRs(); }catch(e){ console.warn('my notes',e); toast('Không đọc được ghi chú của bạn từ Drive: '+(e.status!=null?driveErrMsg(e):e.message),null,8000); } }
       continue; }
     seen.add(email);
     const c=remoteNotes.get(email);
     if(!c||c.ver!==v){ try{ const j=await (await gget(`${GAPI}/${f.id}?alt=media&${kQ()}`)).json();
-        remoteNotes.set(email,{name:j.name||email,ver:v,items:(j.items||[]).filter(isNote),fileId:f.id}); rebuildAuthor(email); changed=true; }catch(e){ console.warn('notes',email,e); } }
+        remoteNotes.set(email,{name:j.name||email,ver:v,items:(j.items||[]).filter(isNote),fileId:f.id}); rebuildAuthor(email); changed=true; }catch(e){ console.warn('notes',email,e); toast('Không đọc được ghi chú của '+email+' từ Drive',null,6000); } }
   }
   for(const email of [...remoteNotes.keys()]) if(!seen.has(email)){ remoteNotes.delete(email); rebuildAuthor(email); changed=true; }
   // notes of other authors left over locally without a file
