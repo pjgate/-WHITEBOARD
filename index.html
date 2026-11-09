@@ -1233,7 +1233,7 @@ function exportBoard(){
 }
 
 // ----- Accounts, per-email notes, remote save -----
-const NOTE_T=new Set(['sticky','text','shape','pen','arrow']);
+const NOTE_T=new Set(['sticky','text','shape','pen','arrow','table']); // 'table': bảng lưu trong notes-<email>.json như ghi chú (trước đây thiếu -> bảng chỉ nằm trên máy tạo ra nó)
 function isNote(it){ return !!it&&NOTE_T.has(it.type); }
 // ----- Ẩn ghi chú của chính mình (chỉ trên máy này, không xóa gì) -----
 let hideMine=false; try{ hideMine=localStorage.getItem('wb-hm-'+(DRIVE?.folder||''))==='1'; }catch{}
