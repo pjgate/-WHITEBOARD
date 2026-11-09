@@ -177,9 +177,18 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 #drvShare b{display:block;margin-bottom:4px;font-size:13px}
 /* top bar extras */
 #top .ib{width:32px;height:32px} #top .ib svg{width:18px;height:18px}
-#backBtn,#filesBtn{display:none}
-body.proj #backBtn{display:grid} body.drive #filesBtn{display:inline-flex}
-#filesBtn,#notesBtn{height:32px;padding:0 10px;font-size:13px;background:#f1f1ee;border-radius:8px}
+#backBtn,#filesBtn,#subBtn,#crumbs{display:none}
+body.proj #backBtn{display:grid} body.drive #filesBtn,body.proj #subBtn{display:inline-flex}
+#subBtn b:not(:empty){background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:0 6px;font-size:11.5px;margin-left:2px}
+body.proj #crumbs:not(:empty){display:flex;align-items:center;gap:2px;font-size:12.5px;color:var(--muted);min-width:0;max-width:300px;overflow:hidden;white-space:nowrap}
+#crumbs a{color:var(--muted);text-decoration:none;overflow:hidden;text-overflow:ellipsis;max-width:120px;flex:0 1 auto} #crumbs a:hover{color:var(--accent);text-decoration:underline}
+#crumbs i{font-style:normal;opacity:.6;padding:0 2px}
+#hub .crumb a.cl{color:var(--muted);text-decoration:none} #hub .crumb a.cl:hover{color:var(--accent);text-decoration:underline}
+#hub .crumb i{font-style:normal;opacity:.6;padding:0 4px}
+.pcard.board{border-color:#c9d3ff;background:#f6f8ff}
+@media (max-width:1100px){ body.proj #crumbs:not(:empty){max-width:170px} }
+@media (max-width:520px){ body.proj #crumbs{display:none!important} }
+#filesBtn,#notesBtn,#subBtn{height:32px;padding:0 10px;font-size:13px;background:#f1f1ee;border-radius:8px}
 #notesBtn{display:inline-flex} #notesBtn b{background:var(--accent);color:#fff;border-radius:9px;font-size:11px;padding:0 6px;line-height:17px;font-weight:600}
 #notesBtn b:empty{display:none}
 /* comment tracking */
@@ -206,8 +215,8 @@ body.hide-mine #world .item.mine{display:none!important}
 #focusChip.show{display:flex} #focusChip .dot{width:10px;height:10px;border-radius:50%;flex:none}
 #focusChip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #focusChip .ib{width:28px;height:28px} #focusChip .ib svg{width:15px;height:15px}
-@media (max-width:640px){ #focusChip{top:calc(110px + env(safe-area-inset-top))} #notesBtn .lbl2{display:none} }
-#filesBtn:hover{background:#e8e8e3}
+@media (max-width:640px){ #focusChip{top:calc(110px + env(safe-area-inset-top))} #notesBtn .lbl2,#subBtn .lbl2{display:none} }
+#filesBtn:hover,#subBtn:hover{background:#e8e8e3}
 /* files drawer */
 #files{right:12px;top:62px;bottom:12px;width:330px;display:none;flex-direction:column;z-index:7;overflow:hidden}
 #files.show{display:flex}
@@ -377,7 +386,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="btn primary" data-act="upload"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Chọn tệp</button>
 </div></div>
 
-<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button><button class="btn" id="notesBtn" data-act="notesPanel" title="Theo dõi ghi chú theo người"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl2">Ghi chú</span><b id="notesCnt"></b></button><button class="btn" id="aiBtn" data-act="aiOpen" title="Trợ lý AI"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg><span class="lbl2">AI</span></button></div>
+<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="crumbs"></span><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button><button class="btn" id="subBtn" data-act="subOpen" title="Dự án con nằm trong dự án này (thư mục con trên Drive)"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lbl2">Dự án con</span><b id="subCnt"></b></button><button class="btn" id="notesBtn" data-act="notesPanel" title="Theo dõi ghi chú theo người"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl2">Ghi chú</span><b id="notesCnt"></b></button><button class="btn" id="aiBtn" data-act="aiOpen" title="Trợ lý AI"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg><span class="lbl2">AI</span></button></div>
 <div id="focusChip" class="panel"></div>
 
 <div id="actions" class="panel">
@@ -477,7 +486,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <div class="row2"><label title="Gửi kèm các ảnh/trang PDF đang chọn, hoặc tối đa 4 cái đang hiện giữa màn hình"><input type="checkbox" id="aiImg">Gửi kèm ảnh/PDF đang xem</label><button class="btn primary" data-act="aiSend" id="aiGo">Gửi</button></div></div>
 </div>
 <div id="hub">
-  <header><div class="tt"><div class="crumb">Bảng mẹ · <a class="driveLink" id="hubDrive" target="_blank" rel="noopener">mở trên Google Drive ↗</a></div><h1 id="hubTitle">Đang tải…</h1></div>
+  <header><div class="tt"><div class="crumb"><span id="hubPath">Bảng mẹ</span> · <a class="driveLink" id="hubDrive" target="_blank" rel="noopener">mở trên Google Drive ↗</a></div><h1 id="hubTitle">Đang tải…</h1></div>
     <div class="hact"><span id="hubUser"></span><input id="hsearch" placeholder="Tìm dự án…" autocomplete="off"><button class="btn ghost" data-act="hubRefresh" title="Làm mới"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18 3v4h-4M6 21v-4h4"/></svg></button><button class="btn ghost" data-act="drvOpen" title="Cài đặt Google Drive"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
   <div id="hubErr"></div><div id="hubGrid"></div><div id="hubEmpty"></div>
 </div>
@@ -524,7 +533,7 @@ body.relogin #loginBtn{background:#e0a92b}
 <div id="upm" class="modal"><div class="box"><h3 id="upmTitle">Tải lên Google Drive?</h3><p id="upmText"></p>
   <div class="row"><button class="btn ghost" data-act="upLocal">Chỉ trên máy này</button><button class="btn primary" data-act="upLogin"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Đăng nhập Google &amp; tải lên</button></div></div></div>
 <div id="npm" class="modal"><div class="box">
-  <h3>Dự án mới</h3>
+  <h3 id="npTitle">Dự án mới</h3>
   <div id="npAuto"><p>Phần mềm sẽ tạo một thư mục con trong Google Drive. Bỏ ảnh, PDF vào thư mục đó (hoặc tải lên từ bảng) là chúng hiện trên bảng của dự án.</p>
     <label>Tên dự án<input id="npName" placeholder="Vd. Nhà phố Quận 7" autocomplete="off"></label>
     <div id="npMsg" style="font-size:13px;color:#d13438;margin:-4px 0 10px;white-space:pre-line"></div>
@@ -621,7 +630,8 @@ const DRIVE = (()=>{
   const okCid=v=>/^\d+-[\w-]+\.apps\.googleusercontent\.com$/.test((v||'').trim());
   const clientId=[CONFIG.clientId,ls?.clientId].map(v=>(v||'').trim()).find(okCid)||'';
   const project=parseFolderId(q.get('p')||'');
-  return root&&key?{root,folder:project||root,project:project||null,key,clientId,fromConfig:!!CONFIG.folder}:null;
+  const sub=!!project&&project!==root&&q.get('sub')==='1'; // xem danh sách dự án con của một dự án
+  return root&&key?{root,folder:project||root,project:project||null,sub,key,clientId,fromConfig:!!CONFIG.folder}:null;
 })();
 let driveName='', hubMode=false;
 const PRIV=!!(DRIVE?.clientId&&CONFIG.requireLogin); // chế độ riêng tư: bắt buộc đăng nhập
@@ -1024,7 +1034,7 @@ function driveErrMsg(e){
 }
 async function driveQuery(q,order='name_natural'){
   const out=[]; let tok='';
-  const fields=encodeURIComponent('nextPageToken,files(id,name,mimeType,size,modifiedTime,md5Checksum,thumbnailLink,appProperties,shortcutDetails(targetId,targetMimeType),owners(emailAddress,displayName),imageMediaMetadata(width,height,rotation))');
+  const fields=encodeURIComponent('nextPageToken,files(id,name,mimeType,parents,size,modifiedTime,md5Checksum,thumbnailLink,appProperties,shortcutDetails(targetId,targetMimeType),owners(emailAddress,displayName),imageMediaMetadata(width,height,rotation))');
   do{ const u=`${GAPI}?q=${encodeURIComponent(q)}&fields=${fields}&pageSize=1000${order?'&orderBy='+order:''}&includeItemsFromAllDrives=true&${kQ()}${tok?'&pageToken='+encodeURIComponent(tok):''}`;
     const j=await (await gget(u)).json(); out.push(...(j.files||[])); tok=j.nextPageToken; }while(tok);
   return out;
@@ -1083,6 +1093,8 @@ async function driveSync(quiet=false, preFiles=null){
     driveName=meta.name||(driveName!=='lỗi kết nối'&&driveName)||'Google Drive'; setMeta();
     if(DRIVE.project&&meta.name&&!meta.__err) noteSeen(meta);
     if(authed&&me&&meta.capabilities){ const cw=!!meta.capabilities.canAddChildren; if(cw!==canWrite){ canWrite=cw; updateRoUI(); } }
+    if(DRIVE.project){ const subs=projFolders(files); $('#subCnt').textContent=subs.length||'';
+      if(tokenValid()&&meta.capabilities?.canAddChildren) tagProjects(subs); }
     const byId=new Map(); let boardFile=null; const noteFiles=[];
     for(const f of files){
       if(f.name==='board.json'){ if(!boardFile||f.modifiedTime>boardFile.modifiedTime) boardFile=f; continue; }
@@ -1460,9 +1472,9 @@ $('#files').addEventListener('pointerdown',e=>e.stopPropagation());
 
 // ----- Hub (bảng mẹ) -----
 const isFolder=f=>f.mimeType==='application/vnd.google-apps.folder';
-function boardLink(p){ const q=new URLSearchParams();
+function boardLink(p,sub=false){ const q=new URLSearchParams();
   if(!(DRIVE.fromConfig&&parseFolderId(CONFIG.folder)===DRIVE.root)) q.set('folder',DRIVE.root);
-  if(p) q.set('p',p); if(!CONFIG.apiKey) q.set('key',DRIVE.key);
+  if(p===DRIVE.root&&sub) p=null; if(p) q.set('p',p); if(p&&sub) q.set('sub','1'); if(!CONFIG.apiKey) q.set('key',DRIVE.key);
   const t=q.toString(); return location.origin+location.pathname+(t?'?'+t:''); }
 let hubData=[], rootInfo=null;
 const FOLDER='application/vnd.google-apps.folder';
@@ -1493,10 +1505,38 @@ async function listMyProjects(){ // người thường: chỉ những thư mục
   if(res.every(r=>r.status==='rejected')) throw res[0].reason;
   const m=new Map(); for(const r of res) if(r.status==='fulfilled') for(const f of r.value) m.set(f.id,f);
   const seen=Object.keys(getSeen()).filter(id=>!m.has(id)&&id!==DRIVE.root), lim=limiter(4);
-  await Promise.all(seen.map(id=>lim(async()=>{ try{ const f=await (await gget(`${GAPI}/${id}?fields=id,name,mimeType,modifiedTime,appProperties,trashed&supportsAllDrives=true&${kQ()}`)).json();
+  await Promise.all(seen.map(id=>lim(async()=>{ try{ const f=await (await gget(`${GAPI}/${id}?fields=id,name,mimeType,parents,modifiedTime,appProperties,trashed&supportsAllDrives=true&${kQ()}`)).json();
     if(f.mimeType===FOLDER&&!f.trashed) m.set(f.id,{...f,linked:true}); else forgetSeen(id); }catch(e){ if(e.status===403||e.status===404) forgetSeen(id); } })));
-  return [...m.values()].sort((a,b)=>a.name.localeCompare(b.name,'vi',{numeric:true}));
+  // dự án con (nằm trong một dự án khác mà mình cũng thấy) không hiện ở cấp ngoài cùng, mở từ dự án cha
+  return [...m.values()].filter(f=>!(f.parents||[]).some(p=>p!==DRIVE.root&&m.has(p))).sort((a,b)=>a.name.localeCompare(b.name,'vi',{numeric:true}));
 }
+// ----- Dự án lồng nhau (thư mục trong thư mục, không giới hạn số cấp) -----
+// HUBP: thư mục đang xem danh sách dự án (thư mục chính, hoặc một dự án khi xem "Dự án con").
+const HUBP=DRIVE?.sub?DRIVE.project:DRIVE?.root;
+let hubInfo=null, hubTrail=[];
+const trailKey=id=>'wb-trail-'+id;
+function cachedTrail(id){ try{ const t=JSON.parse(sessionStorage.getItem(trailKey(id))||'null'); return Array.isArray(t)?t:null; }catch{ return null; } }
+function setTrail(id,t){ try{ sessionStorage.setItem(trailKey(id),JSON.stringify(t)); }catch{} }
+// Các dự án cha (từ ngoài vào trong, không gồm thư mục chính và chính nó). Dừng khi gặp thư mục chính,
+// hoặc thư mục không thuộc bảng này (dự án liên kết từ ngoài / không có quyền xem thư mục cha).
+async function loadTrail(id){ const out=[], seen=new Set([id]); let ok=true;
+  const meta=async x=>(await gget(`${GAPI}/${x}?fields=id,name,parents,appProperties&${kQ()}`)).json();
+  try{ let f=await meta(id);
+    while(out.length<60){ const p=(f.parents||[])[0]; if(!p||p===DRIVE.root||seen.has(p)) break; seen.add(p);
+      let pf; try{ pf=await meta(p); }catch{ break; }
+      if(pf.appProperties?.wbRoot!==DRIVE.root) break; out.unshift({id:pf.id,name:pf.name}); f=pf; }
+  }catch{ ok=false; }
+  if(ok) setTrail(id,out); return ok?out:(cachedTrail(id)||[]); }
+const crumbSep='<i>›</i>';
+function renderTopCrumbs(t){ const c=$('#crumbs'); if(!c) return; if(!t?.length){ c.innerHTML=''; return; }
+  const show=t.length>2?[null,...t.slice(-2)]:t;
+  c.innerHTML=show.map(x=>x?`<a href="${esc(boardLink(x.id))}" title="${esc(x.name)}">${esc(x.name)}</a>`:`<a href="${esc(boardLink(t[t.length-3].id))}" title="${esc(t.slice(0,-2).map(y=>y.name).join(' › '))}">…</a>`).join(crumbSep)+crumbSep; }
+async function initTrail(){ if(!DRIVE?.project) return; const c=cachedTrail(DRIVE.project); if(c) renderTopCrumbs(c);
+  const t=await loadTrail(DRIVE.project); renderTopCrumbs(t); renderMenuDrive(); }
+function upLink(){ const t=cachedTrail(DRIVE.project)||[]; const par=t[t.length-1]; return par?boardLink(par.id,true):boardLink(null); } // về danh sách chứa dự án này
+function renderHubPath(){ const el=$('#hubPath');
+  if(!DRIVE.sub){ el.textContent='Bảng mẹ'; return; }
+  el.innerHTML=[`<a class="cl" href="${esc(boardLink(null))}">Tất cả dự án</a>`,...hubTrail.map(x=>`<a class="cl" href="${esc(boardLink(x.id,true))}">${esc(x.name)}</a>`)].join('<i>›</i>'); }
 function renderHubUser(){
   const u=$('#hubUser'); if(!DRIVE?.clientId){ u.innerHTML=''; return; }
   u.innerHTML=me&&tokenValid()?`<span class="who" title="${esc(me.email)}">${esc(me.email)}</span><button class="btn" data-act="gOutHub">Đăng xuất</button>`
@@ -1504,38 +1544,47 @@ function renderHubUser(){
 }
 async function showHub(files){
   hubMode=true; document.body.classList.add('hub','drive'); $('#toast').classList.remove('show'); renderMenuDrive();
-  $('#hubDrive').href=`https://drive.google.com/drive/folders/${DRIVE.root}`; $('#hubErr').classList.remove('show');
+  $('#hubDrive').href=`https://drive.google.com/drive/folders/${HUBP}`; $('#hubErr').classList.remove('show');
   const fail=e=>{ $('#hubTitle').textContent='Chưa đọc được Google Drive'; hubData=[]; $('#hubGrid').innerHTML=''; $('#hubEmpty').textContent=''; renderHubUser();
     const he=$('#hubErr'); he.textContent=driveErrMsg(e); const b=document.createElement('button'); b.className='btn primary'; b.dataset.act='drvOpen'; b.textContent='Mở cài đặt Google Drive'; he.appendChild(document.createElement('br')); he.appendChild(b); he.classList.add('show'); };
-  if(!files){ try{ await loadRootInfo(); files=rootInfo?await driveList(DRIVE.root):await listMyProjects(); }catch(e){ return fail(e); } }
-  renderHubUser();
-  document.querySelector('#hub .crumb').style.visibility=rootInfo?'':'hidden';
-  const title=rootInfo?.name||(PRIV?'Dự án của bạn':'Dự án');
+  if(DRIVE.sub){ hubTrail=cachedTrail(HUBP)||[]; renderHubPath(); }
+  if(!files){ try{
+      if(DRIVE.sub){ const [inf,list]=await Promise.all([gget(`${GAPI}/${HUBP}?fields=id,name,capabilities(canAddChildren)&${kQ()}`).then(r=>r.json()),driveList(HUBP)]); hubInfo=inf; files=list;
+        loadTrail(HUBP).then(t=>{ hubTrail=t; renderHubPath(); }); }
+      else { await loadRootInfo(); hubInfo=rootInfo; files=rootInfo?await driveList(DRIVE.root):await listMyProjects(); }
+    }catch(e){ return fail(e); } }
+  renderHubUser(); renderHubPath();
+  document.querySelector('#hub .crumb').style.visibility=hubInfo?'':'hidden';
+  const title=hubInfo?.name||(PRIV?'Dự án của bạn':'Dự án');
   $('#hubTitle').textContent=title; document.title=title+' · Bảng trắng';
-  const folders=projFolders(files), own=rootInfo?files.filter(f=>kindOf(f)):[];
+  const folders=projFolders(files), own=hubInfo?files.filter(f=>kindOf(f)):[];
   hubData=folders.map(f=>({id:f.id,name:f.name,modified:f.modifiedTime,files:null,linked:!!f.linked}));
-  if(own.length) hubData.push({id:DRIVE.root,name:'Tệp chung (thư mục chính)',common:true,files:own});
-  if(tokenValid()&&rootInfo?.capabilities?.canAddChildren) tagProjects(folders);
+  if(DRIVE.sub) hubData.unshift({id:HUBP,name:'Bảng của dự án này',board:true,files:own,subs:folders.length});
+  else if(own.length) hubData.push({id:DRIVE.root,name:'Tệp chung (thư mục chính)',common:true,files:own});
+  // dự án con mở từ đây: nhớ sẵn đường dẫn cha để hiện ngay trên bảng
+  const ct=DRIVE.sub?[...hubTrail,{id:HUBP,name:hubInfo?.name||''}]:[]; for(const f of folders) if(!f.linked&&!cachedTrail(f.id)) setTrail(f.id,ct);
+  if(tokenValid()&&hubInfo?.capabilities?.canAddChildren) tagProjects(folders);
   renderHub();
   const lim=limiter(4);
-  await Promise.all(hubData.filter(p=>!p.files).map(p=>lim(async()=>{ try{ p.files=(await driveList(p.id)).filter(f=>kindOf(f)); }catch(e){ p.files=[]; p.err=true; if(p.linked&&(e.status===403||e.status===404)) p.noAccess=true; }
+  await Promise.all(hubData.filter(p=>!p.files).map(p=>lim(async()=>{ try{ const l=await driveList(p.id); p.files=l.filter(f=>kindOf(f)); p.subs=projFolders(l).length; }catch(e){ p.files=[]; p.err=true; if(p.linked&&(e.status===403||e.status===404)) p.noAccess=true; }
     if(p.noAccess) hubData=hubData.filter(x=>x!==p); // dự án liên kết mà mình không được chia sẻ: ẩn đi
     renderHub(); })));
 }
 function renderHub(){
   const q=$('#hsearch').value.trim().toLowerCase(); const list=hubData.filter(p=>!q||p.name.toLowerCase().includes(q));
   const ph='<div class="ph"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>';
-  const newCard=`<button class="pcard new" data-act="npOpen"><span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>Dự án mới<small>${DRIVE.clientId?'Tạo thư mục mới trên Google Drive':'Tạo thư mục con trên Google Drive'}</small></button>`;
-  const canNew=!PRIV||!!rootInfo?.capabilities?.canAddChildren;
+  const newCard=`<button class="pcard new" data-act="npOpen"><span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>${DRIVE.sub?'Dự án con mới':'Dự án mới'}<small>${DRIVE.sub?'Tạo thư mục con bên trong dự án này trên Google Drive':DRIVE.clientId?'Tạo thư mục mới trên Google Drive':'Tạo thư mục con trên Google Drive'}</small></button>`;
+  const canNew=!PRIV||!!hubInfo?.capabilities?.canAddChildren;
   $('#hubGrid').innerHTML=(q||!canNew?'':newCard)+list.map(p=>{
     const fs=p.files; const th=(fs||[]).filter(f=>f.thumbnailLink).slice(0,4);
     const np=(fs||[]).filter(f=>kindOf(f)==='pdf').length, ni=(fs||[]).length-np;
-    const mt=!fs?'Đang đếm tệp…':p.noAccess?'Bạn chưa được chia sẻ folder này':p.err?'Không đọc được thư mục':fs.length?[np&&`${np} PDF`,ni&&`${ni} ảnh`].filter(Boolean).join(' · '):'Chưa có tệp';
+    const mt=!fs?'Đang đếm tệp…':p.noAccess?'Bạn chưa được chia sẻ folder này':p.err?'Không đọc được thư mục':[np&&`${np} PDF`,ni&&`${ni} ảnh`,p.subs&&!p.board&&`${p.subs} dự án con`].filter(Boolean).join(' · ')||'Chưa có tệp';
     const d=p.modified?new Date(p.modified):null;
-    return `<a class="pcard${p.common?' common':''}" href="${esc(boardLink(p.id))}"><div class="th${th.length===1?' one':''}">${th.length?th.map(f=>`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(f.thumbnailLink)}" alt="">`).join(''):ph}</div><div class="bd"><div class="nm" title="${esc(p.name)}">${esc(p.name)}${p.linked?'<span class="tag link" title="Folder liên kết từ ngoài thư mục chính. Quyền do chủ folder đó quản lý trên Google Drive.">Liên kết</span>':''}</div><div class="mt">${mt}${d&&fs?` · ${d.toLocaleDateString('vi-VN')}`:''}</div></div></a>`; }).join('');
+    return `<a class="pcard${p.common?' common':''}${p.board?' board':''}" href="${esc(boardLink(p.id))}"><div class="th${th.length===1?' one':''}">${th.length?th.map(f=>`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(f.thumbnailLink)}" alt="">`).join(''):ph}</div><div class="bd"><div class="nm" title="${esc(p.name)}">${esc(p.name)}${p.linked?'<span class="tag link" title="Folder liên kết từ ngoài thư mục chính. Quyền do chủ folder đó quản lý trên Google Drive.">Liên kết</span>':''}${p.board?'<span class="tag link">Bảng</span>':''}</div><div class="mt">${mt}${d&&fs?` · ${d.toLocaleDateString('vi-VN')}`:''}</div></div></a>`; }).join('');
   $('#hubGrid').querySelectorAll('img').forEach(im=>im.onerror=()=>im.remove());
   const he=$('#hubEmpty');
   if(!hubData.length&&PRIV&&tokenValid()&&!rootInfo) he.innerHTML=`<div class="reqbox"><h3>Chưa có dự án nào được chia sẻ cho ${esc(me?.email||'bạn')}</h3><p>Nhờ chủ folder dự án chia sẻ folder đó cho email này trên Google Drive, rồi bấm Làm mới ↻.</p></div>`;
+  else if(DRIVE.sub) he.textContent=hubData.length<=1?(canNew?'Chưa có dự án con nào. Bấm "Dự án con mới" để tạo — dự án con cũng có thể chứa dự án con khác, không giới hạn số cấp.':'Chưa có dự án con nào.'):!list.length?'Không tìm thấy dự án.':'';
   else he.textContent=!hubData.length?(canNew?'Chưa có dự án nào. Bấm "Dự án mới" để bắt đầu.':'Chưa có dự án nào.'):!list.length?'Không tìm thấy dự án.':'';
 }
 async function tagProjects(folders){ // gắn nhãn ẩn để người được chia sẻ tìm thấy dự án (chỉ thành công với folder mình có quyền sửa)
@@ -1544,19 +1593,20 @@ async function tagProjects(folders){ // gắn nhãn ẩn để người được
 }
 function openNewProject(){
   const auto=!!DRIVE.clientId; $('#npAuto').style.display=auto?'':'none'; $('#npManual').style.display=auto?'none':'';
-  $('#npDrive').href=`https://drive.google.com/drive/folders/${DRIVE.root}`; $('#npMsg').textContent=''; $('#npName').value='';
+  $('#npDrive').href=`https://drive.google.com/drive/folders/${HUBP}`; $('#npMsg').textContent=''; $('#npName').value='';
+  $('#npTitle').textContent=DRIVE.sub?`Dự án con trong "${hubInfo?.name||''}"`:'Dự án mới';
   $('#npm').classList.add('show'); if(auto) setTimeout(()=>$('#npName').focus(),50);
 }
 async function createProject(){
   const name=$('#npName').value.trim(), msg=$('#npMsg'); if(!name){ msg.textContent='Hãy đặt tên dự án.'; return; }
-  if(hubData.some(p=>p.name.toLowerCase()===name.toLowerCase())){ msg.textContent='Đã có dự án trùng tên.'; return; }
+  if(hubData.some(p=>!p.board&&!p.common&&p.name.toLowerCase()===name.toLowerCase())){ msg.textContent='Đã có dự án trùng tên.'; return; }
   const go=$('#npGo'); go.disabled=true; msg.textContent='';
   try{
     if(!tokenValid()) await signIn();
     const r=await fetch(`${GAPI}?supportsAllDrives=true&fields=id,name`,{method:'POST',headers:{Authorization:'Bearer '+gTok.t,'Content-Type':'application/json; charset=UTF-8'},
-      body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[DRIVE.root],appProperties:{wbRoot:DRIVE.root}})});
+      body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[HUBP],appProperties:{wbRoot:DRIVE.root}})});
     if(!r.ok) throw upErr(r.status,await r.text());
-    const f=await r.json(); msg.style.color='#23894f'; msg.textContent='Đã tạo, đang mở dự án…';
+    const f=await r.json(); setTrail(f.id,DRIVE.sub?[...hubTrail,{id:HUBP,name:hubInfo?.name||''}]:[]); msg.style.color='#23894f'; msg.textContent='Đã tạo, đang mở dự án…';
     setTimeout(()=>{ location.href=boardLink(f.id); },400);
   }catch(e){ msg.style.color='#d13438'; msg.textContent=e.status!=null?upErrMsg(e):e.message; }
   finally{ go.disabled=false; }
@@ -1591,7 +1641,7 @@ function renderMenuDrive(){
     hub:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',lnk:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',files:'<path d="M4 6h16M4 12h16M4 18h10"/>'};
   const b=(a,i,t)=>`<button data-act="${a}"><svg viewBox="0 0 24 24">${ic[i]}</svg>${t}</button>`;
   const acct=DRIVE?.clientId&&!hubMode?(me?b('gOut','drv',`Đăng xuất (${esc(me.email)})`):b('gIn','drv','Đăng nhập Google')):'';
-  $('#menuDrive').innerHTML=DRIVE?(DRIVE.project?b('hub','hub','Về danh sách dự án'):'')+acct+b('files','files','Chọn tệp hiện trên bảng')+b('drvSync','sync','Đồng bộ lại từ Drive')+(DRIVE.project&&DRIVE.clientId?b('revOpen','sync','Khôi phục bố cục cũ'):'')+b('copyLink','lnk','Sao chép link bảng này')+b('drvExport','exp','Xuất bố cục (board.json)')+b('drvOpen','drv','Cài đặt Google Drive')
+  $('#menuDrive').innerHTML=DRIVE?(DRIVE.project?b('hub','hub',(cachedTrail(DRIVE.project)||[]).length?'Lên dự án cha':'Về danh sách dự án')+b('subOpen','hub','Dự án con của bảng này'):'')+acct+b('files','files','Chọn tệp hiện trên bảng')+b('drvSync','sync','Đồng bộ lại từ Drive')+(DRIVE.project&&DRIVE.clientId?b('revOpen','sync','Khôi phục bố cục cũ'):'')+b('copyLink','lnk','Sao chép link bảng này')+b('drvExport','exp','Xuất bố cục (board.json)')+b('drvOpen','drv','Cài đặt Google Drive')
     :b('drvOpen','drv','Kết nối Google Drive');
 }
 
@@ -2591,7 +2641,8 @@ document.addEventListener('click',e=>{
   else if(a==='revOpen') openRevisions();
   else if(a==='revClose') $('#revm').classList.remove('show');
   else if(a==='revUse') useRevision(b.dataset.rev,b);
-  else if(a==='hub') location.href=boardLink(null);
+  else if(a==='hub') location.href=DRIVE.project?upLink():boardLink(null);
+  else if(a==='subOpen') location.href=boardLink(DRIVE.project,true);
   else if(a==='files') { const f=$('#files'); const was=f.classList.contains('show')&&!f.classList.contains('people'); f.classList.toggle('show',!was); setTab('files'); }
   else if(a==='notesPanel') { const f=$('#files'); const was=f.classList.contains('show')&&f.classList.contains('people'); f.classList.toggle('show',!was); setTab('people'); }
   else if(a==='focusOff') setFocus(null);
@@ -2952,7 +3003,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=
   if(DRIVE){ document.body.classList.add('drive'); if(DRIVE.project) document.body.classList.add('proj'); setMeta();
     if(DRIVE.clientId){ loadGIS().catch(()=>{}); document.querySelectorAll('#actions .lbl').forEach(l=>l.textContent='Tải lên Drive'); }
     let pre=null;
-    if(!DRIVE.project){ await showHub(); return; }
+    if(!DRIVE.project||DRIVE.sub){ await showHub(); return; }
+    initTrail();
     await loadHidden(); await loadRs(); applyOwnership(); updateRoUI(); booted=true; await driveSync(false,pre);
     setInterval(()=>{ if(PRIV&&me&&!tokenValid()&&!rs.authNeeded) setAuthNeeded(true); if(!hubMode && document.visibilityState==='visible' && !drag && !editing && !toggling && !importing && Date.now()-lastSync>(me?25000:55000)) driveSync(true); },5000);
   }
