@@ -179,6 +179,28 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 #top .ib{width:32px;height:32px} #top .ib svg{width:18px;height:18px}
 #backBtn,#filesBtn,#subBtn,#crumbs{display:none}
 body.proj #backBtn{display:grid} body.drive #filesBtn,body.proj #subBtn{display:inline-flex}
+#tree{left:calc(74px + env(safe-area-inset-left));top:calc(64px + env(safe-area-inset-top));display:none;flex-direction:column;z-index:7;max-width:calc(100vw - 86px);max-height:min(70vh,calc(100vh - 150px));overflow:hidden}
+body.proj.tree-on #tree{display:flex} body.tree-on #subBtn{background:var(--accent-soft);color:var(--accent)}
+#tree .trh{display:flex;align-items:center;gap:4px;padding:8px 8px 4px 14px;white-space:nowrap}
+#tree .trh b{font-size:13px} #tree .trh span{flex:1;color:var(--muted);font-size:12px;padding:0 8px 0 6px}
+#tree .ib{width:28px;height:28px} #tree .ib svg{width:16px;height:16px}
+#trBody{overflow:auto;padding:4px 14px 14px;min-width:200px}
+#trBody .msg{color:var(--muted);font-size:12.5px;padding:6px 0}
+.trc{position:relative}
+.trc svg.ln{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}
+.trc svg.ln path{fill:none;stroke:#9a9890;stroke-width:1.2}
+.trc svg.ln path.on{stroke:var(--accent);stroke-width:1.8}
+.tn{position:absolute;display:flex;align-items:center;gap:6px;height:24px;padding:0 7px 0 4px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:12.5px;white-space:nowrap;border:1px solid transparent}
+.tn:hover{background:#f1f1ee;border-color:var(--line)}
+.tn i{width:16px;height:13px;border-radius:2px;background:#c9d6f5;border:1.3px solid #6f86c6;flex:none;position:relative}
+.tn i::before{content:'';position:absolute;left:-1.3px;top:-4px;width:7px;height:3px;border:1.3px solid #6f86c6;border-bottom:0;border-radius:2px 2px 0 0;background:#c9d6f5}
+.tn span{overflow:hidden;text-overflow:ellipsis;max-width:170px}
+.tn.anc span{font-weight:600}
+.tn.cur{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 8px rgba(59,91,253,.35)}
+.tn.cur i,.tn.cur i::before{background:#fff;border-color:#fff}
+.tn.cur span{font-weight:600}
+.tn.lk span::after{content:' ↗';opacity:.6}
+@media (max-width:640px){ #tree{top:calc(110px + env(safe-area-inset-top))} }
 #subBtn b:not(:empty){background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:0 6px;font-size:11.5px;margin-left:2px}
 body.proj #crumbs:not(:empty){display:flex;align-items:center;gap:2px;font-size:12.5px;color:var(--muted);min-width:0;max-width:300px;overflow:hidden;white-space:nowrap}
 #crumbs a{color:var(--muted);text-decoration:none;overflow:hidden;text-overflow:ellipsis;max-width:120px;flex:0 1 auto} #crumbs a:hover{color:var(--accent);text-decoration:underline}
@@ -269,7 +291,7 @@ body.hub #ai,body.gate #ai{display:none!important}
 /* hub (bảng mẹ) */
 #hub{position:fixed;inset:0;overflow:auto;display:none;background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 24px 40px;z-index:3}
 body.hub #hub{display:block}
-body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub #actions,body.hub #help-btn,body.hub #empty,body.hub #ctx,body.hub #penbar,body.hub #files{display:none!important}
+body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub #actions,body.hub #help-btn,body.hub #empty,body.hub #ctx,body.hub #penbar,body.hub #files,body.hub #tree{display:none!important}
 #hub header{max-width:1200px;margin:0 auto 22px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
 #hub header .tt{flex:1;min-width:220px}
 #hub .crumb{color:var(--muted);font-size:13px;margin-bottom:4px}
@@ -386,7 +408,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="btn primary" data-act="upload"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>Chọn tệp</button>
 </div></div>
 
-<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="crumbs"></span><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button><button class="btn" id="subBtn" data-act="subOpen" title="Dự án con nằm trong dự án này (thư mục con trên Drive)"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span class="lbl2">Dự án con</span><b id="subCnt"></b></button><button class="btn" id="notesBtn" data-act="notesPanel" title="Theo dõi ghi chú theo người"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl2">Ghi chú</span><b id="notesCnt"></b></button><button class="btn" id="aiBtn" data-act="aiOpen" title="Trợ lý AI"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg><span class="lbl2">AI</span></button></div>
+<div id="top" class="panel"><button class="ib" id="backBtn" data-act="hub" title="Tất cả dự án"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><h1>Bảng trắng</h1><span id="crumbs"></span><span id="meta"><i></i><span id="metatext">Trống</span></span><button class="btn" id="filesBtn" data-act="files" title="Chọn tệp hiện trên bảng"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span id="filesBtnTxt">Tệp</span></button><button class="btn" id="subBtn" data-act="treeToggle" title="Cây dự án: dự án cha và các dự án con"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="5" rx="1"/><rect x="15" y="4" width="6" height="5" rx="1"/><rect x="15" y="15" width="6" height="5" rx="1"/><path d="M9 6.5h6M12 6.5v11h3"/></svg><span class="lbl2">Cây dự án</span><b id="subCnt"></b></button><button class="btn" id="notesBtn" data-act="notesPanel" title="Theo dõi ghi chú theo người"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/></svg><span class="lbl2">Ghi chú</span><b id="notesCnt"></b></button><button class="btn" id="aiBtn" data-act="aiOpen" title="Trợ lý AI"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2 2.2.8-2.2.8L19 21l-.8-2.2-2.2-.8 2.2-.8z"/></svg><span class="lbl2">AI</span></button></div>
 <div id="focusChip" class="panel"></div>
 
 <div id="actions" class="panel">
@@ -470,6 +492,12 @@ body.relogin #loginBtn{background:#e0a92b}
 <div id="ctx" class="panel"></div>
 <div id="rtb" class="panel"></div>
 <div id="acp" class="panel"></div>
+<div id="tree" class="panel"><div class="trh"><b>Cây dự án</b><span id="trInfo"></span>
+  <button class="ib" data-act="treeNew" id="trNew" title="Tạo dự án con trong dự án đang mở"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button class="ib" data-act="subOpen" title="Mở dạng danh sách"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button>
+  <button class="ib" data-act="treeRefresh" title="Làm mới"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18 3v4h-4M6 21v-4h4"/></svg></button>
+  <button class="ib" data-act="treeToggle" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="trBody"></div></div>
 <div id="files" class="panel">
   <div class="fh"><b id="fhTitle">Tệp trong dự án</b><span id="fcount"></span><button class="ib" data-act="filesClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
   <div class="ftabs"><button data-tab="files" class="on">Tệp</button><button data-tab="people">Ghi chú theo người</button></div>
@@ -1532,7 +1560,59 @@ function renderTopCrumbs(t){ const c=$('#crumbs'); if(!c) return; if(!t?.length)
   const show=t.length>2?[null,...t.slice(-2)]:t;
   c.innerHTML=show.map(x=>x?`<a href="${esc(boardLink(x.id))}" title="${esc(x.name)}">${esc(x.name)}</a>`:`<a href="${esc(boardLink(t[t.length-3].id))}" title="${esc(t.slice(0,-2).map(y=>y.name).join(' › '))}">…</a>`).join(crumbSep)+crumbSep; }
 async function initTrail(){ if(!DRIVE?.project) return; const c=cachedTrail(DRIVE.project); if(c) renderTopCrumbs(c);
-  const t=await loadTrail(DRIVE.project); renderTopCrumbs(t); renderMenuDrive(); }
+  let open=false; try{ open=localStorage.getItem(TREE_KEY)==='1'; }catch{} if(open){ document.body.classList.add('tree-on'); treeRoot=treeFromCache(treeTop()); renderTree(); }
+  const t=await loadTrail(DRIVE.project); renderTopCrumbs(t); renderMenuDrive(); if(open) refreshTree(); }
+// ----- Cây dự án (khung nổi trên bảng) -----
+const TREE_KEY='wb-tree-open';
+let treeRoot=null, treeBusy=false;
+const treeCacheKey=id=>'wb-tree-'+id;
+function treeTop(){ const t=cachedTrail(DRIVE.project)||[]; return t[0]?.id||DRIVE.project; }
+async function loadTree(topId){ // duyệt theo từng cấp, gộp nhiều thư mục cha vào một truy vấn
+  const meta=await (await gget(`${GAPI}/${topId}?fields=id,name&${kQ()}`)).json();
+  const root={id:topId,name:meta.name,kids:[]}, nodes=new Map([[topId,root]]); let level=[topId]; const lim=limiter(3);
+  while(level.length&&nodes.size<1500){ const next=[], chunks=[];
+    for(let i=0;i<level.length;i+=35) chunks.push(level.slice(i,i+35));
+    await Promise.all(chunks.map(ch=>lim(async()=>{
+      const fs=await driveQuery(`(${ch.map(id=>`'${id}' in parents`).join(' or ')}) and (mimeType='${FOLDER}' or mimeType='${SHORTCUT}') and trashed=false`);
+      for(const f of fs){ const par=(f.parents||[]).find(p=>ch.includes(p)); if(!par) continue;
+        let id=f.id, linked=false; if(f.mimeType===SHORTCUT){ if(f.shortcutDetails?.targetMimeType!==FOLDER) continue; id=f.shortcutDetails.targetId; linked=true; }
+        if(!id||nodes.has(id)||id===DRIVE.root) continue; const n={id,name:f.name,kids:[],linked}; nodes.set(id,n); nodes.get(par).kids.push(n); next.push(id); } })));
+    level=next; }
+  const srt=n=>{ n.kids.sort((a,b)=>a.name.localeCompare(b.name,'vi',{numeric:true})); n.kids.forEach(srt); }; srt(root);
+  const slim=n=>({id:n.id,name:n.name,l:n.linked?1:0,k:n.kids.map(slim)}); try{ sessionStorage.setItem(treeCacheKey(topId),JSON.stringify(slim(root))); }catch{}
+  return root; }
+function treeFromCache(topId){ try{ const j=JSON.parse(sessionStorage.getItem(treeCacheKey(topId))||'null'); if(!j) return null; const un=n=>({id:n.id,name:n.name,linked:!!n.l,kids:n.k.map(un)}); return un(j); }catch{ return null; } }
+let _mc; const textW=t=>{ _mc||=document.createElement('canvas').getContext('2d'); _mc.font="12.5px 'Be Vietnam Pro',system-ui,sans-serif"; return _mc.measureText(t).width; };
+function renderTree(){ const body=$('#trBody'); if(!treeRoot){ body.innerHTML='<div class="msg">Đang tải cây dự án…</div>'; return; }
+  const RH=30, GAP=30, cur=DRIVE.project; let row=0, cnt=0, maxD=0; const colW=[], path=new Set();
+  const find=(n,st)=>{ st.push(n.id); if(n.id===cur){ st.forEach(x=>path.add(x)); return true; } for(const k of n.kids) if(find(k,st)) return true; st.pop(); return false; }; find(treeRoot,[]);
+  const lay=(n,d)=>{ cnt++; n.d=d; maxD=Math.max(maxD,d); n.w=Math.ceil(Math.min(170,textW(n.name))+(n.linked?14:0)+34); colW[d]=Math.max(colW[d]||0,n.w);
+    if(!n.kids.length) n.y=row++; else { n.kids.forEach(k=>lay(k,d+1)); n.y=(n.kids[0].y+n.kids[n.kids.length-1].y)/2; } };
+  lay(treeRoot,0); const X=[0]; for(let d=1;d<=maxD;d++) X[d]=X[d-1]+colW[d-1]+GAP;
+  const W=X[maxD]+colW[maxD], H=row*RH; let html='', lines='';
+  const cy=n=>n.y*RH+RH/2;
+  const walk=n=>{ const cls=n.id===cur?'cur':path.has(n.id)?'anc':'';
+    html+=`<a class="tn ${cls}${n.linked?' lk':''}" style="left:${X[n.d]}px;top:${n.y*RH+3}px" href="${esc(boardLink(n.id))}" data-tid="${esc(n.id)}" title="${esc(n.name)}"><i></i><span>${esc(n.name)}</span></a>`;
+    if(n.kids.length){ const x0=X[n.d]+n.w+2, bx=X[n.d+1]-GAP/2, on=k=>path.has(k.id)&&path.has(n.id)?' class="on"':'';
+      lines+=`<path d="M${x0} ${cy(n)}H${bx}"${n.kids.some(k=>path.has(k.id))?' class="on"':''}/>`;
+      if(n.kids.length>1) lines+=`<path d="M${bx} ${cy(n.kids[0])}V${cy(n.kids[n.kids.length-1])}"/>`;
+      for(const k of n.kids){ lines+=`<path d="M${bx} ${cy(k)}H${X[n.d+1]-1}"${on(k)}/>`; if(path.has(k.id)&&Math.abs(cy(k)-cy(n))>0.5) lines+=`<path class="on" d="M${bx} ${cy(n)}V${cy(k)}"/>`; walk(k); } } };
+  walk(treeRoot);
+  body.innerHTML=`<div class="trc" style="width:${W}px;height:${H}px"><svg class="ln" width="${W}" height="${H}">${lines}</svg>${html}</div>`;
+  $('#trInfo').textContent=cnt>1?`${cnt} dự án · ${maxD+1} cấp`:'';
+  const c=body.querySelector('.tn.cur'); if(c) c.scrollIntoView({block:'nearest',inline:'nearest'}); }
+async function refreshTree(){ if(!DRIVE?.project||treeBusy) return; treeBusy=true; const top=treeTop();
+  if(!treeRoot||treeRoot.id!==top){ treeRoot=treeFromCache(top); renderTree(); }
+  try{ treeRoot=await loadTree(top); renderTree(); }
+  catch(e){ if(!treeRoot) $('#trBody').innerHTML=`<div class="msg">${esc(driveErrMsg(e))}</div>`; }
+  finally{ treeBusy=false; } }
+function setTreeOpen(on){ document.body.classList.toggle('tree-on',on); try{ localStorage.setItem(TREE_KEY,on?'1':'0'); }catch{} if(on) refreshTree(); }
+$('#trBody').addEventListener('click',e=>{ const a=e.target.closest('.tn'); if(a&&a.dataset.tid===DRIVE.project){ e.preventDefault(); } });
+$('#tree').addEventListener('pointerdown',e=>e.stopPropagation());
+$('#tree').addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
+function treeNew(){ const t=cachedTrail(DRIVE.project)||[];
+  const find=(n)=>n.id===DRIVE.project?n:n.kids.map(find).find(Boolean); const me_=treeRoot&&find(treeRoot);
+  npPar={id:DRIVE.project,name:driveName,trail:[...t,{id:DRIVE.project,name:driveName}],names:(me_?.kids||[]).map(k=>k.name)}; openNewProject(); }
 function upLink(){ const t=cachedTrail(DRIVE.project)||[]; const par=t[t.length-1]; return par?boardLink(par.id,true):boardLink(null); } // về danh sách chứa dự án này
 function renderHubPath(){ const el=$('#hubPath');
   if(!DRIVE.sub){ el.textContent='Bảng mẹ'; return; }
@@ -1594,19 +1674,23 @@ async function tagProjects(folders){ // gắn nhãn ẩn để người được
 function openNewProject(){
   const auto=!!DRIVE.clientId; $('#npAuto').style.display=auto?'':'none'; $('#npManual').style.display=auto?'none':'';
   $('#npDrive').href=`https://drive.google.com/drive/folders/${HUBP}`; $('#npMsg').textContent=''; $('#npName').value='';
-  $('#npTitle').textContent=DRIVE.sub?`Dự án con trong "${hubInfo?.name||''}"`:'Dự án mới';
+  const P=npParent(); $('#npDrive').href=`https://drive.google.com/drive/folders/${P.id}`;
+  $('#npTitle').textContent=P.id!==DRIVE.root?`Dự án con trong "${P.name||''}"`:'Dự án mới';
   $('#npm').classList.add('show'); if(auto) setTimeout(()=>$('#npName').focus(),50);
 }
+let npPar=null; // nơi tạo dự án mới (mặc định: thư mục đang xem trong danh sách)
+function npParent(){ return npPar||{id:HUBP,name:hubInfo?.name||'',trail:DRIVE.sub?[...hubTrail,{id:HUBP,name:hubInfo?.name||''}]:[],names:hubData.filter(p=>!p.board&&!p.common).map(p=>p.name)}; }
 async function createProject(){
   const name=$('#npName').value.trim(), msg=$('#npMsg'); if(!name){ msg.textContent='Hãy đặt tên dự án.'; return; }
-  if(hubData.some(p=>!p.board&&!p.common&&p.name.toLowerCase()===name.toLowerCase())){ msg.textContent='Đã có dự án trùng tên.'; return; }
+  const P=npParent();
+  if(P.names.some(n=>n.toLowerCase()===name.toLowerCase())){ msg.textContent='Đã có dự án trùng tên.'; return; }
   const go=$('#npGo'); go.disabled=true; msg.textContent='';
   try{
     if(!tokenValid()) await signIn();
     const r=await fetch(`${GAPI}?supportsAllDrives=true&fields=id,name`,{method:'POST',headers:{Authorization:'Bearer '+gTok.t,'Content-Type':'application/json; charset=UTF-8'},
-      body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[HUBP],appProperties:{wbRoot:DRIVE.root}})});
+      body:JSON.stringify({name,mimeType:'application/vnd.google-apps.folder',parents:[P.id],appProperties:{wbRoot:DRIVE.root}})});
     if(!r.ok) throw upErr(r.status,await r.text());
-    const f=await r.json(); setTrail(f.id,DRIVE.sub?[...hubTrail,{id:HUBP,name:hubInfo?.name||''}]:[]); msg.style.color='#23894f'; msg.textContent='Đã tạo, đang mở dự án…';
+    const f=await r.json(); setTrail(f.id,P.trail); try{ sessionStorage.removeItem(treeCacheKey(P.trail[0]?.id||f.id)); }catch{} msg.style.color='#23894f'; msg.textContent='Đã tạo, đang mở dự án…';
     setTimeout(()=>{ location.href=boardLink(f.id); },400);
   }catch(e){ msg.style.color='#d13438'; msg.textContent=e.status!=null?upErrMsg(e):e.message; }
   finally{ go.disabled=false; }
@@ -1641,7 +1725,7 @@ function renderMenuDrive(){
     hub:'<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',lnk:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',files:'<path d="M4 6h16M4 12h16M4 18h10"/>'};
   const b=(a,i,t)=>`<button data-act="${a}"><svg viewBox="0 0 24 24">${ic[i]}</svg>${t}</button>`;
   const acct=DRIVE?.clientId&&!hubMode?(me?b('gOut','drv',`Đăng xuất (${esc(me.email)})`):b('gIn','drv','Đăng nhập Google')):'';
-  $('#menuDrive').innerHTML=DRIVE?(DRIVE.project?b('hub','hub',(cachedTrail(DRIVE.project)||[]).length?'Lên dự án cha':'Về danh sách dự án')+b('subOpen','hub','Dự án con của bảng này'):'')+acct+b('files','files','Chọn tệp hiện trên bảng')+b('drvSync','sync','Đồng bộ lại từ Drive')+(DRIVE.project&&DRIVE.clientId?b('revOpen','sync','Khôi phục bố cục cũ'):'')+b('copyLink','lnk','Sao chép link bảng này')+b('drvExport','exp','Xuất bố cục (board.json)')+b('drvOpen','drv','Cài đặt Google Drive')
+  $('#menuDrive').innerHTML=DRIVE?(DRIVE.project?b('hub','hub',(cachedTrail(DRIVE.project)||[]).length?'Lên dự án cha':'Về danh sách dự án')+b('treeToggle','hub','Cây dự án')+b('subOpen','hub','Dự án con của bảng này'):'')+acct+b('files','files','Chọn tệp hiện trên bảng')+b('drvSync','sync','Đồng bộ lại từ Drive')+(DRIVE.project&&DRIVE.clientId?b('revOpen','sync','Khôi phục bố cục cũ'):'')+b('copyLink','lnk','Sao chép link bảng này')+b('drvExport','exp','Xuất bố cục (board.json)')+b('drvOpen','drv','Cài đặt Google Drive')
     :b('drvOpen','drv','Kết nối Google Drive');
 }
 
@@ -2643,6 +2727,9 @@ document.addEventListener('click',e=>{
   else if(a==='revUse') useRevision(b.dataset.rev,b);
   else if(a==='hub') location.href=DRIVE.project?upLink():boardLink(null);
   else if(a==='subOpen') location.href=boardLink(DRIVE.project,true);
+  else if(a==='treeToggle') setTreeOpen(!document.body.classList.contains('tree-on'));
+  else if(a==='treeRefresh'){ try{ sessionStorage.removeItem(treeCacheKey(treeTop())); }catch{} refreshTree(); }
+  else if(a==='treeNew') treeNew();
   else if(a==='files') { const f=$('#files'); const was=f.classList.contains('show')&&!f.classList.contains('people'); f.classList.toggle('show',!was); setTab('files'); }
   else if(a==='notesPanel') { const f=$('#files'); const was=f.classList.contains('show')&&f.classList.contains('people'); f.classList.toggle('show',!was); setTab('people'); }
   else if(a==='focusOff') setFocus(null);
