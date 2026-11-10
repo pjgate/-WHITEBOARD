@@ -1010,6 +1010,8 @@ async function importFiles(list, at, mode){
     }catch(e){ console.warn(e); failed++; if(e.upload){ authFail=e; done++; continue; } toast(`Không mở được ${f.name}${String(e).includes('import')||String(e).includes('fetch')?' (không tải được bộ đọc PDF)':''}`, null, 4000); await new Promise(r=>setTimeout(r,800)); }
     done++; prog();
   }
+  // Các tệp (ảnh / trang PDF) thêm trong cùng một lần tải lên thành một nhóm, không thả rời rạc
+  if(created.length>1){ const grp='g'+uid(); created.forEach(it=>{ it.g=grp; }); }
   importing=false;
   const msg=[up?`Đã tải lên Drive và thêm ${created.length} mục`:`Đã thêm ${created.length} mục`]; if(failed) msg.push(`${failed} tệp lỗi`); if(skipped) msg.push(`bỏ qua ${skipped} tệp không hỗ trợ`);
   if(authFail) msg.push(upErrMsg(authFail));
