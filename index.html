@@ -870,7 +870,7 @@ function updateVisibility(){
   const v=viewRect(0.35);
   for(const it of S.items.values()){
     const r=els.get(it.id); if(!r) continue;
-    const vis=hit(it,v);
+    const vis=!it.gh&&hit(it,v); // gh: trang PDF bị ẩn khi nhóm đang thu gọn
     if(vis!==r.vis){ r.vis=vis; r.el.style.display=vis?'':'none';
       if(vis){ if(!r.img?.getAttribute('src')){ if(it.type==='pdf') ensurePdfThumb(it); else if(it.type==='image') ensureImageThumb(it); } }
       else dropHi(it,r);
@@ -1040,9 +1040,9 @@ function pdfLayout(sizes,u){ // u = world units per screen px
   return {pw,gap,cols,rowsH,gw:Math.min(n,cols)*(pw+gap)-gap,gh:rowsH.reduce((s,h)=>s+h+gap,0)-gap};
 }
 function placePdf(key,sizes,L,x0,y0){
-  const out=[]; let y=y0; const n=sizes.length;
+  const out=[]; let y=y0; const n=sizes.length; const gid=n>1?'g'+uid():null; // mọi trang của một PDF là một nhóm, thu gọn được
   for(let i=0;i<n;i++){ const col=i%L.cols, row=Math.floor(i/L.cols); if(col===0&&row>0) y+=L.rowsH[row-1]+L.gap;
-    out.push(createItem({type:'pdf', key, page:i+1, pages:n, x:x0+col*(L.pw+L.gap), y, w:L.pw, h:L.pw*sizes[i][1]/sizes[i][0]})); }
+    out.push(createItem({type:'pdf', key, page:i+1, pages:n, x:x0+col*(L.pw+L.gap), y, w:L.pw, h:L.pw*sizes[i][1]/sizes[i][0], ...(gid?{g:gid}:{})})); }
   return out;
 }
 
@@ -1952,17 +1952,29 @@ function undo(){ if(editing) finishEdit(); if(!undoS.length) return; redoS.push(
 function redo(){ if(!redoS.length) return; undoS.push(snapshot()); applySnap(redoS.pop()); }
 
 // ================== Selection & text editing ==================
-function setSel(ids){ const old=S.sel; S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it); }));
+function setSel(ids){ const old=S.sel; S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it)&&!it.gh; }));
   for(const id of old) if(!S.sel.has(id)){ const r=els.get(id); if(r?.cells){ r.cs?.clear(); markCells(r); } }
   for(const id of S.sel){ const r=els.get(id); if(r?.cells) markCells(r); }
   renderCtx(); requestRender(); }
 // ----- Nhóm (group) -----
 function withGroups(ids){ const s=new Set(ids), gs=new Set(); for(const id of s){ const g=S.items.get(id)?.g; if(g) gs.add(g); }
-  if(gs.size) for(const it of S.items.values()) if(it.g&&gs.has(it.g)) s.add(it.id); return s; }
+  if(gs.size) for(const it of S.items.values()) if(it.g&&gs.has(it.g)&&!it.gh) s.add(it.id); return s; }
+// ----- PDF nhóm thu gọn: chỉ hiện trang đầu (gcol trên trang đầu, gh trên các trang còn lại) -----
+function pdfLeadOf(g){ for(const i of S.items.values()) if(i.g===g&&i.type==='pdf'&&i.page===1) return i; return null; }
+function unhideGroups(gs){ if(!gs.size) return; for(const i of S.items.values()) if(i.g&&gs.has(i.g)){ delete i.gh; delete i.gcol; } }
+function togglePdfGroup(its){
+  const pg=its.find(i=>i.type==='pdf'&&i.g); const lead=pg&&pdfLeadOf(pg.g); if(!lead) return;
+  const on=!lead.gcol, mem=[...S.items.values()].filter(i=>i.g===lead.g&&i.type==='pdf');
+  checkpoint();
+  for(const i of mem){ if(i===lead){ if(on) i.gcol=true; else delete i.gcol; } else if(on) i.gh=true; else delete i.gh; }
+  setSel([...S.sel].filter(id=>!S.items.get(id)?.gh));
+  updateVisibility(); onItemsChanged(); renderCtx(); requestRender();
+  toast(on?`Đã thu gọn ${mem.length} trang PDF · bấm lại để mở`:`Đã mở ${mem.length} trang PDF`,null,1800);
+}
 function selGroup(){ const its=selItems(); if(its.length<2) return null; const g=its[0].g; if(!g||!its.every(i=>i.g===g)) return null;
   const n=[...S.items.values()].filter(i=>i.g===g&&canEdit(i)&&!hidMine(i)).length; return n===its.length?g:null; }
-function groupSel(){ const its=selItems(); if(its.length<2){ toast('Chọn từ 2 đối tượng trở lên để nhóm',null,1800); return; } checkpoint(); const g='g'+uid(); its.forEach(i=>{ i.g=g; }); saveSoon(); renderCtx(); requestRender(); toast(`Đã nhóm ${its.length} đối tượng · Ctrl+Shift+G để bỏ nhóm`,null,2200); }
-function ungroupSel(){ const its=selItems().filter(i=>i.g); if(!its.length) return; checkpoint(); its.forEach(i=>{ delete i.g; }); saveSoon(); renderCtx(); requestRender(); toast('Đã bỏ nhóm',null,1500); }
+function groupSel(){ const its=selItems(); if(its.length<2){ toast('Chọn từ 2 đối tượng trở lên để nhóm',null,1800); return; } checkpoint(); unhideGroups(new Set(its.map(i=>i.g).filter(Boolean))); const g='g'+uid(); its.forEach(i=>{ i.g=g; }); saveSoon(); renderCtx(); requestRender(); toast(`Đã nhóm ${its.length} đối tượng · Ctrl+Shift+G để bỏ nhóm`,null,2200); }
+function ungroupSel(){ const its=selItems().filter(i=>i.g); if(!its.length) return; checkpoint(); unhideGroups(new Set(its.map(i=>i.g))); its.forEach(i=>{ delete i.g; }); saveSoon(); renderCtx(); requestRender(); toast('Đã bỏ nhóm',null,1500); }
 function startEdit(id,cell){
   const it=S.items.get(id), r=els.get(id); if(!it||!r) return;
   if(it.type==='table'){ if(!canEdit(it)||it.locked) return; const [ri,ci]=cell||r.ac||[0,0]; const cd=r.cells[ri]?.[ci]; if(!cd) return;
@@ -2410,8 +2422,8 @@ addEventListener('pointermove',e=>{
       updateArrows(); requestRender(); break; }
     case 'marquee':{ drag.cur=toWorld(sp.x,sp.y); const a=drag.start,b=drag.cur;
       const r={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)};
-      const s=new Set(drag.base); for(const it of S.items.values()) if(hit(it,r)&&canEdit(it)&&!it.locked&&!hidMine(it)) s.add(it.id);
-      S.sel=new Set([...withGroups(s)].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it); })); requestRender(); break; }
+      const s=new Set(drag.base); for(const it of S.items.values()) if(hit(it,r)&&canEdit(it)&&!it.locked&&!hidMine(it)&&!it.gh) s.add(it.id);
+      S.sel=new Set([...withGroups(s)].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it)&&!it.gh; })); requestRender(); break; }
     case 'resize':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it, mn=8/cam.z, A=d.anchor;
       const vx=wp.x-A.x, vy=wp.y-A.y; let w=Math.max(mn,(vx*d.ux.x+vy*d.ux.y)*d.sx), h=Math.max(mn,(vx*d.uy.x+vy*d.uy.y)*d.sy);
       const asp=FREE_RS.has(it.type)?e.shiftKey:ASPECT.has(it.type)!==e.shiftKey;
@@ -2617,6 +2629,11 @@ function drawOverlay(){
     if(it?.g){ const mem=[...S.items.values()].filter(i=>i.g===it.g&&!hidMine(i)); if(mem.length>1){ const b=sRect(bbox(mem)); ov.save(); ov.setLineDash([5,4]); ov.strokeStyle='rgba(59,91,253,.45)'; ov.lineWidth=1; ov.strokeRect(b.x-4,b.y-4,b.w+8,b.h+8); ov.restore(); } }
     if(it){ const r=sRect(aabb(it)); ov.strokeStyle=it.ro?'rgba(120,120,130,.5)':'rgba(59,91,253,.55)'; ov.lineWidth=1.5; if(it.type!=='arrow'){ const cs=corners(it).map(p=>toScreen(p.x,p.y)); ov.beginPath(); cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); }
     if(isNote(it)&&it.by&&DRIVE?.clientId){ const t=it.by+(it.ro?' · chỉ xem':''); ov.font='500 11px "Be Vietnam Pro",system-ui'; const tw=ov.measureText(t).width+12; ov.fillStyle=avColor(it.own||''); ov.beginPath(); ov.roundRect?ov.roundRect(r.x,r.y-24,tw,20,5):ov.rect(r.x,r.y-24,tw,20); ov.fill(); ov.fillStyle='#fff'; ov.fillText(t,r.x+6,r.y-10); } } }
+  for(const it of S.items.values()){ // nhãn cho nhóm PDF đang thu gọn
+    if(!it.gcol||it.type!=='pdf'||!it.g) continue; const r=els.get(it.id); if(!r||r.el.style.display==='none') continue;
+    const n=[...S.items.values()].filter(i=>i.g===it.g&&i.type==='pdf').length, b=sRect(it);
+    const t=`Nhóm · ${n} trang · đã thu gọn`; ov.font='600 11px "Be Vietnam Pro",system-ui'; const tw=ov.measureText(t).width+12;
+    ov.fillStyle=A; ov.beginPath(); ov.roundRect?ov.roundRect(b.x,b.y-24,tw,20,5):ov.rect(b.x,b.y-24,tw,20); ov.fill(); ov.fillStyle='#fff'; ov.fillText(t,b.x+6,b.y-10); }
   if(S.sel.size){
     ov.strokeStyle=A; ov.lineWidth=1.5; const list=[];
     for(const id of S.sel){ const it=S.items.get(id); if(!it) continue; list.push(it);
@@ -2655,6 +2672,8 @@ function drawOverlay(){
 // ================== Context toolbar ==================
 const ICON={
   replace:'<path d="M7 4L3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8"/>',
+  colgrp:'<path d="M5 5h14"/><path d="M5 9l7 7 7-7"/>',
+  expgrp:'<path d="M5 19h14"/><path d="M5 15l7-7 7 7"/>',
   rowAdd:'<rect x="3.5" y="3.5" width="17" height="10" rx="1.5"/><path d="M3.5 8.5h17M12 16.5v6M9 19.5h6"/>',
   colAdd:'<rect x="3.5" y="3.5" width="10" height="17" rx="1.5"/><path d="M8.5 3.5v17M16.5 12h6M19.5 9v6"/>',
   rowDel:'<rect x="3.5" y="3.5" width="17" height="10" rx="1.5"/><path d="M3.5 8.5h17M9 19.5h6"/>',
@@ -2744,6 +2763,8 @@ function renderCtx(){
   if(its.length===1&&['sticky','shape','text'].includes(its[0].type)&&!its[0].locked) h+='<div class="vsep"></div>'+btn('nextR','Thêm ô nối bên phải (Tab)')+btn('nextD','Thêm ô nối bên dưới (Shift Tab)');
   if(its.length===1 && its[0].type==='arrow'){ const hd=its[0].head||'end'; h+=btn(hd==='end'?'hEnd':hd==='both'?'hBoth':'hNone','Đổi kiểu đầu mũi tên'); }
   if(its.some(i=>i.rot)) h+=btn('rot0','Về góc 0°');
+  { const pg=its.find(i=>i.type==='pdf'&&i.g), pl=pg&&pdfLeadOf(pg.g);
+    if(pl) h+=pl.gcol?btn('expgrp','Mở nhóm PDF (hiện lại mọi trang)'):btn('colgrp','Thu gọn nhóm PDF (chỉ hiện trang đầu)'); }
   if(its.length>1&&!selGroup()) h+=btn('group','Nhóm lại (Ctrl G)');
   if(its.some(i=>i.g)) h+=btn('ungroup','Bỏ nhóm (Ctrl Shift G)');
   if(its.some(i=>i.type==='shape')) h+=btn('pdfx','Xuất PDF: mỗi khung (hình) đang chọn thành 1 trang, gồm mọi thứ nằm trong khung (Ctrl P)');
@@ -2811,6 +2832,7 @@ ctx.addEventListener('click',e=>{
   else if(b.dataset.cx.startsWith('frame')){ checkpoint(); const tx=its.filter(i=>i.type==='text'), nx={'':'s',s:'d',d:'r',r:''}[tx[0]?.fr||'']; setFmt(tx,'fr',nx||undefined); tx.forEach(i=>{ if(!i.fr) delete i.fr; }); updateArrows(); }
   else if(b.dataset.cx==='nextR'||b.dataset.cx==='nextD') return addNext(its[0],b.dataset.cx==='nextR'?'r':'d');
   else if(b.dataset.cx==='group') return groupSel();
+  else if(b.dataset.cx==='colgrp'||b.dataset.cx==='expgrp') return togglePdfGroup(its);
   else if(b.dataset.cx==='ungroup') return ungroupSel();
   else if(b.dataset.cx==='pdfx') return exportFrames();
   else if(b.dataset.cx==='del') return deleteSel();
@@ -2822,7 +2844,7 @@ ctx.addEventListener('click',e=>{
   else if(b.dataset.cx==='edit') return startEdit(its[0].id);
   saveSoon(); renderCtx(); requestRender();
 });
-function deleteSel(){ if(!S.sel.size) return; const ids=[...S.sel].filter(id=>!S.items.get(id)?.locked); if(!ids.length){ toast('Đối tượng đang khóa. Mở khóa trước khi xóa.',null,2200); return; } checkpoint(); deleteItems(ids); }
+function deleteSel(){ if(!S.sel.size) return; const ids=[...S.sel].filter(id=>!S.items.get(id)?.locked); if(!ids.length){ toast('Đối tượng đang khóa. Mở khóa trước khi xóa.',null,2200); return; } checkpoint(); unhideGroups(new Set(ids.map(id=>S.items.get(id)).filter(i=>i?.gcol).map(i=>i.g))); deleteItems(ids); }
 function toggleLock(){ const its=selItems(); if(!its.length) return; checkpoint(); const lock=its.some(i=>!i.locked);
   its.forEach(i=>{ if(lock) i.locked=true; else delete i.locked; }); saveSoon(); renderCtx(); requestRender(); toast(lock?`Đã khóa ${its.length} đối tượng`:`Đã mở khóa ${its.length} đối tượng`,null,1600); }
 function toFront(){ if(!S.sel.size) return; checkpoint(); [...S.sel].map(id=>S.items.get(id)).sort((a,b)=>a.z-b.z).forEach(it=>{ it.z=++zTop; syncEl(it); }); saveSoon(); }
@@ -2830,7 +2852,7 @@ function toBack(){ if(!S.sel.size) return; checkpoint(); let mn=Math.min(...[...
   [...S.sel].map(id=>S.items.get(id)).sort((a,b)=>b.z-a.z).forEach(it=>{ it.z=--mn; syncEl(it); }); saveSoon(); }
 let clip=null;
 function cloneItems(list,dx,dy=dx){ if(!editMode()) return openLogin(); checkpoint(); const ids=[], map=new Map(), arrows=[], gmap=new Map();
-  for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,locked,t,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
+  for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,locked,t,gh,gcol,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
     if(rest.g){ if(!gmap.has(rest.g)) gmap.set(rest.g,'g'+uid()); rest.g=gmap.get(rest.g); }
     if(rest.type==='arrow'){ rest.a.x+=dx; rest.a.y+=dy; rest.b.x+=dx; rest.b.y+=dy; }
     const n=createItem(rest); map.set(id,n.id); ids.push(n.id); if(n.type==='arrow') arrows.push(n); }
