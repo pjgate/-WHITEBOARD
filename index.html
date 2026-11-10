@@ -814,6 +814,10 @@ function edgePoint(t,toward){
   if(k>=1) return c; const len=Math.hypot(lx,ly)*k; k*=(len+Math.min(8,len*.3+2))/len;
   const px=lx*k, py=ly*k; return {x:c.x+px*co-py*si, y:c.y+px*si+py*co};
 }
+// Chỉ coi là "chạm" đối tượng khi con trỏ nằm sát viền (trong dải 14px). Ở giữa thân thì để tự do.
+function nearOutline(t,wp){ const c=ctr(t), a=rad(t), co=Math.cos(a), si=Math.sin(a);
+  const dx=wp.x-c.x, dy=wp.y-c.y, lx=dx*co+dy*si, ly=-dx*si+dy*co, hw=t.w/2, hh=t.h/2, band=14/cam.z;
+  return (Math.abs(Math.abs(lx)-hw)<=band && Math.abs(ly)<=hh+band) || (Math.abs(Math.abs(ly)-hh)<=band && Math.abs(lx)<=hw+band); }
 function arrowEnds(it){
   const ta=it.a.id&&S.items.get(it.a.id), tb=it.b.id&&S.items.get(it.b.id);
   const ca=ta?ctr(ta):it.a, cb=tb?ctr(tb):it.b;
@@ -1914,7 +1918,7 @@ function startEdit(id,cell){
   checkpoint(); paintTxt(r.txt,it.type==='table'?cellOf(it,r.cellEdit):it,true); editing={id}; r.el.classList.add('editing');
   r.txt.contentEditable='plaintext-only'; if(r.txt.contentEditable!=='plaintext-only') r.txt.contentEditable='true';
   r.txt.focus(); const rg=document.createRange(); rg.selectNodeContents(r.txt); const s=getSelection(); s.removeAllRanges(); s.addRange(rg);
-  r.txt.oninput=()=>{ if(it.type==='text'){ it.text=readRich(r.txt).text; fitText(it); requestRender(); } else if(it.type==='sticky'||it.type==='shape') applyTxtStyle(it,r); else if(it.type==='table'){ fitTable(it,r); updateArrows(); requestRender(); } acUpdate(it,r); };
+  r.txt.oninput=()=>{ if(it.type==='text'){ it.text=readRich(r.txt).text; fitText(it); requestRender(); } else if(it.type==='sticky'||it.type==='shape'){ applyTxtStyle(it,r); if(it.shape==='pill'){ fitText(it); updateArrows(); } } else if(it.type==='table'){ fitTable(it,r); updateArrows(); requestRender(); } acUpdate(it,r); };
   r.txt.onkeydown=e=>editKey(e,it,r);
   r.txt.onblur=()=>finishEdit();
   renderCtx(); requestRender();
@@ -2303,13 +2307,13 @@ vp.addEventListener('pointerdown',e=>{
   }
   if(!editMode()){ setTool('select'); openLogin(); pointers.delete(e.pointerId); return; }
   if(tool==='pen'){ drag={type:'pen', pts:[[wp.x,wp.y]], anchor:sp, straight:false}; armPenHold(); return; }
-  if(tool==='callout'){ checkpoint(); const s=180/cam.z, hh=44/cam.z;
+  if(tool==='callout'){ checkpoint(); const s=240/cam.z, hh=56/cam.z;
     // Chú thích: ghi chú dạng viên thuốc, mũi tên từ ghi chú tới đối tượng cần chú ý
     const note=createItem({type:'shape', shape:'pill', x:wp.x-s/2, y:wp.y-hh/2, w:s, h:hh, color:FILLS[0], fs:18/cam.z, bw:2/cam.z, text:''});
     const it=createItem({type:'arrow', a:{x:wp.x,y:wp.y,id:note.id}, b:{x:wp.x,y:wp.y}, color:INKS[0], sw:2/cam.z, head:'end', x:wp.x, y:wp.y, w:1, h:1});
     updateArrow(it);
     drag={type:'aend', it, w:'b', creating:true, start:sp, note:note.id}; return; }
-  if(tool==='arrow'){ checkpoint(); const t=itemAt(sp,null);
+  if(tool==='arrow'){ checkpoint(); const t0=itemAt(sp,null), t=t0&&nearOutline(t0,wp)?t0:null;
     const it=createItem({type:'arrow', a:{x:wp.x,y:wp.y,...(t?{id:t.id}:{})}, b:{x:wp.x,y:wp.y}, color:INKS[0], sw:2.5/cam.z, head:'end', x:wp.x, y:wp.y, w:1, h:1});
     drag={type:'aend', it, w:'b', creating:true, start:sp}; return; }
   if(tool==='sticky'){ checkpoint(); const s=200/cam.z; const it=createItem({type:'sticky', x:wp.x-s/2, y:wp.y-s/2, w:s, h:s, color:FILLS[0], fs:20/cam.z, text:''});
@@ -2394,7 +2398,7 @@ addEventListener('pointermove',e=>{
         if(it.type==='arrow'){ if(!o.a.id){ const p=sc(o.a); it.a.x=p.x; it.a.y=p.y; } if(!o.b.id){ const p=sc(o.b); it.b.x=p.x; it.b.y=p.y; } it.sw=o.sw*s; return; }
         const c=sc(ctr(o)); it.w=o.w*s; it.h=o.h*s; it.x=c.x-it.w/2; it.y=c.y-it.h/2; if(o.fs) it.fs=o.fs*s; if(o.bw) it.bw=o.bw*s; syncEl(it); });
       updateArrows(); requestRender(); break; }
-    case 'aend':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it; const t=itemAt(sp,it.id); const other=d.w==='a'?it.b:it.a;
+    case 'aend':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it; const t0=itemAt(sp,it.id), t=t0&&nearOutline(t0,wp)?t0:null; const other=d.w==='a'?it.b:it.a;
       d.tid=t&&t.id!==other.id?t.id:null; it[d.w]=d.tid?{x:wp.x,y:wp.y,id:d.tid}:{x:wp.x,y:wp.y};
       updateArrow(it); requestRender(); break; }
     case 'pen':{ const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
