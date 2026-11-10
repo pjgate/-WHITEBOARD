@@ -440,12 +440,9 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="ib on" data-tool="select" title="Chọn (V)"><svg viewBox="0 0 24 24"><path d="M5 3.5l13 7.2-5.6 1.6-2.4 5.6z"/></svg></button>
   <button class="ib" data-tool="hand" title="Kéo bảng (H) — hoặc giữ Space"><svg viewBox="0 0 24 24"><path d="M8 12.5V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V14a6.5 6.5 0 0 1-6.5 6.5h-.6a6 6 0 0 1-4.9-2.6l-2.2-3.3a1.6 1.6 0 0 1 2.6-1.8L8 15"/></svg></button>
   <div class="sep"></div>
-  <button class="ib" data-tool="sticky" title="Giấy ghi chú (N)"><svg viewBox="0 0 24 24"><path d="M4 4h16v10l-6 6H4z"/><path d="M14 20v-6h6"/></svg></button>
   <button class="ib" data-tool="text" title="Chữ (T)"><svg viewBox="0 0 24 24"><path d="M5 7V5h14v2M12 5v14M9 19h6"/></svg></button>
   <button class="ib" data-tool="rect" title="Hình chữ nhật (R)"><svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="13" rx="2"/></svg></button>
-  <button class="ib" data-tool="ellipse" title="Hình tròn (O)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg></button>
   <button class="ib" data-tool="table" title="Bảng (B)"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15M15 4.5v15"/></svg></button>
-  <button class="ib" data-tool="arrow" title="Mũi tên (A) — kéo từ đối tượng này sang đối tượng kia để nối"><svg viewBox="0 0 24 24"><path d="M5 19L18 6M10 6h8v8"/></svg></button>
   <button class="ib" data-tool="callout" title="Chú thích (K) — kéo từ ghi chú tới đối tượng cần chú ý"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="10" height="5" rx="2.5"/><path d="M8 9v5l4 6"/></svg></button>
   <button class="ib" data-tool="pen" title="Bút vẽ (P)"><svg viewBox="0 0 24 24"><path d="M4 20l4.2-1L19.5 7.7a2.1 2.1 0 0 0-3-3L5.2 16z"/><path d="M14.5 6.5l3 3"/></svg></button>
   <div class="sep"></div>
@@ -2977,7 +2974,7 @@ addEventListener('keydown',e=>{
     const ddx=k==='arrowleft'?-st:k==='arrowright'?st:0, ddy=k==='arrowup'?-st:k==='arrowdown'?st:0;
     for(const id of S.sel){ const it=S.items.get(id); if(it.locked) continue; if(it.type==='arrow'){ for(const q of ['a','b']) if(!it[q].id){ it[q].x+=ddx; it[q].y+=ddy; } } else { it.x+=ddx; it.y+=ddy; syncPos(it); } } updateArrows();
     requestRender(); saveSoon(); return; }
-  const map={v:'select',h:'hand',n:'sticky',t:'text',r:'rect',o:'ellipse',a:'arrow',p:'pen',b:'table',k:'callout'}; if(map[k]){ setTool(map[k]); }
+  const map={v:'select',h:'hand',t:'text',r:'rect',p:'pen',b:'table',k:'callout'}; if(map[k]){ setTool(map[k]); }
 });
 addEventListener('keyup',e=>{ if(e.code==='Space'){ spaceDown=false; vp.classList.remove('grab'); } });
 addEventListener('blur',()=>{ spaceDown=false; vp.classList.remove('grab'); });
