@@ -2744,7 +2744,7 @@ function renderCtx(){
   if(hasInk) h+=(hasShape?'<span class="ctxlbl">Viền</span>':'')+INKS.map(c=>`<button class="sw${curI===c?' on':''}" data-ink="${c}" style="background:${c}" title="${hasShape?'Màu viền / nét':'Màu chữ / nét'}"></button>`).join('')+'<div class="vsep"></div>';
   if(its.length===1 && (its[0].type==='image'||its[0].type==='pdf')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
   if(its.length===1 && (its[0].type==='image'||its[0].type==='pdf') && canEdit(its[0])) h+=btn('replace','Thay thế bằng tệp khác (tệp cũ sẽ ẩn)');
-  if(its.length===1 && els.get(its[0].id)?.txt) h+=btn('edit','Sửa chữ (nhấp đúp)');
+  if(its.length===1&&['text','sticky','shape','table'].includes(its[0].type)&&!its[0].locked) h+=btnOn('legend',its[0].lg?'Đang là bảng legend (bấm để bỏ)':'Đặt làm bảng legend (bảng mã hóa)',!!its[0].lg);
   const tx=its.filter(i=>TXT_T.has(i.type)&&!i.locked), tbs=its.filter(i=>i.type==='table'&&!i.locked);
   if(tx.length){ const t0=tx[0], al=t0.al||(t0.type==='text'?'l':'c');
     h+='<div class="vsep"></div>'+btn('fsDn','Chữ nhỏ hơn (Ctrl Shift <)')+fsBox(its)+btn('fsUp','Chữ to hơn (Ctrl Shift >)')+btnOn('bold','In đậm (Ctrl B)',!!t0.b)+btnOn('ital','In nghiêng (Ctrl I)',!!t0.it)+btnOn('under','Gạch dưới (Ctrl U)',!!t0.u)
@@ -2758,7 +2758,7 @@ function renderCtx(){
       +INKS.map(c=>`<button class="sw${ink===c?' on':''}" data-cx="tcc" data-v="${c}" style="background:${c}" title="Màu chữ ô"></button>`).join('')+'<div class="vsep"></div>'
       +btnOn('cb','In đậm ô (Ctrl B)',!!c0.b)+btnOn('ci','In nghiêng ô (Ctrl I)',!!c0.it)+btnOn('cu','Gạch dưới ô (Ctrl U)',!!c0.u)+btn('cal'+(c0.al||'l').toUpperCase(),'Căn lề ô')
       +(multi?btn('cclr','Xóa chữ trong các ô đang chọn (Delete)'):''); }
-  if(its.length===1&&['text','sticky','shape','table'].includes(its[0].type)&&!its[0].locked) h+=btnOn('legend',its[0].lg?'Đang là bảng legend (bấm để bỏ)':'Đặt làm bảng legend (bảng mã hóa)',!!its[0].lg);
+  if(its.length===1 && els.get(its[0].id)?.txt) h+=btn('edit','Sửa chữ (nhấp đúp)');
   const txo=its.filter(i=>i.type==='text'&&!i.locked); if(txo.length){ const fr=txo[0].fr; h+=btnOn(fr==='d'?'frameD':fr==='r'?'frameR':fr?'frameS':'frame','Khung viền chữ: '+({s:'nét liền',d:'nét đứt',r:'bo tròn'}[fr]||'không có')+' (bấm để đổi)',!!fr); }
   if(its.length===1&&['sticky','shape','text'].includes(its[0].type)&&!its[0].locked) h+='<div class="vsep"></div>'+btn('nextR','Thêm ô nối bên phải (Tab)')+btn('nextD','Thêm ô nối bên dưới (Shift Tab)');
   if(its.length===1 && its[0].type==='arrow'){ const hd=its[0].head||'end'; h+=btn(hd==='end'?'hEnd':hd==='both'?'hBoth':'hNone','Đổi kiểu đầu mũi tên'); }
