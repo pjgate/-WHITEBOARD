@@ -184,7 +184,9 @@ body.proj #backBtn{display:grid} body.drive #filesBtn,body.proj #subBtn{display:
 #tree{left:calc(74px + env(safe-area-inset-left));top:calc(64px + env(safe-area-inset-top));display:none;flex-direction:column;z-index:7;max-width:calc(100vw - 86px);max-height:min(70vh,calc(100vh - 150px));overflow:hidden}
 body.proj.tree-on #tree{display:flex} body.tree-on #subBtn{background:var(--accent-soft);color:var(--accent)}
 #tree .trh{display:flex;align-items:center;gap:4px;padding:8px 8px 4px 14px;white-space:nowrap}
-#tree .trh b{font-size:13px} #tree .trh span{flex:1;color:var(--muted);font-size:12px;padding:0 8px 0 6px}
+#tree .trh b{font-size:13px}
+#trDrive{display:block;padding:0 14px 8px;font-size:12px;color:var(--accent);text-decoration:none;white-space:nowrap}
+#trDrive:hover{text-decoration:underline} #tree .trh span{flex:1;color:var(--muted);font-size:12px;padding:0 8px 0 6px}
 #tree .ib{width:28px;height:28px} #tree .ib svg{width:16px;height:16px}
 #trBody{overflow:auto;padding:4px 14px 14px;min-width:200px}
 #trBody .msg{color:var(--muted);font-size:12.5px;padding:6px 0}
@@ -500,6 +502,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="ib" data-act="subOpen" title="Mở dạng danh sách"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg></button>
   <button class="ib" data-act="treeRefresh" title="Làm mới"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18 3v4h-4M6 21v-4h4"/></svg></button>
   <button class="ib" data-act="treeToggle" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <a id="trDrive" target="_blank" rel="noopener">Mở thư mục trên Google Drive ↗</a>
   <div id="trBody"></div></div>
 <div id="files" class="panel">
   <div class="fh"><b id="fhTitle">Tệp trong dự án</b><span id="fcount"></span><button class="ib" data-act="filesClose" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
@@ -1615,7 +1618,11 @@ async function refreshTree(){ if(!DRIVE?.project||treeBusy) return; treeBusy=tru
   try{ treeRoot=await loadTree(top); renderTree(); }
   catch(e){ if(!treeRoot) $('#trBody').innerHTML=`<div class="msg">${esc(driveErrMsg(e))}</div>`; }
   finally{ treeBusy=false; } }
-function setTreeOpen(on){ document.body.classList.toggle('tree-on',on); try{ localStorage.setItem(TREE_KEY,on?'1':'0'); }catch{} if(on) refreshTree(); }
+function alignTree(){ const t=$('#top'), tr=$('#tree'), dl=$('#trDrive'); if(!t||!tr) return;
+  const r=t.getBoundingClientRect(); tr.style.left=r.left+'px'; tr.style.top=(r.bottom+8)+'px';
+  if(dl&&DRIVE?.project) dl.href=`https://drive.google.com/drive/folders/${DRIVE.project}`; }
+addEventListener('resize',alignTree);
+function setTreeOpen(on){ document.body.classList.toggle('tree-on',on); try{ localStorage.setItem(TREE_KEY,on?'1':'0'); }catch{} if(on){ alignTree(); refreshTree(); } }
 $('#trBody').addEventListener('click',e=>{ const a=e.target.closest('.tn'); if(a&&a.dataset.tid===DRIVE.project){ e.preventDefault(); } });
 $('#tree').addEventListener('pointerdown',e=>e.stopPropagation());
 $('#tree').addEventListener('wheel',e=>e.stopPropagation(),{passive:true});
