@@ -582,6 +582,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <div class="row"><button class="btn ghost" data-act="npClose">Đóng</button><a class="btn primary" id="npDrive" target="_blank" rel="noopener" style="text-decoration:none">Mở Google Drive</a></div></div>
 </div></div>
 <input type="file" id="file" multiple accept="image/*,application/pdf,.pdf" hidden>
+<input type="file" id="repFile" accept="image/*,application/pdf,.pdf" hidden>
 
 <script type="module">
 // ================== Config ==================
@@ -1085,7 +1086,7 @@ async function driveQuery(q,order='name_natural'){
 }
 const driveList=folder=>driveQuery(`'${folder}' in parents and trashed=false`);
 const verOf=f=>(f.md5Checksum||'').slice(0,10)||String(f.modifiedTime||'').replace(/\D/g,'');
-function kindOf(f){ const m=f.mimeType||''; if(m==='application/pdf'||/\.pdf$/i.test(f.name)) return 'pdf';
+function kindOf(f){ if(/~$/.test(f.name||'')) return null; /* tệp cũ đã thay thế */ const m=f.mimeType||''; if(m==='application/pdf'||/\.pdf$/i.test(f.name)) return 'pdf';
   if(m.startsWith('image/')) return 'image'; if(GEXPORT.has(m)) return 'pdf'; return null; }
 function getBlob(a){
   if(a.blob) return Promise.resolve(a.blob);
@@ -1626,6 +1627,40 @@ function alignTree(){ const t=$('#top'), tr=$('#tree'), dl=$('#trDrive'); if(!t|
   const r=t.getBoundingClientRect(); tr.style.left=r.left+'px'; tr.style.top=(r.bottom+8)+'px';
   if(dl&&DRIVE?.project) dl.href=`https://drive.google.com/drive/folders/${DRIVE.project}`; }
 addEventListener('resize',alignTree);
+// ----- Thay thế ảnh / PDF: tệp cũ đổi tên thành "tên~" để ẩn khỏi bảng -----
+let repTarget=null;
+function pickReplacement(it){ if(!it||!canEdit(it)) return; repTarget=it.id; const inp=$('#repFile');
+  inp.accept=it.type==='pdf'?'application/pdf,.pdf':'image/*'; inp.value=''; inp.click(); }
+$('#repFile').addEventListener('change',e=>{ const f=e.target.files[0], id=repTarget; repTarget=null; if(f&&id) replaceMedia(id,f); });
+async function replaceMedia(id,file){
+  const it=S.items.get(id); if(!it) return;
+  if(it.type==='pdf'?!isPdf(file):!isImg(file)){ toast(`Hãy chọn một tệp ${it.type==='pdf'?'PDF':'ảnh'}`,null,3000); return; }
+  const onDrive=!!DRIVE?.clientId;
+  if(onDrive&&!tokenValid()){ toast('Đăng nhập để thay tệp trên Drive',null,3000); openLogin(); return; }
+  const oldKey=it.key, oldFid=fidOf(it), oldName=driveEntries.get(oldFid)?.f?.name||assets.get(oldKey)?.name;
+  const grp=it.g; checkpoint(); toast('Đang thay thế…',null,2000);
+  try{
+    const dm=onDrive?await uploadToDrive(file,DRIVE.folder,()=>{}):null;
+    if(it.type==='image'){
+      const a=await addImageAsset(file,dm);
+      it.key=a.key; it.h=it.w*a.h/a.w; resetMedia(it); syncEl(it);
+    } else {
+      const key=dm?driveKeyOf(dm):uid(); const a={key,kind:'pdf',blob:file,name:dm?.name||file.name||'document.pdf',driveId:dm?.id,ver:dm?verOf(dm):undefined};
+      assets.set(key,a); persistFile(key,recOf(a)); if(dm) registerDriveFile(dm,'pdf',key);
+      const olds=[...S.items.values()].filter(i=>i.type==='pdf'&&i.key===oldKey);
+      const bb=bbox(olds.length?olds:[it]), sizes=await measurePdf(key), L=pdfLayout(sizes,1/cam.z);
+      deleteItems(olds.map(i=>i.id)); // deleteItems bỏ cả các trang cũ
+      placePdf(key,sizes,L,bb.x,bb.y).forEach(i=>{ if(grp) i.g=grp; });
+    }
+    if(onDrive&&oldFid&&oldName){ // đổi tên tệp cũ thành "tên~" để ẩn
+      const r=await fetch(`${GAPI}/${oldFid}?supportsAllDrives=true`,{method:'PATCH',headers:{Authorization:'Bearer '+gTok.t,'Content-Type':'application/json; charset=UTF-8'},body:JSON.stringify({name:oldName+'~'})});
+      if(!r.ok) throw upErr(r.status,await r.text());
+      driveEntries.delete(oldFid);
+    }
+    renderFiles(); onItemsChanged(); saveSoon();
+    toast('Đã thay thế. Tệp cũ được ẩn (tên kết thúc bằng ~)',null,3000);
+  }catch(e){ console.warn(e); toast(e.status!=null?driveErrMsg(e):(e.message||'Không thay thế được'),null,5000); }
+}
 function setTreeOpen(on){ document.body.classList.toggle('tree-on',on); try{ localStorage.setItem(TREE_KEY,on?'1':'0'); }catch{} if(on){ alignTree(); refreshTree(); } }
 $('#trBody').addEventListener('click',e=>{ const a=e.target.closest('.tn'); if(a&&a.dataset.tid===DRIVE.project){ e.preventDefault(); } });
 $('#tree').addEventListener('pointerdown',e=>e.stopPropagation());
@@ -2619,6 +2654,7 @@ function drawOverlay(){
 
 // ================== Context toolbar ==================
 const ICON={
+  replace:'<path d="M7 4L3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8"/>',
   rowAdd:'<rect x="3.5" y="3.5" width="17" height="10" rx="1.5"/><path d="M3.5 8.5h17M12 16.5v6M9 19.5h6"/>',
   colAdd:'<rect x="3.5" y="3.5" width="10" height="17" rx="1.5"/><path d="M8.5 3.5v17M16.5 12h6M19.5 9v6"/>',
   rowDel:'<rect x="3.5" y="3.5" width="17" height="10" rx="1.5"/><path d="M3.5 8.5h17M9 19.5h6"/>',
@@ -2688,6 +2724,7 @@ function renderCtx(){
   if(hasFill) h+=(hasShape?'<span class="ctxlbl">Nền</span>':'')+FILLS.map(c=>`<button class="sw${curF===c?' on':''}" data-fill="${c}" style="background:${c}" title="Màu nền"></button>`).join('')+(hasShape?`<button class="sw nofill${curF==='none'?' on':''}" data-nofill="1" title="Không tô (chỉ viền)"></button>`:'')+'<div class="vsep"></div>';
   if(hasInk) h+=(hasShape?'<span class="ctxlbl">Viền</span>':'')+INKS.map(c=>`<button class="sw${curI===c?' on':''}" data-ink="${c}" style="background:${c}" title="${hasShape?'Màu viền / nét':'Màu chữ / nét'}"></button>`).join('')+'<div class="vsep"></div>';
   if(its.length===1 && (its[0].type==='image'||its[0].type==='pdf')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
+  if(its.length===1 && (its[0].type==='image'||its[0].type==='pdf') && canEdit(its[0])) h+=btn('replace','Thay thế bằng tệp khác (tệp cũ sẽ ẩn)');
   if(its.length===1 && els.get(its[0].id)?.txt) h+=btn('edit','Sửa chữ (nhấp đúp)');
   const tx=its.filter(i=>TXT_T.has(i.type)&&!i.locked), tbs=its.filter(i=>i.type==='table'&&!i.locked);
   if(tx.length){ const t0=tx[0], al=t0.al||(t0.type==='text'?'l':'c');
@@ -2781,6 +2818,7 @@ ctx.addEventListener('click',e=>{
   else if(b.dataset.cx==='front') toFront();
   else if(b.dataset.cx==='back') toBack();
   else if(b.dataset.cx==='zoom') return fitTo(its,12);
+  else if(b.dataset.cx==='replace') return pickReplacement(its[0]);
   else if(b.dataset.cx==='edit') return startEdit(its[0].id);
   saveSoon(); renderCtx(); requestRender();
 });
