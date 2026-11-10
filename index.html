@@ -306,14 +306,15 @@ body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub 
 .hsep{grid-column:1/-1;height:0}
 @media (max-width:1100px){ #hubGrid{grid-template-columns:repeat(4,minmax(0,1fr))} }
 @media (max-width:860px){ #hubGrid{grid-template-columns:repeat(3,minmax(0,1fr))} }
-.pcard{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;color:inherit;text-decoration:none;transition:transform .12s,box-shadow .12s}
+.pcard{display:flex;flex-direction:column;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;color:inherit;text-decoration:none;transition:transform .12s,box-shadow .12s}
 .pcard:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-.pcard .th{height:100px;background:#eceae4;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
+.pcard .th{flex:0 0 100px;height:100px;overflow:hidden;background:#eceae4;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
 .pcard .th.one{grid-template-columns:1fr;grid-template-rows:1fr}
 .pcard .th img{width:100%;height:100%;object-fit:cover;display:block;background:#e4e2db}
 .pcard .th .ph{grid-column:1/-1;grid-row:1/-1;display:grid;place-items:center;color:#a9a79f}
 .pcard .th .ph svg{width:34px;height:34px;fill:none;stroke:currentColor;stroke-width:1.5}
-.pcard .bd{padding:12px 14px 14px}
+.pcard .bd{padding:12px 14px 14px;background:#fff;flex:1;min-width:0;position:relative;z-index:1}
+.pcard.board .bd{background:#f6f8ff}
 .pcard .nm{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pcard .mt{color:var(--muted);font-size:12.5px;margin-top:3px}
 .pcard.common .nm{color:var(--muted)}
