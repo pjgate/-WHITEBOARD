@@ -302,10 +302,13 @@ body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub 
 #hub h1{margin:0;font-size:24px;letter-spacing:-.02em}
 #hub .hact{display:flex;gap:8px;align-items:center}
 #hsearch{height:38px;border:1px solid #deded8;border-radius:10px;padding:0 12px;font:inherit;font-size:16px;width:220px;background:#fff}
-#hubGrid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+#hubGrid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.hsep{grid-column:1/-1;height:0}
+@media (max-width:1100px){ #hubGrid{grid-template-columns:repeat(4,minmax(0,1fr))} }
+@media (max-width:860px){ #hubGrid{grid-template-columns:repeat(3,minmax(0,1fr))} }
 .pcard{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;color:inherit;text-decoration:none;transition:transform .12s,box-shadow .12s}
 .pcard:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
-.pcard .th{height:132px;background:#eceae4;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
+.pcard .th{height:100px;background:#eceae4;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
 .pcard .th.one{grid-template-columns:1fr;grid-template-rows:1fr}
 .pcard .th img{width:100%;height:100%;object-fit:cover;display:block;background:#e4e2db}
 .pcard .th .ph{grid-column:1/-1;grid-row:1/-1;display:grid;place-items:center;color:#a9a79f}
@@ -1671,12 +1674,15 @@ function renderHub(){
   const ph='<div class="ph"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>';
   const newCard=`<button class="pcard new" data-act="npOpen"><span><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>${DRIVE.sub?'Dự án con mới':'Dự án mới'}<small>${DRIVE.sub?'Tạo thư mục con bên trong dự án này trên Google Drive':DRIVE.clientId?'Tạo thư mục mới trên Google Drive':'Tạo thư mục con trên Google Drive'}</small></button>`;
   const canNew=!PRIV||!!hubInfo?.capabilities?.canAddChildren;
-  $('#hubGrid').innerHTML=(q||!canNew?'':newCard)+list.map(p=>{
+  const card=p=>{
     const fs=p.files; const th=(fs||[]).filter(f=>f.thumbnailLink).slice(0,4);
     const np=(fs||[]).filter(f=>kindOf(f)==='pdf').length, ni=(fs||[]).length-np;
     const mt=!fs?'Đang đếm tệp…':p.noAccess?'Bạn chưa được chia sẻ folder này':p.err?'Không đọc được thư mục':[np&&`${np} PDF`,ni&&`${ni} ảnh`,p.subs&&!p.board&&`${p.subs} dự án con`].filter(Boolean).join(' · ')||'Chưa có tệp';
     const d=p.modified?new Date(p.modified):null;
-    return `<a class="pcard${p.common?' common':''}${p.board?' board':''}" href="${esc(boardLink(p.id))}"><div class="th${th.length===1?' one':''}">${th.length?th.map(f=>`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(f.thumbnailLink)}" alt="">`).join(''):ph}</div><div class="bd"><div class="nm" title="${esc(p.name)}">${esc(p.name)}${p.linked?'<span class="tag link" title="Folder liên kết từ ngoài thư mục chính. Quyền do chủ folder đó quản lý trên Google Drive.">Liên kết</span>':''}${p.board?'<span class="tag link">Bảng</span>':''}</div><div class="mt">${mt}${d&&fs?` · ${d.toLocaleDateString('vi-VN')}`:''}</div></div></a>`; }).join('');
+    return `<a class="pcard${p.common?' common':''}${p.board?' board':''}" href="${esc(boardLink(p.id))}"><div class="th${th.length===1?' one':''}">${th.length?th.map(f=>`<img loading="lazy" referrerpolicy="no-referrer" src="${esc(f.thumbnailLink)}" alt="">`).join(''):ph}</div><div class="bd"><div class="nm" title="${esc(p.name)}">${esc(p.name)}${p.linked?'<span class="tag link" title="Folder liên kết từ ngoài thư mục chính. Quyền do chủ folder đó quản lý trên Google Drive.">Liên kết</span>':''}${p.board?'<span class="tag link">Bảng</span>':''}</div><div class="mt">${mt}${d&&fs?` · ${d.toLocaleDateString('vi-VN')}`:''}</div></div></a>`; };
+  // Dự án liên kết xếp thành hàng riêng bên dưới
+  const base=list.filter(p=>!p.linked), lk=list.filter(p=>p.linked);
+  $('#hubGrid').innerHTML=(q||!canNew?'':newCard)+base.map(card).join('')+(base.length&&lk.length?'<div class="hsep"></div>':'')+lk.map(card).join('');
   $('#hubGrid').querySelectorAll('img').forEach(im=>im.onerror=()=>im.remove());
   const he=$('#hubEmpty');
   if(!hubData.length&&PRIV&&tokenValid()&&!rootInfo) he.innerHTML=`<div class="reqbox"><h3>Chưa có dự án nào được chia sẻ cho ${esc(me?.email||'bạn')}</h3><p>Nhờ chủ folder dự án chia sẻ folder đó cho email này trên Google Drive, rồi bấm Làm mới ↻.</p></div>`;
