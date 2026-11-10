@@ -32,7 +32,7 @@ html,body{-webkit-text-size-adjust:100%}
   background-color:var(--bg);background-image:radial-gradient(circle,#c8c7bf 1px,transparent 1.3px);cursor:default}
 #vp.tool-hand,#vp.grab{cursor:grab}
 #vp.panning{cursor:grabbing}
-#vp.tool-pen,#vp.tool-rect,#vp.tool-ellipse,#vp.tool-sticky,#vp.tool-arrow{cursor:crosshair}
+#vp.tool-pen,#vp.tool-rect,#vp.tool-ellipse,#vp.tool-sticky,#vp.tool-arrow,#vp.tool-callout{cursor:crosshair}
 #vp.tool-text{cursor:text}
 #world{position:absolute;left:0;top:0;transform-origin:0 0}
 .item{position:absolute;left:0;top:0}
@@ -43,6 +43,7 @@ html,body{-webkit-text-size-adjust:100%}
 .t-sticky{display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.08),0 4px 10px rgba(0,0,0,.06);padding:9%}
 .t-shape{display:flex;align-items:center;justify-content:center;border:2px solid #2a2d34;padding:8%}
 .t-shape.ellipse{border-radius:50%}
+.t-shape.pill{border-radius:999px}
 .txt{width:100%;outline:none;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;line-height:1.35;max-height:100%;overflow:hidden}
 .t-sticky .txt,.t-shape .txt{text-align:center}
 .t-text .txt{max-height:none;overflow:visible}
@@ -438,6 +439,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="ib" data-tool="ellipse" title="Hình tròn (O)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg></button>
   <button class="ib" data-tool="table" title="Bảng (B)"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15M15 4.5v15"/></svg></button>
   <button class="ib" data-tool="arrow" title="Mũi tên (A) — kéo từ đối tượng này sang đối tượng kia để nối"><svg viewBox="0 0 24 24"><path d="M5 19L18 6M10 6h8v8"/></svg></button>
+  <button class="ib" data-tool="callout" title="Chú thích (K) — kéo từ ghi chú tới đối tượng cần chú ý"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="10" height="5" rx="2.5"/><path d="M8 9v5l4 6"/></svg></button>
   <button class="ib" data-tool="pen" title="Bút vẽ (P)"><svg viewBox="0 0 24 24"><path d="M4 20l4.2-1L19.5 7.7a2.1 2.1 0 0 0-3-3L5.2 16z"/><path d="M14.5 6.5l3 3"/></svg></button>
   <div class="sep"></div>
   <button class="ib" data-act="upload" title="Thêm ảnh / PDF"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></button>
@@ -773,7 +775,7 @@ function syncEl(it){
   if(it.type==='image'){ const a=assets.get(it.key); if(a?.thumbUrl && !r.img.getAttribute('src')){ r.img.src=a.thumbUrl; r.level='t'; } }
   else if(it.type==='pdf'){ const u=pdfThumbs.get(it.key+'#'+it.page); if(u && !r.img.getAttribute('src')){ r.img.src=u; el.classList.add('ready'); } }
   else if(it.type==='sticky'){ s.background=it.color; s.fontSize=it.fs+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
-  else if(it.type==='shape'){ el.classList.toggle('ellipse',it.shape==='ellipse'); s.background=it.nofill?'transparent':it.color; s.borderColor=it.stroke||'#2a2d34'; s.fontSize=it.fs+'px'; s.borderWidth=(it.bw||2)+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
+  else if(it.type==='shape'){ el.classList.toggle('ellipse',it.shape==='ellipse'); el.classList.toggle('pill',it.shape==='pill'); s.background=it.nofill?'transparent':it.color; s.borderColor=it.stroke||'#2a2d34'; s.fontSize=it.fs+'px'; s.borderWidth=(it.bw||2)+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
   else if(it.type==='text'){ s.color=it.color; s.fontSize=it.fs+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
   else if(it.type==='pen'){ const svg=el.firstChild; svg.setAttribute('viewBox',`0 0 ${it.vw} ${it.vh}`);
     const [h,k]=svg.children; for(const p of [h,k]) p.setAttribute('d',it.d);
@@ -2301,6 +2303,12 @@ vp.addEventListener('pointerdown',e=>{
   }
   if(!editMode()){ setTool('select'); openLogin(); pointers.delete(e.pointerId); return; }
   if(tool==='pen'){ drag={type:'pen', pts:[[wp.x,wp.y]], anchor:sp, straight:false}; armPenHold(); return; }
+  if(tool==='callout'){ checkpoint(); const s=180/cam.z, hh=44/cam.z;
+    // Chú thích: ghi chú dạng viên thuốc, mũi tên từ ghi chú tới đối tượng cần chú ý
+    const note=createItem({type:'shape', shape:'pill', x:wp.x-s/2, y:wp.y-hh/2, w:s, h:hh, color:FILLS[0], fs:18/cam.z, bw:2/cam.z, text:''});
+    const it=createItem({type:'arrow', a:{x:wp.x,y:wp.y,id:note.id}, b:{x:wp.x,y:wp.y}, color:INKS[0], sw:2/cam.z, head:'end', x:wp.x, y:wp.y, w:1, h:1});
+    updateArrow(it);
+    drag={type:'aend', it, w:'b', creating:true, start:sp, note:note.id}; return; }
   if(tool==='arrow'){ checkpoint(); const t=itemAt(sp,null);
     const it=createItem({type:'arrow', a:{x:wp.x,y:wp.y,...(t?{id:t.id}:{})}, b:{x:wp.x,y:wp.y}, color:INKS[0], sw:2.5/cam.z, head:'end', x:wp.x, y:wp.y, w:1, h:1});
     drag={type:'aend', it, w:'b', creating:true, start:sp}; return; }
@@ -2413,7 +2421,7 @@ function endPointer(e){
   else if(d.type==='resize'||d.type==='eresize'){ const it=d.it; if(it.type==='text') fitText(it); updateArrows(); saveSoon(); updateLODSoon(); }
   else if(d.type==='rotate'||d.type==='grot'){ saveSoon(); updateLODSoon(); }
   else if(d.type==='gscale'){ d.its.forEach(it=>{ if(it.type==='text') fitText(it); }); updateArrows(); saveSoon(); updateLODSoon(); }
-  else if(d.type==='aend'){ const it=d.it;
+  else if(d.type==='aend'){ const it=d.it; if(d.note) pendingEdit=d.note;
     if(d.creating){ const st=toScreen(it.a.x,it.a.y), en=toScreen(it.b.x,it.b.y);
       if(Math.hypot(st.x-en.x,st.y-en.y)<12 && !it.b.id){ S.items.delete(it.id); removeEl(it.id); undoS.pop(); onItemsChanged(); }
       else { setTool('select'); setSel([it.id]); } }
@@ -2878,7 +2886,7 @@ addEventListener('keydown',e=>{
     const ddx=k==='arrowleft'?-st:k==='arrowright'?st:0, ddy=k==='arrowup'?-st:k==='arrowdown'?st:0;
     for(const id of S.sel){ const it=S.items.get(id); if(it.locked) continue; if(it.type==='arrow'){ for(const q of ['a','b']) if(!it[q].id){ it[q].x+=ddx; it[q].y+=ddy; } } else { it.x+=ddx; it.y+=ddy; syncPos(it); } } updateArrows();
     requestRender(); saveSoon(); return; }
-  const map={v:'select',h:'hand',n:'sticky',t:'text',r:'rect',o:'ellipse',a:'arrow',p:'pen',b:'table'}; if(map[k]){ setTool(map[k]); }
+  const map={v:'select',h:'hand',n:'sticky',t:'text',r:'rect',o:'ellipse',a:'arrow',p:'pen',b:'table',k:'callout'}; if(map[k]){ setTool(map[k]); }
 });
 addEventListener('keyup',e=>{ if(e.code==='Space'){ spaceDown=false; vp.classList.remove('grab'); } });
 addEventListener('blur',()=>{ spaceDown=false; vp.classList.remove('grab'); });
