@@ -44,6 +44,7 @@ html,body{-webkit-text-size-adjust:100%}
 .t-shape{display:flex;align-items:center;justify-content:center;border:2px solid #2a2d34;padding:8%}
 .t-shape.ellipse{border-radius:50%}
 .t-shape.pill{border-radius:999px}
+.t-shape.dash{border-style:dashed;border-radius:14px}
 .txt{width:100%;outline:none;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;line-height:1.35;max-height:100%;overflow:hidden}
 .t-sticky .txt,.t-shape .txt{text-align:center}
 .t-text .txt{max-height:none;overflow:visible}
@@ -775,7 +776,7 @@ function syncEl(it){
   if(it.type==='image'){ const a=assets.get(it.key); if(a?.thumbUrl && !r.img.getAttribute('src')){ r.img.src=a.thumbUrl; r.level='t'; } }
   else if(it.type==='pdf'){ const u=pdfThumbs.get(it.key+'#'+it.page); if(u && !r.img.getAttribute('src')){ r.img.src=u; el.classList.add('ready'); } }
   else if(it.type==='sticky'){ s.background=it.color; s.fontSize=it.fs+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
-  else if(it.type==='shape'){ el.classList.toggle('ellipse',it.shape==='ellipse'); el.classList.toggle('pill',it.shape==='pill'); s.background=it.nofill?'transparent':it.color; s.borderColor=it.stroke||'#2a2d34'; s.fontSize=it.fs+'px'; s.borderWidth=(it.bw||2)+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
+  else if(it.type==='shape'){ el.classList.toggle('ellipse',it.shape==='ellipse'); el.classList.toggle('pill',it.shape==='pill'); el.classList.toggle('dash',!!it.dash); s.background=it.nofill?'transparent':it.color; s.borderColor=it.stroke||'#2a2d34'; s.fontSize=it.fs+'px'; s.borderWidth=(it.bw||2)+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
   else if(it.type==='text'){ s.color=it.color; s.fontSize=it.fs+'px'; if(editing?.id!==it.id) paintTxt(r.txt,it); }
   else if(it.type==='pen'){ const svg=el.firstChild; svg.setAttribute('viewBox',`0 0 ${it.vw} ${it.vh}`);
     const [h,k]=svg.children; for(const p of [h,k]) p.setAttribute('d',it.d);
@@ -804,7 +805,7 @@ function autoFit(it,r){ const t=r.txt, el=r.el; if(!t||!it.fs) return;
   if(over()){ let lo=it.fs*.2, hi=it.fs; for(let i=0;i<9;i++){ const m=(lo+hi)/2; el.style.fontSize=m+'px'; if(over()) hi=m; else lo=m; } f=lo; el.style.fontSize=f+'px'; }
   r.fitKey=key; r.fitFs=f; el.classList.toggle('shrunk',f<it.fs*.999); }
 const txtBase=it=>it.fs||(it.type==='arrow'?Math.max((it.sw||2)*5.6,8):20);
-function stepFs(it,dir){ const f=txtBase(it)*(dir>0?1.2:1/1.2); it.fs=Math.round(f*1000)/1000; const r=els.get(it.id); if(r) r.fitKey=null; syncEl(it); if(it.type==='text') fitText(it); }
+function stepFs(it,dir){ const f=txtBase(it)*(dir>0?1.2:1/1.2), nf=Math.round(f*1000)/1000; if(it.type==='text') it.w*=nf/(it.fs||txtBase(it)); it.fs=nf; const r=els.get(it.id); if(r) r.fitKey=null; syncEl(it); if(it.type==='text') fitText(it); }
 function setFmt(its,key,val){ its.forEach(it=>{ it[key]=val; const r=els.get(it.id); if(r) r.fitKey=null; syncEl(it); if(it.type==='text') fitText(it); }); }
 // ----- Arrows -----
 function edgePoint(t,toward){
@@ -1920,7 +1921,7 @@ function startEdit(id,cell){
   checkpoint(); paintTxt(r.txt,it.type==='table'?cellOf(it,r.cellEdit):it,true); editing={id}; r.el.classList.add('editing');
   r.txt.contentEditable='plaintext-only'; if(r.txt.contentEditable!=='plaintext-only') r.txt.contentEditable='true';
   r.txt.focus(); const rg=document.createRange(); rg.selectNodeContents(r.txt); const s=getSelection(); s.removeAllRanges(); s.addRange(rg);
-  r.txt.oninput=()=>{ if(it.type==='text'){ it.text=readRich(r.txt).text; fitText(it); requestRender(); } else if(it.type==='sticky'||it.type==='shape'){ applyTxtStyle(it,r); if(it.shape==='pill'){ fitText(it); updateArrows(); } } else if(it.type==='table'){ fitTable(it,r); updateArrows(); requestRender(); } acUpdate(it,r); };
+  r.txt.oninput=()=>{ if(it.type==='text'){ it.text=readRich(r.txt).text; fitText(it); updateArrows(); requestRender(); } else if(it.type==='sticky'||it.type==='shape'){ applyTxtStyle(it,r); if(it.shape==='pill'){ fitText(it); updateArrows(); } } else if(it.type==='table'){ fitTable(it,r); updateArrows(); requestRender(); } acUpdate(it,r); };
   r.txt.onkeydown=e=>editKey(e,it,r);
   r.txt.onblur=()=>finishEdit();
   renderCtx(); requestRender();
@@ -2309,12 +2310,14 @@ vp.addEventListener('pointerdown',e=>{
   }
   if(!editMode()){ setTool('select'); openLogin(); pointers.delete(e.pointerId); return; }
   if(tool==='pen'){ drag={type:'pen', pts:[[wp.x,wp.y]], anchor:sp, straight:false}; armPenHold(); return; }
-  if(tool==='callout'){ checkpoint(); const s=240/cam.z, hh=56/cam.z;
-    // Chú thích: ghi chú dạng viên thuốc, mũi tên từ ghi chú tới đối tượng cần chú ý
-    const note=createItem({type:'shape', shape:'pill', x:wp.x-s/2, y:wp.y-hh/2, w:s, h:hh, color:FILLS[0], fs:18/cam.z, bw:2/cam.z, text:''});
-    const it=createItem({type:'arrow', a:{x:wp.x,y:wp.y,id:note.id}, b:{x:wp.x,y:wp.y}, color:INKS[0], sw:2/cam.z, head:'end', x:wp.x, y:wp.y, w:1, h:1});
-    updateArrow(it);
-    drag={type:'aend', it, w:'b', creating:true, start:sp, note:note.id}; return; }
+  if(tool==='callout'){ checkpoint();
+    if(pendingCallout && S.items.get(pendingCallout.rect)){ // giai đoạn 2: kéo mũi dẫn từ khung ra ngoài
+      const cp=pendingCallout; pendingCallout=null;
+      const it=createItem({type:'arrow', a:{x:wp.x,y:wp.y}, b:{x:wp.x,y:wp.y,id:cp.rect}, color:INKS[0], sw:2/cam.z, head:'end', x:wp.x, y:wp.y, w:1, h:1, g:cp.g});
+      updateArrow(it); drag={type:'leader', it, g:cp.g}; return; }
+    const grp='g'+uid();  // giai đoạn 1: kéo khung vùng (nét đứt)
+    const it=createItem({type:'shape', shape:'rect', dash:true, nofill:true, x:wp.x, y:wp.y, w:1, h:1, bw:2/cam.z, fs:18/cam.z, text:'', g:grp});
+    drag={type:'create', it, start:wp, callout:grp}; return; }
   if(tool==='arrow'){ checkpoint(); const t0=itemAt(sp,null), t=t0&&nearOutline(t0,wp)?t0:null;
     const it=createItem({type:'arrow', a:{x:wp.x,y:wp.y,...(t?{id:t.id}:{})}, b:{x:wp.x,y:wp.y}, color:INKS[0], sw:2.5/cam.z, head:'end', x:wp.x, y:wp.y, w:1, h:1});
     drag={type:'aend', it, w:'b', creating:true, start:sp}; return; }
@@ -2408,6 +2411,7 @@ addEventListener('pointermove',e=>{
         if(Math.hypot(wp.x-l[0],wp.y-l[1])*cam.z>1.5) drag.pts.push([wp.x,wp.y]); }
       if(!drag.straight && Math.hypot(sp.x-drag.anchor.x, sp.y-drag.anchor.y)>HOLD_TOL){ drag.anchor=sp; armPenHold(); }
       requestRender(); break; }
+    case 'leader':{ const wp=toWorld(sp.x,sp.y); drag.it.a={x:wp.x,y:wp.y}; updateArrow(drag.it); requestRender(); break; }
     case 'create':{ const wp=toWorld(sp.x,sp.y), s=drag.start, it=drag.it; let w=Math.abs(wp.x-s.x), h=Math.abs(wp.y-s.y);
       if(e.shiftKey){ w=h=Math.max(w,h); } it.w=Math.max(w,1); it.h=Math.max(h,1);
       it.x=wp.x<s.x?s.x-it.w:s.x; it.y=wp.y<s.y?s.y-it.h:s.y; syncEl(it); requestRender(); break; }
@@ -2422,7 +2426,8 @@ function endPointer(e){
   if(d.type==='move'){ if(d.moved) saveSoon(); else if(!e.shiftKey && !d.fresh && S.sel.size>1 && d.hid) setSel([d.hid]); } // bấm lần nữa: chọn riêng 1 đối tượng trong nhóm
   else if(d.type==='pen'){ clearTimeout(d.timer); if(d.shape) createShape(d.shape); else createPen(penPts(d)); }
   else if(d.type==='create'){ const it=d.it; if(it.w*cam.z<6 && it.h*cam.z<6){ const w=160/cam.z, h=(it.shape==='ellipse'?160:110)/cam.z; it.x=d.start.x-w/2; it.y=d.start.y-h/2; it.w=w; it.h=h; syncEl(it); }
-    setTool('select'); setSel([it.id]); saveSoon(); }
+    if(d.callout){ pendingCallout={rect:it.id,g:d.callout}; } else { setTool('select'); setSel([it.id]); } saveSoon(); }
+  else if(d.type==='leader'){ finishLeader(d); }
   else if(d.type==='tcol'||d.type==='trow'){ d.it.t=Date.now(); saveSoon(); }
   else if(d.type==='resize'||d.type==='eresize'){ const it=d.it; if(it.type==='text') fitText(it); updateArrows(); saveSoon(); updateLODSoon(); }
   else if(d.type==='rotate'||d.type==='grot'){ saveSoon(); updateLODSoon(); }
@@ -2647,7 +2652,7 @@ const fsBox=its=>{ const v=fsCur(its); return `<input class="fsin" id="fsIn" typ
 function setFsPx(px){ px=+px; if(!(px>=2&&px<=2000)) return; const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean); checkpoint();
   const T=selTable();
   if(T){ const fs=T.it.fs||18; tSel(T.it,T.r).forEach(([i,j])=>{ const c=T.it.cells[i][j], z=Math.round(px/fs*1000)/1000; if(Math.abs(z-1)<.005) delete c.z; else c.z=z; }); T.it.t=Date.now(); T.r.tkey=null; tableText(T.it); syncEl(T.it); }
-  else for(const it of fsTargets(its)){ it.fs=px; it.t=Date.now(); const r=els.get(it.id); if(r){ r.fitKey=null; if(it.type==='table') r.tkey=null; } syncEl(it); if(it.type==='text') fitText(it); }
+  else for(const it of fsTargets(its)){ if(it.type==='text'&&it.fs) it.w*=px/it.fs; it.fs=px; it.t=Date.now(); const r=els.get(it.id); if(r){ r.fitKey=null; if(it.type==='table') r.tkey=null; } syncEl(it); if(it.type==='text') fitText(it); }
   updateArrows(); saveSoon(); renderCtx(); requestRender(); }
 ctx.addEventListener('keydown',e=>{ if(e.target.id!=='fsIn') return; e.stopPropagation();
   if(e.key==='Enter'){ e.preventDefault(); e.target.blur(); } // blur → sự kiện change → setFsPx
@@ -2781,7 +2786,11 @@ function cloneItems(list,dx,dy=dx){ if(!editMode()) return openLogin(); checkpoi
 function duplicate(){ if(!S.sel.size) return; cloneItems([...S.sel].map(id=>S.items.get(id)), 24/cam.z); }
 
 // ================== Tools, buttons, keyboard ==================
-function setTool(t){ if(t!=='select'&&t!=='hand'&&!editMode()){ openLogin(); t='select'; } tool=t; document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
+let pendingCallout=null; // khung chú thích đang chờ mũi dẫn
+function finishLeader(d){ const it=d.it, p=it.a, fs=22/cam.z;
+  const tx=createItem({type:'text', x:p.x, y:p.y-fs*.7, w:260/cam.z, h:fs*1.4, color:INKS[0], fs, text:'', g:d.g});
+  it.a={x:p.x,y:p.y,id:tx.id}; updateArrow(it); pendingEdit=tx.id; }
+function setTool(t){ if(t!=='select'&&t!=='hand'&&!editMode()){ openLogin(); t='select'; } if(t!=='callout') pendingCallout=null; tool=t; document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
   vp.className='tool-'+t+(spaceDown?' grab':''); $('#penbar').classList.toggle('show',t==='pen'); if(t!=='select') setSel([]); }
 function renderPenbar(){
   const pb=$('#penbar');
