@@ -106,8 +106,10 @@ html,body{-webkit-text-size-adjust:100%}
 @media (max-width:520px){ #help td{display:block;width:auto;border-top:0;padding:0} #help td:first-child{width:auto;padding-top:8px} }
 kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px}
 
-#ctx{padding:4px;display:none;align-items:center;gap:2px;z-index:5}
+#ctx{padding:4px;display:none;flex-direction:column;align-items:stretch;gap:0;z-index:5}
 #ctx.show{display:flex}
+#ctx .crow{display:flex;align-items:center;gap:2px;min-height:38px}
+#ctx .crow+.crow{border-top:1px solid var(--line)}
 #world .item.lg::before{content:'LEGEND';position:absolute;left:0;bottom:100%;margin-bottom:.35em;font:600 .55em/1 system-ui;letter-spacing:.08em;color:#e8388a;pointer-events:none;white-space:nowrap}
 #world .item.lg{outline:1.5px dashed #e8388a;outline-offset:.25em}
 #acp{display:none;flex-direction:column;padding:4px;z-index:9;min-width:220px;max-width:min(420px,calc(100vw - 16px))}
@@ -2734,7 +2736,7 @@ function renderCtx(){
   const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean);
   let h='';
   if(its.every(i=>i.locked)){ if(its.length===1&&(its[0].type==='image'||its[0].type==='pdf')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
-    h+=`<span class="ctxlbl">Đang khóa</span>`+btn('unlock','Mở khóa (Ctrl Shift L)'); ctx.innerHTML=h; ctx.classList.add('show'); positionCtx(); return; }
+    h+=`<span class="ctxlbl">Đang khóa</span>`+btn('unlock','Mở khóa (Ctrl Shift L)'); ctx.innerHTML=ctxRows(h); ctx.classList.add('show'); positionCtx(); return; }
   const hasFill=its.some(i=>i.type==='sticky'||i.type==='shape'), hasShape=its.some(i=>i.type==='shape'), hasInk=its.some(i=>i.type==='text'||i.type==='pen'||i.type==='arrow'||i.type==='shape');
   const f0=its.find(i=>i.type==='sticky'||i.type==='shape'), i0=its.find(i=>i.type!=='sticky'&&i.type!=='image'&&i.type!=='pdf');
   const curF=f0&&(f0.nofill?'none':f0.color), curI=i0&&(i0.type==='shape'?(i0.stroke||'#2a2d34'):i0.color);
@@ -2767,8 +2769,10 @@ function renderCtx(){
   if(its.some(i=>i.g)) h+=btn('ungroup','Bỏ nhóm (Ctrl Shift G)');
   if(its.some(i=>i.type==='shape')) h+=btn('pdfx','Xuất PDF: mỗi khung (hình) đang chọn thành 1 trang, gồm mọi thứ nằm trong khung (Ctrl P)');
   h+=btn('lock','Khóa: không di chuyển, co giãn, xoay (Ctrl Shift L)')+btn('front','Đưa lên trên ( ] )')+btn('back','Đưa xuống dưới ( [ )')+btn('dup','Nhân bản (Ctrl D)')+btn('del','Xóa (Delete)');
-  ctx.innerHTML=h; ctx.classList.add('show'); positionCtx();
+  ctx.innerHTML=ctxRows(h); ctx.classList.add('show'); positionCtx();
 }
+// Mỗi nhóm nút (ngăn cách bằng vạch .vsep) thành một hàng riêng trên thanh ngữ cảnh
+const ctxRows=h=>h.split('<div class="vsep"></div>').map(s=>s.trim()).filter(Boolean).map(s=>`<div class="crow">${s}</div>`).join('');
 const btn=(k,t)=>`<button class="ib" data-cx="${k}" title="${t}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`;
 const btnOn=(k,t,on)=>`<button class="ib${on?' on':''}" data-cx="${k}" title="${t}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`;
 
