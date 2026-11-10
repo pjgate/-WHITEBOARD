@@ -517,7 +517,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <div class="row2"><label title="Gửi kèm các ảnh/trang PDF đang chọn, hoặc tối đa 4 cái đang hiện giữa màn hình"><input type="checkbox" id="aiImg">Gửi kèm ảnh/PDF đang xem</label><button class="btn primary" data-act="aiSend" id="aiGo">Gửi</button></div></div>
 </div>
 <div id="hub">
-  <header><div class="tt"><div class="crumb"><span id="hubPath">Bảng mẹ</span> · <a class="driveLink" id="hubDrive" target="_blank" rel="noopener">mở trên Google Drive ↗</a></div><h1 id="hubTitle">Đang tải…</h1></div>
+  <header><div class="tt"><div class="crumb"><span id="hubPath">Bảng mẹ</span> · <a class="driveLink" id="hubDrive" target="_blank" rel="noopener" style="display:none">mở trên Google Drive ↗</a></div><h1 id="hubTitle">Đang tải…</h1></div>
     <div class="hact"><span id="hubUser"></span><input id="hsearch" placeholder="Tìm dự án…" autocomplete="off"><button class="btn ghost" data-act="hubRefresh" title="Làm mới"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 0 1-14.3 4.9M4 12a8 8 0 0 1 14.3-4.9M18 3v4h-4M6 21v-4h4"/></svg></button><button class="btn ghost" data-act="drvOpen" title="Cài đặt Google Drive"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div></header>
   <div id="hubErr"></div><div id="hubGrid"></div><div id="hubEmpty"></div>
 </div>
@@ -1623,7 +1623,7 @@ function treeNew(){ const t=cachedTrail(DRIVE.project)||[];
   const find=(n)=>n.id===DRIVE.project?n:n.kids.map(find).find(Boolean); const me_=treeRoot&&find(treeRoot);
   npPar={id:DRIVE.project,name:driveName,trail:[...t,{id:DRIVE.project,name:driveName}],names:(me_?.kids||[]).map(k=>k.name)}; openNewProject(); }
 function upLink(){ const t=cachedTrail(DRIVE.project)||[]; const par=t[t.length-1]; return par?boardLink(par.id,true):boardLink(null); } // về danh sách chứa dự án này
-function renderHubPath(){ const el=$('#hubPath');
+function renderHubPath(){ const el=$('#hubPath'); el.parentElement.style.display=DRIVE.sub?'':'none'; // ẩn 'Bảng mẹ' ở trang gốc
   if(!DRIVE.sub){ el.textContent='Bảng mẹ'; return; }
   el.innerHTML=[`<a class="cl" href="${esc(boardLink(null))}">Tất cả dự án</a>`,...hubTrail.map(x=>`<a class="cl" href="${esc(boardLink(x.id,true))}">${esc(x.name)}</a>`)].join('<i>›</i>'); }
 function renderHubUser(){
@@ -1711,7 +1711,9 @@ function shareLink(folder,key){ return `${location.origin}${location.pathname}?f
 function openDrv(){
   $('#drvFolder').value=DRIVE?`https://drive.google.com/drive/folders/${DRIVE.root}`:''; $('#drvKey').value=DRIVE?.key||''; $('#drvClient').value=DRIVE?.clientId||'';
   $('#drvMsg').textContent=''; $('#drvMsg').className='';
-  const sh=$('#drvShare'); if(DRIVE){ $('#drvLink').textContent=boardLink(null); sh.classList.add('show'); $('#drvCopyBtn').style.display=''; } else { sh.classList.remove('show'); $('#drvCopyBtn').style.display='none'; }
+  // Đã kết nối thì ẩn thư mục gốc và API key; chỉ khi đang ở trong một dự án mới hiện link của dự án đó
+  const setup=!DRIVE; $('#drvFolder').parentElement.style.display=setup?'':'none'; $('#drvKey').parentElement.style.display=setup?'':'none';
+  const sh=$('#drvShare'); if(DRIVE?.project){ $('#drvLink').textContent=boardLink(DRIVE.project); sh.classList.add('show'); $('#drvCopyBtn').style.display=''; } else { sh.classList.remove('show'); $('#drvCopyBtn').style.display='none'; }
   $('#drvOffBtn').style.display=DRIVE&&!DRIVE.fromConfig?'':'none'; $('#drvGo').textContent=DRIVE?'Lưu & mở lại':'Kết nối';
   $('#drv').classList.add('show');
 }
@@ -1725,7 +1727,6 @@ async function testDrv(){
     const cid=$('#drvClient').value.trim(); if(cid&&!/^\d+-[\w-]+\.apps\.googleusercontent\.com$/.test(cid)){ msg.className='err'; msg.textContent='OAuth Client ID không đúng dạng. Client ID có dạng 123456789-abc….apps.googleusercontent.com (không phải API key AIza… hay Client secret).'; return; }
     try{ localStorage.setItem('wb-drive',JSON.stringify({folder,key,clientId:cid})); }catch{}
     const link=shareLink(folder,key); msg.className='ok'; msg.textContent=`Kết nối được thư mục "${j.name}". Đang mở…`;
-    $('#drvLink').textContent=link; $('#drvShare').classList.add('show');
     setTimeout(()=>{ location.href=link; },700);
   }catch(e){ msg.className='err'; msg.textContent=driveErrMsg(e); }
 }
