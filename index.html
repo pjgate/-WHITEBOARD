@@ -1577,7 +1577,7 @@ function renderTopCrumbs(t){ const c=$('#crumbs'); if(!c) return; if(!t?.length)
   const show=t.length>2?[null,...t.slice(-2)]:t;
   c.innerHTML=show.map(x=>x?`<a href="${esc(boardLink(x.id))}" title="${esc(x.name)}">${esc(x.name)}</a>`:`<a href="${esc(boardLink(t[t.length-3].id))}" title="${esc(t.slice(0,-2).map(y=>y.name).join(' › '))}">…</a>`).join(crumbSep)+crumbSep; }
 async function initTrail(){ if(!DRIVE?.project) return; const c=cachedTrail(DRIVE.project); if(c) renderTopCrumbs(c);
-  let open=false; try{ open=localStorage.getItem(TREE_KEY)==='1'; }catch{} if(open){ document.body.classList.add('tree-on'); treeRoot=treeFromCache(treeTop()); renderTree(); }
+  let open=false; try{ open=localStorage.getItem(TREE_KEY)==='1'; }catch{} if(open){ document.body.classList.add('tree-on'); alignTree(); treeRoot=treeFromCache(treeTop()); renderTree(); }
   const t=await loadTrail(DRIVE.project); renderTopCrumbs(t); renderMenuDrive(); if(open) refreshTree(); }
 // ----- Cây dự án (khung nổi trên bảng) -----
 const TREE_KEY='wb-tree-open';
@@ -1623,9 +1623,10 @@ async function refreshTree(){ if(!DRIVE?.project||treeBusy) return; treeBusy=tru
   try{ treeRoot=await loadTree(top); renderTree(); }
   catch(e){ if(!treeRoot) $('#trBody').innerHTML=`<div class="msg">${esc(driveErrMsg(e))}</div>`; }
   finally{ treeBusy=false; } }
-function alignTree(){ const t=$('#top'), tr=$('#tree'), dl=$('#trDrive'); if(!t||!tr) return;
-  const r=t.getBoundingClientRect(); tr.style.left=r.left+'px'; tr.style.top=(r.bottom+8)+'px';
-  if(dl&&DRIVE?.project) dl.href=`https://drive.google.com/drive/folders/${DRIVE.project}`; }
+function alignTree(){ const t=$('#top'), tr=$('#tree'), dl=$('#trDrive');
+  if(dl&&DRIVE?.project) dl.href=`https://drive.google.com/drive/folders/${DRIVE.project}`; // đặt link trước mọi điều kiện khác
+  if(!t||!tr) return;
+  const r=t.getBoundingClientRect(); tr.style.left=r.left+'px'; tr.style.top=(r.bottom+8)+'px'; }
 addEventListener('resize',alignTree);
 // ----- Thay thế ảnh / PDF: tệp cũ đổi tên thành "tên~" để ẩn khỏi bảng -----
 let repTarget=null;
