@@ -74,7 +74,7 @@ html,body{-webkit-text-size-adjust:100%}
 .ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 #toolcol{position:fixed;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px}
 #toolcol #tools{position:relative;left:auto;top:auto;transform:none;padding:5px;display:flex;flex-direction:column;gap:2px}
-#hist{position:relative;padding:5px;display:flex;flex-direction:row;gap:2px}
+#hist{position:relative;padding:5px;display:flex;flex-direction:column;gap:2px}
 .ib:disabled{opacity:.35;cursor:default}
 .ib:disabled:hover{background:transparent}
 body.ro #hist{display:none!important}
@@ -405,6 +405,7 @@ body.relogin #loginBtn{background:#e0a92b}
   #help-btn{display:none}
   #toolcol{left:50%;top:auto;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);flex-direction:row;gap:6px;align-items:center}
   #toolcol #tools{flex-direction:row}
+  #hist{flex-direction:row}
   #tools .sep{width:1px;height:auto;margin:6px 3px}
   #penbar{left:50%;top:auto;bottom:calc(66px + env(safe-area-inset-bottom));transform:translateX(-50%);flex-direction:row;padding:6px 8px}
   #penbar .sep{width:1px!important;height:20px;margin:0 4px}
