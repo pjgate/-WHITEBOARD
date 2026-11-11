@@ -501,7 +501,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Bút: nét thẳng</td><td>Giữ <kbd>Shift</kbd> khi vẽ (góc làm tròn theo 45°)</td></tr>
     <tr><td>Chọn kiểu AutoCAD</td><td>Kéo trái→phải: chọn đối tượng nằm trọn trong khung. Kéo phải→trái: chọn đối tượng chạm khung</td></tr>
     <tr><td>Sửa nhóm tại chỗ</td><td>Đúp vào đối tượng trong nhóm; đối tượng khác mờ đi. <kbd>Esc</kbd> để thoát</td></tr>
-    <tr><td>Sao chép tại chỗ</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> (nhân bản đúng vị trí, khác <kbd>Ctrl</kbd>+<kbd>D</kbd> lệch 24px)</td></tr>
+    <tr><td>Sao chép tại chỗ</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (nhân bản đúng vị trí, khác <kbd>Ctrl</kbd>+<kbd>D</kbd> lệch 24px)</td></tr>
     <tr><td>Bắt điểm kiểu AutoCAD (bút)</td><td><kbd>F3</kbd> bật/tắt. Rê gần đỉnh, điểm giữa, tâm hoặc cạnh để bắt; giữ <kbd>Shift</kbd> để căn thẳng theo đỉnh/tâm</td></tr>
   </table>
 </div>
@@ -3046,7 +3046,7 @@ addEventListener('keydown',e=>{
   if(mod&&k==='a'){ e.preventDefault(); setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); return; }
   if(mod&&e.shiftKey&&k==='l'){ e.preventDefault(); toggleLock(); return; }
   if(mod&&e.shiftKey&&k==='c'){ e.preventDefault(); copyGraph(); return; }
-  if(mod&&e.shiftKey&&k==='d'){ e.preventDefault(); copyInPlace(); return; }
+  if(mod&&e.shiftKey&&k==='v'){ e.preventDefault(); copyInPlace(); return; }
   if(mod&&k==='g'){ e.preventDefault(); e.shiftKey?ungroupSel():groupSel(); return; }
   if(mod&&k==='d'){ e.preventDefault(); duplicate(); return; }
   if(mod&&(k==='='||k==='+')){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,1.25); return; }
