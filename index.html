@@ -84,8 +84,8 @@ body.find-on #find{display:flex}
 #find input:focus{border-color:var(--accent)}
 #find .ib{width:30px;height:30px} #find .ib svg{width:17px;height:17px}
 #findCnt{font-size:12.5px;color:var(--muted);white-space:nowrap;min-width:52px;text-align:center}
-.find-match{outline:2px solid rgba(245,159,0,.55);outline-offset:3px;background-color:rgba(255,212,59,.18)!important}
-.find-cur{outline:3px solid #f59f00;outline-offset:4px;background-color:rgba(255,212,59,.35)!important}
+.fhl{position:absolute;pointer-events:none;background:rgba(255,212,59,.42);border-radius:2px;mix-blend-mode:multiply;z-index:2}
+.fhl.cur{background:rgba(245,159,0,.62);box-shadow:0 0 0 1.5px #f59f00}
 .sep{height:1px;background:var(--line);margin:4px 6px}
 .vsep{width:1px;background:var(--line);margin:6px 2px;align-self:stretch}
 #top{left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top));padding:6px 8px 6px 14px;display:flex;align-items:center;gap:12px}
@@ -494,7 +494,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v24</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v25</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -3055,7 +3055,7 @@ document.addEventListener('click',e=>{
   else if(a==='drvOff') { try{ localStorage.removeItem('wb-drive'); }catch{} location.href=location.origin+location.pathname; }
 });
 // ================== Tìm (Find) ==================
-// Tìm không phân biệt hoa thường và bỏ dấu tiếng Việt. Tìm trong chữ của ô, bảng, khung và trong văn bản PDF (từng trang).
+// Tìm không phân biệt hoa thường và bỏ dấu tiếng Việt. Chỉ tô đúng đoạn chữ khớp, không tô cả khung.
 const foldMap=s=>{ let out='', map=[]; for(let i=0;i<s.length;i++){ const f=s[i].normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase(); for(const ch of f){ out+=ch; map.push(i); } } return {out,map}; };
 const foldQ=q=>foldMap(q.trim()).out;
 function findIdx(text,qf){ const hits=[]; if(!qf) return hits; const {out,map}=foldMap(text); let p=out.indexOf(qf);
@@ -3063,13 +3063,37 @@ function findIdx(text,qf){ const hits=[]; if(!qf) return hits; const {out,map}=f
 function findSnip(t,h){ const a=Math.max(0,h.s-25), b=Math.min(t.length,h.e+25); return (a?'…':'')+t.slice(a,b).replace(/\s+/g,' ')+(b<t.length?'…':''); }
 function findText(it){ if(it.type==='table') return (it.cells||[]).map(r=>r.map(c=>c.text||'').join(' | ')).join('\n'); return it.text||''; }
 const pdfTextCache=new Map();
+// Chữ của một trang PDF kèm vị trí từng đoạn chữ (tính theo % kích thước trang)
 function pdfPageText(it){ const k=it.key+'#'+it.page; if(pdfTextCache.has(k)) return pdfTextCache.get(k);
-  const p=(async()=>{ const doc=await getDoc(it.key); const pg=await doc.getPage(it.page); const tc=await pg.getTextContent(); return tc.items.map(x=>x.str).join(' '); })();
+  const p=(async()=>{ const doc=await getDoc(it.key); const pg=await doc.getPage(it.page); const vp=pg.getViewport({scale:1}); const tc=await pg.getTextContent();
+    let t='', segs=[];
+    for(const x of tc.items){ if(!x.str) continue; const a=t.length; t+=x.str; const b=t.length; t+=' ';
+      const h=x.height||Math.hypot(x.transform[2],x.transform[3]); const top=vp.height-(x.transform[5]+h);
+      segs.push({a,b,l:x.transform[4]/vp.width*100,t:top/vp.height*100,w:x.width/vp.width*100,h:h/vp.height*100}); }
+    return {t,segs}; })();
   pdfTextCache.set(k,p); p.catch(()=>pdfTextCache.delete(k)); return p; }
-let findQ='', findHits=[], findPos=-1, findRun=0, findDeb=null;
+// Ô vuông (%) bao đúng phần chữ khớp trên trang PDF
+function pdfBoxes(pd,m){ const out=[]; for(const g of pd.segs){ if(g.b<=m.s||g.a>=m.e) continue; const len=Math.max(1,g.b-g.a); const a=Math.max(g.a,m.s), b=Math.min(g.b,m.e);
+  out.push({l:g.l+g.w*(a-g.a)/len, t:g.t, w:Math.max(g.w*(b-a)/len,0.2), h:g.h}); } return out; }
+// Ô vuông (%) bao đúng phần chữ khớp trong một đối tượng trên bảng (đọc từ DOM)
+function domBoxes(el,qf){ const out=[]; const er=el.getBoundingClientRect(); if(!er.width||!er.height) return out;
+  const tw=document.createTreeWalker(el,NodeFilter.SHOW_TEXT); const rng=document.createRange(); let n;
+  while((n=tw.nextNode())){ const v=n.nodeValue||''; if(!v.trim()) continue;
+    for(const m of findIdx(v,qf)){ rng.setStart(n,m.s); rng.setEnd(n,m.e);
+      for(const rc of rng.getClientRects()){ if(rc.width<1||rc.height<1) continue;
+        out.push({l:(rc.left-er.left)/er.width*100, t:(rc.top-er.top)/er.height*100, w:rc.width/er.width*100, h:rc.height/er.height*100}); } } }
+  return out; }
+function paintBoxes(el,boxes){ return boxes.map(b=>{ const s=document.createElement('span'); s.className='fhl'; s.style.left=b.l+'%'; s.style.top=b.t+'%'; s.style.width=b.w+'%'; s.style.height=b.h+'%'; el.appendChild(s); return s; }); }
+let findQ='', findHits=[], findPos=-1, findRun=0, findDeb=null, findTimer2=null;
 function renderFindCnt(){ const c=$('#findCnt'); if(!findQ){ c.textContent=''; c.title=''; return; }
   c.textContent=findHits.length?`${findPos+1}/${findHits.length}`:'0 kết quả'; c.title=findHits[findPos]?.snip||''; }
-function clearFindHi(){ document.querySelectorAll('.find-match,.find-cur').forEach(e=>e.classList.remove('find-match','find-cur')); }
+function clearFindHi(){ document.querySelectorAll('.fhl').forEach(n=>n.remove()); }
+function refreshFindHi(){ clearFindHi();
+  for(const h of findHits){ const r=els.get(h.id); if(!r){ h.nodes=[]; continue; } h.nodes=paintBoxes(r.el,h.boxes||domBoxes(r.el,findQ)); }
+  markCur(); }
+function markCur(){ document.querySelectorAll('.fhl.cur').forEach(n=>n.classList.remove('cur')); const h=findHits[findPos]; if(!h) return;
+  if(!h.nodes?.length){ const r=els.get(h.id); if(r) h.nodes=paintBoxes(r.el,[{l:0,t:0,w:100,h:100}]); } // dự phòng: chữ chưa hiện trên màn hình thì tô cả đối tượng
+  (h.nodes||[]).forEach(n=>n.classList.add('cur')); }
 async function runFind(jump){
   const run=++findRun; findQ=foldQ($('#findIn').value); clearFindHi();
   if(!findQ){ findHits=[]; findPos=-1; renderFindCnt(); return; }
@@ -3077,17 +3101,15 @@ async function runFind(jump){
   const items=[...S.items.values()].filter(it=>vis(it)&&['text','sticky','shape','table','pdf'].includes(it.type)).sort((a,b)=>(a.y-b.y)||(a.x-b.x));
   const hits=[];
   for(const it of items){
-    let t='';
-    if(it.type==='pdf'){ try{ t=await pdfPageText(it); }catch{ t=''; } } else t=findText(it);
-    if(run!==findRun) return;
-    const h=findIdx(t,findQ);
-    if(h.length) hits.push({id:it.id,snip:findSnip(t,h[0]),n:h.length});
+    if(it.type==='pdf'){ let pd=null; try{ pd=await pdfPageText(it); }catch{ pd=null; } if(run!==findRun) return;
+      if(!pd) continue; const ms=findIdx(pd.t,findQ); if(ms.length) hits.push({id:it.id,snip:findSnip(pd.t,ms[0]),n:ms.length,boxes:ms.flatMap(m=>pdfBoxes(pd,m)),nodes:null}); }
+    else { const t=findText(it); const ms=findIdx(t,findQ); if(ms.length) hits.push({id:it.id,snip:findSnip(t,ms[0]),n:ms.length,boxes:null,nodes:null}); }
   }
   if(run!==findRun) return;
-  findHits=hits; findPos=hits.length?0:-1; for(const h of hits) els.get(h.id)?.el.classList.add('find-match'); renderFindCnt(); if(jump) showFind();
+  findHits=hits; findPos=hits.length?0:-1; renderFindCnt(); refreshFindHi(); if(jump) showFind();
 }
-function showFind(){ document.querySelectorAll('.find-cur').forEach(e=>e.classList.remove('find-cur')); renderFindCnt(); const h=findHits[findPos]; const it=h&&S.items.get(h.id); if(!it) return;
-  els.get(it.id)?.el.classList.add('find-cur'); fitTo([it],2); }
+function showFind(){ renderFindCnt(); const h=findHits[findPos]; const it=h&&S.items.get(h.id); if(!it) return; markCur(); fitTo([it],2);
+  clearTimeout(findTimer2); findTimer2=setTimeout(refreshFindHi,450); }
 async function findStep(d){
   if(findDeb){ clearTimeout(findDeb); findDeb=null; await runFind(true); return; }
   if(!findHits.length) return; findPos=(findPos+d+findHits.length)%findHits.length; showFind(); }
