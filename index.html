@@ -72,7 +72,12 @@ html,body{-webkit-text-size-adjust:100%}
 .ib:hover{background:#f1f1ee}
 .ib.on{background:var(--accent-soft);color:var(--accent)}
 .ib svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#tools{left:12px;top:50%;transform:translateY(-50%);padding:5px;display:flex;flex-direction:column;gap:2px}
+#toolcol{position:fixed;left:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px}
+#toolcol #tools{position:relative;left:auto;top:auto;transform:none;padding:5px;display:flex;flex-direction:column;gap:2px}
+#hist{position:relative;padding:5px;display:flex;flex-direction:row;gap:2px}
+.ib:disabled{opacity:.35;cursor:default}
+.ib:disabled:hover{background:transparent}
+body.ro #hist{display:none!important}
 .sep{height:1px;background:var(--line);margin:4px 6px}
 .vsep{width:1px;background:var(--line);margin:6px 2px;align-self:stretch}
 #top{left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top));padding:6px 8px 6px 14px;display:flex;align-items:center;gap:12px}
@@ -301,7 +306,7 @@ body.hub #ai,body.gate #ai{display:none!important}
 /* hub (bảng mẹ) */
 #hub{position:fixed;inset:0;overflow:auto;display:none;background:var(--bg);padding:calc(22px + env(safe-area-inset-top)) 24px 40px;z-index:3}
 body.hub #hub{display:block}
-body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub #actions,body.hub #help-btn,body.hub #empty,body.hub #ctx,body.hub #penbar,body.hub #files,body.hub #tree{display:none!important}
+body.hub #vp,body.hub #ov,body.hub #toolcol,body.hub #zoom,body.hub #top,body.hub #actions,body.hub #help-btn,body.hub #empty,body.hub #ctx,body.hub #penbar,body.hub #files,body.hub #tree{display:none!important}
 #hub header{max-width:1200px;margin:0 auto 22px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
 #hub header .tt{flex:1;min-width:220px}
 #hub .crumb{color:var(--muted);font-size:13px;margin-bottom:4px}
@@ -345,7 +350,7 @@ body.hub #vp,body.hub #ov,body.hub #tools,body.hub #zoom,body.hub #top,body.hub 
 /* màn hình đăng nhập */
 #gate{position:fixed;inset:0;background:var(--bg);z-index:60;display:none;place-items:center;padding:24px}
 body.gate #gate{display:grid}
-body.gate #hub,body.gate #vp,body.gate #ov,body.gate #tools,body.gate #zoom,body.gate #top,body.gate #actions,body.gate #help-btn,body.gate #empty,body.gate #ctx,body.gate #penbar,body.gate #files{display:none!important}
+body.gate #hub,body.gate #vp,body.gate #ov,body.gate #toolcol,body.gate #zoom,body.gate #top,body.gate #actions,body.gate #help-btn,body.gate #empty,body.gate #ctx,body.gate #penbar,body.gate #files{display:none!important}
 #gate .gbox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:30px 28px;width:min(380px,100%);text-align:center;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:10px}
 #gate img{border-radius:18px} #gate h2{margin:4px 0 0;font-size:21px} #gate p{margin:0 0 6px;color:var(--muted);line-height:1.5}
 #gate .btn{width:100%;justify-content:center;height:42px}
@@ -398,7 +403,8 @@ body.relogin #loginBtn{background:#e0a92b}
   #top h1{display:none} #top{padding-left:10px}
   .btn .lbl{display:none} .btn.primary{padding:0 11px}
   #help-btn{display:none}
-  #tools{left:50%;top:auto;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);flex-direction:row}
+  #toolcol{left:50%;top:auto;bottom:calc(12px + env(safe-area-inset-bottom));transform:translateX(-50%);flex-direction:row;gap:6px;align-items:center}
+  #toolcol #tools{flex-direction:row}
   #tools .sep{width:1px;height:auto;margin:6px 3px}
   #penbar{left:50%;top:auto;bottom:calc(66px + env(safe-area-inset-bottom));transform:translateX(-50%);flex-direction:row;padding:6px 8px}
   #penbar .sep{width:1px!important;height:20px;margin:0 4px}
@@ -442,6 +448,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button data-act="clear" class="red"><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Xóa toàn bộ bảng</button>
 </div>
 
+<div id="toolcol">
 <div id="tools" class="panel">
   <button class="ib on" data-tool="select" title="Chọn (V)"><svg viewBox="0 0 24 24"><path d="M5 3.5l13 7.2-5.6 1.6-2.4 5.6z"/></svg></button>
   <button class="ib" data-tool="hand" title="Kéo bảng (H) — hoặc giữ Space"><svg viewBox="0 0 24 24"><path d="M8 12.5V5.5a1.5 1.5 0 0 1 3 0V11M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V14a6.5 6.5 0 0 1-6.5 6.5h-.6a6 6 0 0 1-4.9-2.6l-2.2-3.3a1.6 1.6 0 0 1 2.6-1.8L8 15"/></svg></button>
@@ -453,6 +460,11 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="ib" data-tool="pen" title="Bút vẽ (L)"><svg viewBox="0 0 24 24"><path d="M4 20l4.2-1L19.5 7.7a2.1 2.1 0 0 0-3-3L5.2 16z"/><path d="M14.5 6.5l3 3"/></svg></button>
   <div class="sep"></div>
   <button class="ib" data-act="upload" title="Thêm ảnh / PDF"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></button>
+</div>
+<div id="hist" class="panel">
+  <button class="ib" data-act="undo" disabled title="Hoàn tác (Ctrl Z)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+  <button class="ib" data-act="redo" disabled title="Làm lại (Ctrl Shift Z / Ctrl Y)"><svg viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+</div>
 </div>
 <div id="penbar" class="panel"></div>
 
@@ -1286,7 +1298,7 @@ function applyRemoteLayout(j,byId){
   const pres=new Set(items.map(fidOf)); for(const f of [...hid]) if(pres.has(f)) hid.delete(f);
   const ch=applyItems(fidOf,items);
   const hc=stab([...hid].sort())!==stab([...hidden].sort()); hidden=hid; saveHidden();
-  afterApply(); if(ch) { undoS.length=0; redoS.length=0; }
+  afterApply(); if(ch) { undoS.length=0; redoS.length=0; updHist(); }
   rs.lastLayout=layoutStr(R.items,R.hidden); // bản gốc = bản đang có trên Drive; phần khác (của máy này) sẽ được lưu lên
   persistRs(); saveNow();
   return ch||hc;
@@ -1950,7 +1962,8 @@ async function restore(){
 // ================== Undo / redo ==================
 const undoS=[], redoS=[];
 const snapshot=()=>JSON.stringify([...S.items.values()].filter(i=>!i.ro));
-function checkpoint(){ undoS.push(snapshot()); if(undoS.length>80) undoS.shift(); redoS.length=0; }
+function updHist(){ const u=document.querySelector('#hist [data-act=undo]'), r=document.querySelector('#hist [data-act=redo]'); if(u) u.disabled=!undoS.length; if(r) r.disabled=!redoS.length; }
+function checkpoint(){ undoS.push(snapshot()); if(undoS.length>80) undoS.shift(); redoS.length=0; updHist(); }
 function applySnap(json){
   const arr=JSON.parse(json); const keep=new Set();
   for(const it of arr){ keep.add(it.id); const had=S.items.has(it.id); S.items.set(it.id,it); if(had && els.has(it.id)) syncEl(it); else buildEl(it); }
@@ -1958,8 +1971,8 @@ function applySnap(json){
   for(const id of [...S.sel]) if(!keep.has(id)) S.sel.delete(id);
   zTop=Math.max(1,...[...S.items.values()].map(i=>i.z||0)); if(DRIVE) recomputeHidden(); onItemsChanged(); renderCtx();
 }
-function undo(){ if(editing) finishEdit(); if(!undoS.length) return; redoS.push(snapshot()); applySnap(undoS.pop()); }
-function redo(){ if(!redoS.length) return; undoS.push(snapshot()); applySnap(redoS.pop()); }
+function undo(){ if(editing) finishEdit(); if(!undoS.length) return; redoS.push(snapshot()); applySnap(undoS.pop()); updHist(); }
+function redo(){ if(!redoS.length) return; undoS.push(snapshot()); applySnap(redoS.pop()); updHist(); }
 
 // ================== Selection & text editing ==================
 function setSel(ids){ const old=S.sel; S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it)&&!it.gh&&(!gEdit||it.g===gEdit); }));
@@ -2520,7 +2533,7 @@ function endPointer(e){
   else if(d.type==='gscale'){ d.its.forEach(it=>{ if(it.type==='text') fitText(it); }); updateArrows(); saveSoon(); updateLODSoon(); }
   else if(d.type==='aend'){ const it=d.it; if(d.note) pendingEdit=d.note;
     if(d.creating){ const st=toScreen(it.a.x,it.a.y), en=toScreen(it.b.x,it.b.y);
-      if(Math.hypot(st.x-en.x,st.y-en.y)<12 && !it.b.id){ S.items.delete(it.id); removeEl(it.id); undoS.pop(); onItemsChanged(); }
+      if(Math.hypot(st.x-en.x,st.y-en.y)<12 && !it.b.id){ S.items.delete(it.id); removeEl(it.id); undoS.pop(); updHist(); onItemsChanged(); }
       else { setTool('select'); setSel([it.id]); } }
     saveSoon(); }
   if(pendingEdit){ const id=pendingEdit; pendingEdit=null; if(e.pointerType==='touch') startEdit(id); else setTimeout(()=>startEdit(id),0); }
@@ -2971,6 +2984,8 @@ document.addEventListener('click',e=>{
   if(a==='upload') $('#file').click();
   else if(a==='menu') { $('#help').classList.remove('show'); $('#menu').classList.toggle('show'); }
   else if(a==='help') { $('#menu').classList.remove('show'); $('#help').classList.toggle('show'); }
+  else if(a==='undo') undo();
+  else if(a==='redo') redo();
   else if(a==='zin') zoomAt(innerWidth/2,innerHeight/2,1.25);
   else if(a==='zout') zoomAt(innerWidth/2,innerHeight/2,0.8);
   else if(a==='z100') zoomAt(innerWidth/2,innerHeight/2,1/cam.z);
@@ -3020,7 +3035,7 @@ document.addEventListener('click',e=>{
 });
 $('#file').addEventListener('change',e=>{ const f=[...e.target.files]; e.target.value=''; if(f.length) importFiles(f); });
 async function clearBoard(){
-  for(const id of [...S.items.keys()]) removeEl(id); S.items.clear(); S.sel.clear(); undoS.length=0; redoS.length=0;
+  for(const id of [...S.items.keys()]) removeEl(id); S.items.clear(); S.sel.clear(); undoS.length=0; redoS.length=0; updHist();
   for(const a of assets.values()){ for(const u of [a.thumbUrl,a.midUrl,a.fullUrl]) if(u) URL.revokeObjectURL(u); }
   assets.clear(); for(const u of pdfThumbs.values()) URL.revokeObjectURL(u); pdfThumbs.clear();
   for(const p of docs.values()) p.then(d=>d.destroy()).catch(()=>{}); docs.clear();
