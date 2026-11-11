@@ -446,7 +446,7 @@ body.relogin #loginBtn{background:#e0a92b}
   <button class="ib" data-tool="rect" title="Hình chữ nhật (R)"><svg viewBox="0 0 24 24"><rect x="4" y="5.5" width="16" height="13" rx="2"/></svg></button>
   <button class="ib" data-tool="table" title="Bảng (B)"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9.5 4.5v15M15 4.5v15"/></svg></button>
   <button class="ib" data-tool="callout" title="Chú thích (K) — kéo từ ghi chú tới đối tượng cần chú ý"><svg viewBox="0 0 24 24"><path d="M6 3.5h12a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-7l-4.5 4.5V15.5H6a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3z"/><path d="M7.5 7h9M7.5 10.5h5"/></svg></button>
-  <button class="ib" data-tool="pen" title="Bút vẽ (P)"><svg viewBox="0 0 24 24"><path d="M4 20l4.2-1L19.5 7.7a2.1 2.1 0 0 0-3-3L5.2 16z"/><path d="M14.5 6.5l3 3"/></svg></button>
+  <button class="ib" data-tool="pen" title="Bút vẽ (L)"><svg viewBox="0 0 24 24"><path d="M4 20l4.2-1L19.5 7.7a2.1 2.1 0 0 0-3-3L5.2 16z"/><path d="M14.5 6.5l3 3"/></svg></button>
   <div class="sep"></div>
   <button class="ib" data-act="upload" title="Thêm ảnh / PDF"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg></button>
 </div>
@@ -493,7 +493,9 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Thụt lề dòng (khi đang gõ)</td><td><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></td></tr>
     <tr><td>Xuống dòng thường</td><td><kbd>Shift</kbd>+<kbd>Enter</kbd></td></tr>
     <tr><td>Sao chép sơ đồ cho Claude</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd></td></tr>
-    <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>P</kbd></td></tr>
+    <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>L</kbd></td></tr>
+    <tr><td>Bút: nét thẳng</td><td>Giữ <kbd>Shift</kbd> khi vẽ (góc làm tròn theo 45°)</td></tr>
+    <tr><td>Bắt điểm kiểu AutoCAD (bút)</td><td><kbd>F3</kbd> bật/tắt. Rê gần đỉnh, điểm giữa, tâm hoặc cạnh để bắt; giữ <kbd>Shift</kbd> để căn thẳng theo đỉnh/tâm</td></tr>
   </table>
 </div>
 
@@ -2371,7 +2373,7 @@ vp.addEventListener('pointerdown',e=>{
     return;
   }
   if(!editMode()){ setTool('select'); openLogin(); pointers.delete(e.pointerId); return; }
-  if(tool==='pen'){ drag={type:'pen', pts:[[wp.x,wp.y]], anchor:sp, straight:false}; armPenHold(); return; }
+  if(tool==='pen'){ const a=penAim(e,wp,null); penAimState=a; drag={type:'pen', pts:[[a.x,a.y]], anchor:sp, straight:false}; armPenHold(); return; }
   if(tool==='callout'){ checkpoint();
     if(pendingCallout && S.items.get(pendingCallout.rect)){ // giai đoạn 2: kéo mũi dẫn từ khung ra ngoài
       const cp=pendingCallout; pendingCallout=null;
@@ -2399,6 +2401,7 @@ addEventListener('pointermove',e=>{
     if(e.pointerType!=='mouse') return;
     const hid=(e.target.closest&&e.target.closest('#vp .item'))?.dataset.id||null;
     if(hid!==hoverId){ hoverId=hid; requestRender(); }
+    if(tool==='pen'){ penAimState=penAim(e,toWorld(sp.x,sp.y),null); requestRender(); return; }
     const h=tool==='select'?hitHandle(sp):null;
     if(h===null&&tool==='select'&&!drag){ const hi=hoverTableBorder(e); if(hi){ vp.style.cursor=hi; return; } }
     vp.style.cursor=h===null?'':h.k==='rot'?'grab':h.k==='end'?'crosshair':h.k==='edge'?(h.i%2===0?'ns-resize':'ew-resize'):(h.i%2===0?'nwse-resize':'nesw-resize');
@@ -2469,9 +2472,12 @@ addEventListener('pointermove',e=>{
       d.tid=t&&t.id!==other.id?t.id:null; it[d.w]=d.tid?{x:wp.x,y:wp.y,id:d.tid}:{x:wp.x,y:wp.y};
       updateArrow(it); requestRender(); break; }
     case 'pen':{ const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
-      for(const ev of evs){ const wp=toWorld(ev.clientX,ev.clientY), l=drag.pts[drag.pts.length-1];
-        if(Math.hypot(wp.x-l[0],wp.y-l[1])*cam.z>1.5) drag.pts.push([wp.x,wp.y]); }
-      if(!drag.straight && Math.hypot(sp.x-drag.anchor.x, sp.y-drag.anchor.y)>HOLD_TOL){ drag.anchor=sp; armPenHold(); }
+      for(const ev of evs){ const wp=toWorld(ev.clientX,ev.clientY), a=penAim(ev,wp,drag.pts[0]), l=drag.pts[drag.pts.length-1];
+        penAimState=a;
+        if(a.line){ drag.line=true; drag.lineEnd=[a.x,a.y]; drag.shape=null; clearTimeout(drag.timer); continue; }
+        drag.line=false;
+        if(Math.hypot(a.x-l[0],a.y-l[1])*cam.z>1.5) drag.pts.push([a.x,a.y]); }
+      if(!drag.straight && !drag.line && Math.hypot(sp.x-drag.anchor.x, sp.y-drag.anchor.y)>HOLD_TOL){ drag.anchor=sp; armPenHold(); }
       requestRender(); break; }
     case 'leader':{ const wp=toWorld(sp.x,sp.y); drag.it.a={x:wp.x,y:wp.y}; updateArrow(drag.it); requestRender(); break; }
     case 'create':{ const wp=toWorld(sp.x,sp.y), s=drag.start, it=drag.it; let w=Math.abs(wp.x-s.x), h=Math.abs(wp.y-s.y);
@@ -2480,7 +2486,7 @@ addEventListener('pointermove',e=>{
   }
 });
 function endPointer(e){
-  pointers.delete(e.pointerId); if(!drag) return;
+  pointers.delete(e.pointerId); penAimState=null; if(!drag) return;
   if(drag.type==='pinch'){ if(pointers.size===1){ drag={type:'pan', last:[...pointers.values()][0]}; } else if(!pointers.size){ drag=null; } return; }
   if(pointers.size) return;
   const d=drag; drag=null; vp.classList.remove('panning');
@@ -2505,11 +2511,68 @@ function endPointer(e){
 addEventListener('pointerup',endPointer); addEventListener('pointercancel',endPointer);
 const HOLD_MS=500, HOLD_TOL=5; // giữ đứng yên 0.5s thì nhận dạng / nắn nét
 function armPenHold(){ const d=drag; clearTimeout(d.timer);
-  d.timer=setTimeout(()=>{ if(drag!==d||d.straight) return;
+  d.timer=setTimeout(()=>{ if(drag!==d||d.straight||d.line) return;
     const s=recognizeStroke(d.pts); if(!s) return; // nét kín không nhận ra: giữ nguyên nét tay
     d.straight=true; d.shape=s.kind==='line'?null:s; requestRender(); }, HOLD_MS); }
-function penPts(d){ return d.straight ? [d.pts[0], d.pts[d.pts.length-1]] : d.pts; }
+function penPts(d){ if(d.line&&d.lineEnd) return [d.pts[0], d.lineEnd]; return d.straight ? [d.pts[0], d.pts[d.pts.length-1]] : d.pts; }
 function penPreview(d){ return d.shape ? d.shape.pts : penPts(d); }
+
+// ----- Bắt điểm kiểu AutoCAD (Object Snap + Tracking) cho bút vẽ -----
+// Bắt: đỉnh (vuông), điểm giữa cạnh (tam giác), tâm (chữ thập tròn), điểm gần nhất trên cạnh (hourglass).
+// Căn thẳng (tracking, chỉ khi giữ Shift): đường nét đứt nối tới đỉnh/tâm đang thẳng hàng với con trỏ.
+let penSnapOn=true, penAimState=null;
+const SNAP_AP=10; // bán kính bắt điểm tính bằng px màn hình
+function snapTargets(){ const v=viewRect(.5), out=[];
+  for(const it of S.items.values()){ if(it.type==='arrow'||it.type==='pen'||!vis(it)||hidMine(it)) continue;
+    const a=aabb(it); if(a.x>v.x+v.w||a.x+a.w<v.x||a.y>v.y+v.h||a.y+a.h<v.y) continue;
+    out.push({p:corners(it), c:ctr(it)}); if(out.length>800) break; }
+  return out; }
+function penSnapFind(wp,tg){ const ap=SNAP_AP/cam.z, best={};
+  const put=(k,x,y)=>{ const d=Math.hypot(x-wp.x,y-wp.y); if(d<=ap&&(!best[k]||d<best[k].d)) best[k]={d,x,y}; };
+  for(const t of tg){ const p=t.p;
+    for(let i=0;i<4;i++){ const a=p[i], b=p[(i+1)%4], dx=b.x-a.x, dy=b.y-a.y, L2=dx*dx+dy*dy;
+      put('end',a.x,a.y); put('mid',(a.x+b.x)/2,(a.y+b.y)/2);
+      if(L2){ const u=Math.max(0,Math.min(1,((wp.x-a.x)*dx+(wp.y-a.y)*dy)/L2)); put('nea',a.x+dx*u,a.y+dy*u); } }
+    put('cen',t.c.x,t.c.y); }
+  for(const k of ['end','mid','cen','nea']) if(best[k]) return {kind:k,x:best[k].x,y:best[k].y};
+  return null; }
+function penTrackFind(wp,tg){ const ap=SNAP_AP/cam.z; let bx=null,by=null,qx=null,qy=null,dx0=ap,dy0=ap;
+  for(const t of tg) for(const q of [...t.p,t.c]){ const dx=Math.abs(q.x-wp.x), dy=Math.abs(q.y-wp.y);
+    if(dx<dx0){ dx0=dx; bx=q.x; qx=q; } if(dy<dy0){ dy0=dy; by=q.y; qy=q; } }
+  const lines=[], marks=[];
+  if(bx!==null){ lines.push({axis:'x', s:toScreen(bx,0).x}); marks.push(toScreen(qx.x,qx.y)); }
+  if(by!==null){ lines.push({axis:'y', s:toScreen(0,by).y}); marks.push(toScreen(qy.x,qy.y)); }
+  return {x:bx, y:by, lines, marks}; }
+// Điểm bút thực tế: [giữ Shift → góc 45° từ điểm đầu] → [bắt điểm] → [căn thẳng khi giữ Shift]
+function penAim(e,wp,start){
+  let x=wp.x, y=wp.y; const line=!!(e.shiftKey&&start);
+  if(line){ const dx=x-start[0], dy=y-start[1], L=Math.hypot(dx,dy);
+    if(L>0){ const an=Math.round(Math.atan2(dy,dx)/(Math.PI/4))*(Math.PI/4); x=start[0]+L*Math.cos(an); y=start[1]+L*Math.sin(an); } }
+  const tg=(penSnapOn||line)?snapTargets():[];
+  const snap=penSnapOn&&tg.length?penSnapFind({x,y},tg):null;
+  let track=null;
+  if(snap){ x=snap.x; y=snap.y; }
+  else if(line&&tg.length){ const tr=penTrackFind({x,y},tg); if(tr.x!==null) x=tr.x; if(tr.y!==null) y=tr.y; if(tr.lines.length) track=tr; }
+  return {x,y,snap,track,line}; }
+function drawPenAim(ov,a){ const A='#3b5bfd', P='#e8388a';
+  ov.save();
+  if(a.track){ ov.strokeStyle=P; ov.lineWidth=1; ov.setLineDash([5,4]); ov.beginPath();
+    for(const l of a.track.lines){ if(l.axis==='x'){ ov.moveTo(Math.round(l.s)+.5,0); ov.lineTo(Math.round(l.s)+.5,innerHeight); }
+      else { ov.moveTo(0,Math.round(l.s)+.5); ov.lineTo(innerWidth,Math.round(l.s)+.5); } }
+    ov.stroke(); ov.setLineDash([]);
+    for(const m of a.track.marks){ ov.beginPath(); ov.moveTo(m.x-5,m.y); ov.lineTo(m.x+5,m.y); ov.moveTo(m.x,m.y-5); ov.lineTo(m.x,m.y+5); ov.stroke(); } }
+  if(a.snap){ const s=toScreen(a.x,a.y), r=6, k=a.snap.kind; ov.strokeStyle=A; ov.lineWidth=1.5; ov.beginPath();
+    if(k==='end') ov.rect(s.x-r,s.y-r,2*r,2*r);
+    else if(k==='mid'){ ov.moveTo(s.x,s.y-r-1); ov.lineTo(s.x+r+1,s.y+r); ov.lineTo(s.x-r-1,s.y+r); ov.closePath(); }
+    else if(k==='cen'){ ov.arc(s.x,s.y,r,0,Math.PI*2); ov.moveTo(s.x-r,s.y); ov.lineTo(s.x+r,s.y); ov.moveTo(s.x,s.y-r); ov.lineTo(s.x,s.y+r); }
+    else { ov.moveTo(s.x-r,s.y-r); ov.lineTo(s.x+r,s.y+r); ov.lineTo(s.x-r,s.y+r); ov.lineTo(s.x+r,s.y-r); ov.closePath(); }
+    ov.stroke();
+    const t={end:'Điểm cuối',mid:'Điểm giữa',cen:'Tâm',nea:'Điểm gần nhất'}[k];
+    ov.font='500 11px "Be Vietnam Pro",system-ui'; const tw=ov.measureText(t).width+12;
+    ov.fillStyle=A; ov.beginPath(); ov.roundRect?ov.roundRect(s.x+10,s.y-26,tw,18,5):ov.rect(s.x+10,s.y-26,tw,18); ov.fill();
+    ov.fillStyle='#fff'; ov.fillText(t,s.x+16,s.y-13); }
+  ov.restore(); }
+vp.addEventListener('pointerleave',()=>{ if(!drag&&penAimState){ penAimState=null; requestRender(); } });
 
 // ----- Nhận dạng nét khi giữ bút: mũi tên, tròn, vuông/chữ nhật, tam giác, cung -----
 const distP=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
@@ -2665,6 +2728,7 @@ function drawOverlay(){
     const x=r.x+r.w-12, y=r.y-12; ov.fillStyle='#2a2d34'; ov.beginPath(); ov.arc(x+6,y+6,11,0,Math.PI*2); ov.fill(); ov.strokeStyle='#fff'; ov.lineWidth=1.6;
     ov.strokeRect(x+1.5,y+5,9,7); ov.beginPath(); ov.arc(x+6,y+5,3,Math.PI,0); ov.stroke(); }
   if(drag?.type==='aend' && drag.tid){ const t=S.items.get(drag.tid); if(t){ const cs=corners(t).map(p=>toScreen(p.x,p.y)); ov.strokeStyle=A; ov.lineWidth=2.5; ov.beginPath(); cs.forEach((p,i)=>i?ov.lineTo(p.x,p.y):ov.moveTo(p.x,p.y)); ov.closePath(); ov.stroke(); } }
+  if(tool==='pen' && penAimState) drawPenAim(ov,penAimState);
   if(drag?.type==='pen' && drag.pts.length){ ov.strokeStyle=penColor; ov.lineWidth=penSize; ov.lineCap='round'; ov.lineJoin='round'; ov.beginPath();
     penPreview(drag).forEach(([x,y],i)=>{ const s=toScreen(x,y); i?ov.lineTo(s.x,s.y):ov.moveTo(s.x,s.y); }); ov.stroke(); }
 }
@@ -2867,7 +2931,7 @@ let pendingCallout=null; // khung chú thích đang chờ mũi dẫn
 function finishLeader(d){ const it=d.it, p=it.a, fs=22/cam.z;
   const tx=createItem({type:'text', x:p.x, y:p.y-fs*.7, w:260/cam.z, h:fs*1.4, color:INKS[0], fs, text:'', g:d.g});
   it.a={x:p.x,y:p.y,id:tx.id}; updateArrow(it); pendingEdit=tx.id; }
-function setTool(t){ if(t!=='select'&&t!=='hand'&&!editMode()){ openLogin(); t='select'; } if(t!=='callout') pendingCallout=null; tool=t; document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
+function setTool(t){ if(t!=='select'&&t!=='hand'&&!editMode()){ openLogin(); t='select'; } if(t!=='callout') pendingCallout=null; if(t!=='pen') penAimState=null; tool=t; document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('on',b.dataset.tool===t));
   vp.className='tool-'+t+(spaceDown?' grab':''); $('#penbar').classList.toggle('show',t==='pen'); if(t!=='select') setSel([]); }
 function renderPenbar(){
   const pb=$('#penbar');
@@ -2967,6 +3031,7 @@ addEventListener('keydown',e=>{
   if(mod&&k==='0'){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,1/cam.z); return; }
   if(mod) return;
   if(k==='delete'||k==='backspace'){ e.preventDefault(); deleteSel(); return; }
+  if(k==='f3'){ e.preventDefault(); penSnapOn=!penSnapOn; penAimState=null; toast('Bắt điểm: '+(penSnapOn?'BẬT':'TẮT'),null,1400); requestRender(); return; }
   if(k==='escape'){ if(focusKey){ setFocus(null); return; } setSel([]); setTool('select'); closeMenus(); return; }
   if(e.shiftKey&&e.code==='Digit1'){ fitTo([...S.items.values()]); return; }
   if(e.shiftKey&&e.code==='Digit2'){ fitTo([...S.sel].map(id=>S.items.get(id)).filter(Boolean),12); return; }
@@ -2978,7 +3043,7 @@ addEventListener('keydown',e=>{
     const ddx=k==='arrowleft'?-st:k==='arrowright'?st:0, ddy=k==='arrowup'?-st:k==='arrowdown'?st:0;
     for(const id of S.sel){ const it=S.items.get(id); if(it.locked) continue; if(it.type==='arrow'){ for(const q of ['a','b']) if(!it[q].id){ it[q].x+=ddx; it[q].y+=ddy; } } else { it.x+=ddx; it.y+=ddy; syncPos(it); } } updateArrows();
     requestRender(); saveSoon(); return; }
-  const map={v:'select',h:'hand',t:'text',r:'rect',p:'pen',b:'table',k:'callout'}; if(map[k]){ setTool(map[k]); }
+  const map={v:'select',h:'hand',t:'text',r:'rect',l:'pen',b:'table',k:'callout'}; if(map[k]){ setTool(map[k]); }
 });
 addEventListener('keyup',e=>{ if(e.code==='Space'){ spaceDown=false; vp.classList.remove('grab'); } });
 addEventListener('blur',()=>{ spaceDown=false; vp.classList.remove('grab'); });
