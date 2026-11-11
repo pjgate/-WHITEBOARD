@@ -84,7 +84,8 @@ body.find-on #find{display:flex}
 #find input:focus{border-color:var(--accent)}
 #find .ib{width:30px;height:30px} #find .ib svg{width:17px;height:17px}
 #findCnt{font-size:12.5px;color:var(--muted);white-space:nowrap;min-width:52px;text-align:center}
-.find-hit{outline:2px solid #f59f00;outline-offset:4px;border-radius:4px}
+.find-match{outline:2px solid rgba(245,159,0,.55);outline-offset:3px;background-color:rgba(255,212,59,.18)!important}
+.find-cur{outline:3px solid #f59f00;outline-offset:4px;background-color:rgba(255,212,59,.35)!important}
 .sep{height:1px;background:var(--line);margin:4px 6px}
 .vsep{width:1px;background:var(--line);margin:6px 2px;align-self:stretch}
 #top{left:calc(12px + env(safe-area-inset-left));top:calc(12px + env(safe-area-inset-top));padding:6px 8px 6px 14px;display:flex;align-items:center;gap:12px}
@@ -3068,7 +3069,7 @@ function pdfPageText(it){ const k=it.key+'#'+it.page; if(pdfTextCache.has(k)) re
 let findQ='', findHits=[], findPos=-1, findRun=0, findDeb=null;
 function renderFindCnt(){ const c=$('#findCnt'); if(!findQ){ c.textContent=''; c.title=''; return; }
   c.textContent=findHits.length?`${findPos+1}/${findHits.length}`:'0 kết quả'; c.title=findHits[findPos]?.snip||''; }
-function clearFindHi(){ document.querySelectorAll('.find-hit').forEach(e=>e.classList.remove('find-hit')); }
+function clearFindHi(){ document.querySelectorAll('.find-match,.find-cur').forEach(e=>e.classList.remove('find-match','find-cur')); }
 async function runFind(jump){
   const run=++findRun; findQ=foldQ($('#findIn').value); clearFindHi();
   if(!findQ){ findHits=[]; findPos=-1; renderFindCnt(); return; }
@@ -3083,10 +3084,10 @@ async function runFind(jump){
     if(h.length) hits.push({id:it.id,snip:findSnip(t,h[0]),n:h.length});
   }
   if(run!==findRun) return;
-  findHits=hits; findPos=hits.length?0:-1; renderFindCnt(); if(jump) showFind();
+  findHits=hits; findPos=hits.length?0:-1; for(const h of hits) els.get(h.id)?.el.classList.add('find-match'); renderFindCnt(); if(jump) showFind();
 }
-function showFind(){ clearFindHi(); renderFindCnt(); const h=findHits[findPos]; const it=h&&S.items.get(h.id); if(!it) return;
-  els.get(it.id)?.el.classList.add('find-hit'); fitTo([it],2); }
+function showFind(){ document.querySelectorAll('.find-cur').forEach(e=>e.classList.remove('find-cur')); renderFindCnt(); const h=findHits[findPos]; const it=h&&S.items.get(h.id); if(!it) return;
+  els.get(it.id)?.el.classList.add('find-cur'); fitTo([it],2); }
 async function findStep(d){
   if(findDeb){ clearTimeout(findDeb); findDeb=null; await runFind(true); return; }
   if(!findHits.length) return; findPos=(findPos+d+findHits.length)%findHits.length; showFind(); }
