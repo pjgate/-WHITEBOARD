@@ -138,6 +138,10 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 .ctxlbl{font-size:11px;color:var(--muted);padding:0 4px 0 6px;white-space:nowrap}
 #penbar{left:64px;top:50%;transform:translateY(-50%);padding:8px 6px;display:none;flex-direction:column;gap:6px;align-items:center}
 #penbar.show{display:flex}
+#gbar{position:fixed;top:62px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:12px;padding:6px 6px 6px 14px;background:#3b5bfd;color:#fff;border-radius:999px;font:600 12px "Be Vietnam Pro",system-ui,sans-serif;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.18);white-space:nowrap}
+#gbar.show{display:flex}
+#gbar button{border:0;border-radius:999px;background:#fff;color:#3b5bfd;font:inherit;padding:4px 10px;cursor:pointer}
+#vp .item.gdim{opacity:.25;pointer-events:none}
 #penbar .sz{width:28px;height:28px;border-radius:8px;border:0;background:transparent;cursor:pointer;display:grid;place-items:center}
 #penbar .sz.on{background:var(--accent-soft)}
 #penbar .sz b{display:block;border-radius:50%;background:#2a2d34}
@@ -495,6 +499,9 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Sao chép sơ đồ cho Claude</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd></td></tr>
     <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>L</kbd></td></tr>
     <tr><td>Bút: nét thẳng</td><td>Giữ <kbd>Shift</kbd> khi vẽ (góc làm tròn theo 45°)</td></tr>
+    <tr><td>Chọn kiểu AutoCAD</td><td>Kéo trái→phải: chọn đối tượng nằm trọn trong khung. Kéo phải→trái: chọn đối tượng chạm khung</td></tr>
+    <tr><td>Sửa nhóm tại chỗ</td><td>Đúp vào đối tượng trong nhóm; đối tượng khác mờ đi. <kbd>Esc</kbd> để thoát</td></tr>
+    <tr><td>Sao chép tại chỗ</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> (nhân bản đúng vị trí, khác <kbd>Ctrl</kbd>+<kbd>D</kbd> lệch 24px)</td></tr>
     <tr><td>Bắt điểm kiểu AutoCAD (bút)</td><td><kbd>F3</kbd> bật/tắt. Rê gần đỉnh, điểm giữa, tâm hoặc cạnh để bắt; giữ <kbd>Shift</kbd> để căn thẳng theo đỉnh/tâm</td></tr>
   </table>
 </div>
@@ -697,7 +704,7 @@ const cam = { x: innerWidth/2, y: innerHeight/2, z: 1 };
 const els = new Map();     // id -> {el,img,hi,txt,vis,...}
 const assets = new Map();  // key -> asset
 const pdfThumbs = new Map(); // "key#page" -> objectURL
-let lastTap=null, zTop = 1, tool='select', drag=null, hoverId=null, editing=null, pendingEdit=null, spaceDown=false;
+let lastTap=null, zTop = 1, tool='select', drag=null, hoverId=null, editing=null, pendingEdit=null, spaceDown=false, gEdit=null; // gEdit: id nhóm đang sửa tại chỗ
 let penColor=INKS[0], penSize=3;
 const pointers = new Map();
 const pdfQ = new PQ(IS_IOS ? 1 : 2);
@@ -711,6 +718,7 @@ const toScreen=(wx,wy)=>({x:wx*cam.z+cam.x, y:wy*cam.z+cam.y});
 function viewRect(m=0){ const a=toWorld(0,0), b=toWorld(innerWidth,innerHeight); const w=b.x-a.x, h=b.y-a.y;
   return {x:a.x-w*m, y:a.y-h*m, w:w*(1+2*m), h:h*(1+2*m)}; }
 const hit=(it0,r)=>{ const it=aabb(it0); return it.x<r.x+r.w && it.x+it.w>r.x && it.y<r.y+r.h && it.y+it.h>r.y; };
+const inside=(it0,r)=>{ const it=aabb(it0); return it.x>=r.x && it.x+it.w<=r.x+r.w && it.y>=r.y && it.y+it.h<=r.y+r.h; }; // Window: nằm trọn trong khung
 const rad=it=>(it.rot||0)*Math.PI/180;
 const ctr=it=>({x:it.x+it.w/2,y:it.y+it.h/2});
 function corners(it){ const c=ctr(it), a=rad(it), co=Math.cos(a), si=Math.sin(a), hw=it.w/2, hh=it.h/2;
@@ -857,7 +865,7 @@ function createItem(p){ if(hideMine&&NOTE_T.has(p.type)) setHideMine(false); con
 function removeEl(id){ const r=els.get(id); if(!r) return; r.el.remove(); els.delete(id); }
 function deleteItems(ids){ if(!ids.length) return; for(const id of ids){ S.items.delete(id); removeEl(id); S.sel.delete(id); } if(DRIVE) recomputeHidden(); onItemsChanged(); renderCtx(); if(DRIVE) saveNow(); }
 let rpT=0; function renderPeopleSoon(){ clearTimeout(rpT); rpT=setTimeout(renderPeople,300); }
-function onItemsChanged(){ legendSoon(); updateArrows(); applyFocus(); renderPeopleSoon(); requestRender(); saveSoon(); updateCount(); updateLODSoon(); }
+function onItemsChanged(){ legendSoon(); updateArrows(); applyFocus(); applyGEdit(); renderPeopleSoon(); requestRender(); saveSoon(); updateCount(); updateLODSoon(); }
 function updateCount(){
   const n=S.items.size; $('#empty').classList.toggle('hide', n>0);
   let img=0,pdf=0; for(const it of S.items.values()){ if(it.type==='image') img++; else if(it.type==='pdf') pdf++; }
@@ -1954,13 +1962,21 @@ function undo(){ if(editing) finishEdit(); if(!undoS.length) return; redoS.push(
 function redo(){ if(!redoS.length) return; undoS.push(snapshot()); applySnap(redoS.pop()); }
 
 // ================== Selection & text editing ==================
-function setSel(ids){ const old=S.sel; S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it)&&!it.gh; }));
+function setSel(ids){ const old=S.sel; S.sel=new Set([...ids].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it)&&!it.gh&&(!gEdit||it.g===gEdit); }));
   for(const id of old) if(!S.sel.has(id)){ const r=els.get(id); if(r?.cells){ r.cs?.clear(); markCells(r); } }
   for(const id of S.sel){ const r=els.get(id); if(r?.cells) markCells(r); }
   renderCtx(); requestRender(); }
 // ----- Nhóm (group) -----
 function withGroups(ids){ const s=new Set(ids), gs=new Set(); for(const id of s){ const g=S.items.get(id)?.g; if(g) gs.add(g); }
   if(gs.size) for(const it of S.items.values()) if(it.g&&gs.has(it.g)&&!it.gh) s.add(it.id); return s; }
+// ----- Sửa nhóm tại chỗ (kiểu Edit In Place của AutoCAD): đối tượng ngoài nhóm bị mờ, không chọn/sửa được -----
+function applyGEdit(){ for(const it of S.items.values()){ const r=els.get(it.id); if(r) r.el.classList.toggle('gdim', !!gEdit&&it.g!==gEdit); } }
+function enterGEdit(g){ if(!g||gEdit===g) return; if(editing) finishEdit(); gEdit=g; setSel([]); applyGEdit(); updateGBar(); requestRender(); }
+function exitGEdit(){ if(!gEdit) return; gEdit=null; applyGEdit(); updateGBar(); requestRender(); }
+function updateGBar(){ let b=document.getElementById('gbar');
+  if(!b){ b=document.createElement('div'); b.id='gbar'; b.innerHTML='<span>Đang sửa trong nhóm · đối tượng khác bị mờ</span><button type="button">Thoát (Esc)</button>';
+    b.querySelector('button').onclick=exitGEdit; document.body.appendChild(b); }
+  b.classList.toggle('show',!!gEdit); }
 // ----- PDF nhóm thu gọn: chỉ hiện trang đầu (gcol trên trang đầu, gh trên các trang còn lại) -----
 function pdfLeadOf(g){ for(const i of S.items.values()) if(i.g===g&&i.type==='pdf'&&i.page===1) return i; return null; }
 function unhideGroups(gs){ if(!gs.size) return; for(const i of S.items.values()) if(i.g&&gs.has(i.g)){ delete i.gh; delete i.gcol; } }
@@ -2364,7 +2380,7 @@ vp.addEventListener('pointerdown',e=>{
         const rc=cellFromPoint(e.clientX,e.clientY); if(rc){ const r=els.get(hid);
           if((e.shiftKey||e.ctrlKey||e.metaKey)&&S.sel.size===1&&S.sel.has(hid)){ tablePick(ti,r,rc,e.shiftKey?'shift':'ctrl'); drag={type:'none'}; return; }
           tablePick(ti,r,rc,''); } } }
-    if(hid){ let fresh=false; const grp=withGroups([hid]);
+    if(hid){ let fresh=false; const grp=gEdit?new Set([hid]):withGroups([hid]);
       if(e.shiftKey){ const s=new Set(S.sel); if(s.has(hid)) grp.forEach(id=>s.delete(id)); else grp.forEach(id=>s.add(id)); setSel(s); fresh=true; }
       else if(!S.sel.has(hid)){ setSel(grp); fresh=true; }
       if(S.items.get(hid)?.locked){ drag={type:'pan', last:sp}; vp.classList.add('panning'); return; }
@@ -2425,8 +2441,10 @@ addEventListener('pointermove',e=>{
       updateArrows(); requestRender(); break; }
     case 'marquee':{ drag.cur=toWorld(sp.x,sp.y); const a=drag.start,b=drag.cur;
       const r={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),w:Math.abs(a.x-b.x),h:Math.abs(a.y-b.y)};
-      const s=new Set(drag.base); for(const it of S.items.values()) if(hit(it,r)&&canEdit(it)&&!it.locked&&!hidMine(it)&&!it.gh) s.add(it.id);
-      S.sel=new Set([...withGroups(s)].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it)&&!it.gh; })); requestRender(); break; }
+      // Kéo trái→phải: Window (chọn đối tượng nằm trọn trong khung). Kéo phải→trái: Crossing (chọn đối tượng chạm khung).
+      const cross=b.x<a.x; drag.cross=cross;
+      const s=new Set(drag.base); for(const it of S.items.values()) if((cross?hit(it,r):inside(it,r))&&canEdit(it)&&!it.locked&&!hidMine(it)&&!it.gh&&(!gEdit||it.g===gEdit)) s.add(it.id);
+      S.sel=new Set([...(gEdit?s:withGroups(s))].filter(id=>{ const it=S.items.get(id); return canEdit(it)&&!hidMine(it)&&!it.gh&&(!gEdit||it.g===gEdit); })); requestRender(); break; }
     case 'resize':{ const wp=toWorld(sp.x,sp.y), d=drag, it=d.it, mn=8/cam.z, A=d.anchor;
       const vx=wp.x-A.x, vy=wp.y-A.y; let w=Math.max(mn,(vx*d.ux.x+vy*d.ux.y)*d.sx), h=Math.max(mn,(vx*d.uy.x+vy*d.uy.y)*d.sy);
       const asp=FREE_RS.has(it.type)?e.shiftKey:ASPECT.has(it.type)!==e.shiftKey;
@@ -2662,6 +2680,7 @@ function createPen(pts){
 vp.addEventListener('dblclick',e=>{
   if(tool!=='select') return; const id=document.elementFromPoint(e.clientX,e.clientY)?.closest('.item')?.dataset.id; if(!id) return;
   const it=S.items.get(id); if(!it) return;
+  if(it.g&&gEdit!==it.g){ enterGEdit(it.g); setSel([id]); return; } // đúp vào đối tượng trong nhóm → sửa nhóm tại chỗ
   if(it.type==='table'&&canEdit(it)&&!it.locked){ setSel([id]); startEdit(id,cellFromPoint(e.clientX,e.clientY)||undefined); }
   else if((it.type==='sticky'||it.type==='text'||it.type==='shape')&&canEdit(it)&&!it.locked){ setSel([id]); startEdit(id); }
   else if(it.type==='arrow'&&canEdit(it)&&!it.locked){ setSel([id]); startEdit(id); }
@@ -2721,9 +2740,11 @@ function drawOverlay(){
   }
   drawGuides(ov);
   if(drag?.type==='marquee'){ const a=toScreen(drag.start.x,drag.start.y), b=toScreen(drag.cur.x,drag.cur.y);
-    ov.fillStyle='rgba(59,91,253,.07)'; ov.strokeStyle='rgba(59,91,253,.8)'; ov.lineWidth=1;
+    const cr=!!drag.cross, col=cr?'16,163,74':'59,91,253';
+    ov.fillStyle=`rgba(${col},.07)`; ov.strokeStyle=`rgba(${col},.8)`; ov.lineWidth=1;
+    ov.setLineDash(cr?[5,4]:[]);
     ov.fillRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(a.x-b.x),Math.abs(a.y-b.y));
-    ov.strokeRect(Math.min(a.x,b.x)+.5,Math.min(a.y,b.y)+.5,Math.abs(a.x-b.x),Math.abs(a.y-b.y)); }
+    ov.strokeRect(Math.min(a.x,b.x)+.5,Math.min(a.y,b.y)+.5,Math.abs(a.x-b.x),Math.abs(a.y-b.y)); ov.setLineDash([]); }
   for(const id of new Set([...S.sel, ...(hoverId?[hoverId]:[])])){ const it=S.items.get(id); if(!it?.locked) continue; const r=sRect(aabb(it));
     const x=r.x+r.w-12, y=r.y-12; ov.fillStyle='#2a2d34'; ov.beginPath(); ov.arc(x+6,y+6,11,0,Math.PI*2); ov.fill(); ov.strokeStyle='#fff'; ov.lineWidth=1.6;
     ov.strokeRect(x+1.5,y+5,9,7); ov.beginPath(); ov.arc(x+6,y+5,3,Math.PI,0); ov.stroke(); }
@@ -2919,12 +2940,13 @@ function toBack(){ if(!S.sel.size) return; checkpoint(); let mn=Math.min(...[...
 let clip=null;
 function cloneItems(list,dx,dy=dx){ if(!editMode()) return openLogin(); checkpoint(); const ids=[], map=new Map(), arrows=[], gmap=new Map();
   for(const src of list.slice().sort((a,b)=>a.z-b.z)){ const {id,z,ro,own,by,locked,t,gh,gcol,...rest}=JSON.parse(JSON.stringify(src)); rest.x+=dx; rest.y+=dy;
-    if(rest.g){ if(!gmap.has(rest.g)) gmap.set(rest.g,'g'+uid()); rest.g=gmap.get(rest.g); }
+    if(rest.g&&!(gEdit&&rest.g===gEdit)){ if(!gmap.has(rest.g)) gmap.set(rest.g,'g'+uid()); rest.g=gmap.get(rest.g); } // đang sửa nhóm: bản sao vẫn ở trong nhóm
     if(rest.type==='arrow'){ rest.a.x+=dx; rest.a.y+=dy; rest.b.x+=dx; rest.b.y+=dy; }
     const n=createItem(rest); map.set(id,n.id); ids.push(n.id); if(n.type==='arrow') arrows.push(n); }
   for(const n of arrows){ for(const k of ['a','b']) if(n[k].id&&map.has(n[k].id)) n[k].id=map.get(n[k].id); updateArrow(n); }
   setSel(ids); onItemsChanged(); }
 function duplicate(){ if(!S.sel.size) return; cloneItems([...S.sel].map(id=>S.items.get(id)), 24/cam.z); }
+function copyInPlace(){ if(!S.sel.size) return; cloneItems([...S.sel].map(id=>S.items.get(id)), 0); toast('Đã sao chép tại chỗ (cùng vị trí)',null,1600); }
 
 // ================== Tools, buttons, keyboard ==================
 let pendingCallout=null; // khung chú thích đang chờ mũi dẫn
@@ -3024,6 +3046,7 @@ addEventListener('keydown',e=>{
   if(mod&&k==='a'){ e.preventDefault(); setTool('select'); setSel([...S.items.values()].filter(i=>!i.locked).map(i=>i.id)); return; }
   if(mod&&e.shiftKey&&k==='l'){ e.preventDefault(); toggleLock(); return; }
   if(mod&&e.shiftKey&&k==='c'){ e.preventDefault(); copyGraph(); return; }
+  if(mod&&e.shiftKey&&k==='d'){ e.preventDefault(); copyInPlace(); return; }
   if(mod&&k==='g'){ e.preventDefault(); e.shiftKey?ungroupSel():groupSel(); return; }
   if(mod&&k==='d'){ e.preventDefault(); duplicate(); return; }
   if(mod&&(k==='='||k==='+')){ e.preventDefault(); zoomAt(innerWidth/2,innerHeight/2,1.25); return; }
@@ -3032,7 +3055,7 @@ addEventListener('keydown',e=>{
   if(mod) return;
   if(k==='delete'||k==='backspace'){ e.preventDefault(); deleteSel(); return; }
   if(k==='f3'){ e.preventDefault(); penSnapOn=!penSnapOn; penAimState=null; toast('Bắt điểm: '+(penSnapOn?'BẬT':'TẮT'),null,1400); requestRender(); return; }
-  if(k==='escape'){ if(focusKey){ setFocus(null); return; } setSel([]); setTool('select'); closeMenus(); return; }
+  if(k==='escape'){ if(gEdit) exitGEdit(); if(focusKey){ setFocus(null); return; } setSel([]); setTool('select'); closeMenus(); return; }
   if(e.shiftKey&&e.code==='Digit1'){ fitTo([...S.items.values()]); return; }
   if(e.shiftKey&&e.code==='Digit2'){ fitTo([...S.sel].map(id=>S.items.get(id)).filter(Boolean),12); return; }
   if(k==='enter'&&S.sel.size===1){ const id=[...S.sel][0]; if(els.get(id)?.txt||S.items.get(id)?.type==='table'){ e.preventDefault(); startEdit(id); } return; }
