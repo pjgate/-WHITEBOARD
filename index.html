@@ -495,7 +495,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v26</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v27</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -2991,15 +2991,57 @@ let dimS=null; // {scale, refId, made:[], skip:Set, cp:bool}
 const DIM_CLR='#e8388a';
 function segDist(p,a,b){ const dx=b.x-a.x, dy=b.y-a.y, L2=dx*dx+dy*dy; const u=L2?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/L2)):0; return Math.hypot(p.x-a.x-dx*u, p.y-a.y-dy*u); }
 function dimStart(){ const g=[...S.sel].map(id=>S.items.get(id)).find(i=>i&&i.g&&i.ds);
-  dimS={scale:g?g.ds:null, refId:null, made:[], cp:false, skip:new Set([...S.items.values()].filter(i=>i.dm).map(i=>i.dmOf))}; }
+  dimS={scale:g?g.ds:null, refId:null, made:[], cp:false, skip:new Set([...S.items.values()].filter(i=>i.dm).map(i=>i.dmOf))};
+  for(const it of S.items.values()) if(it.type==='pdf'&&vis(it)) pdfVecOf(it); } // đọc sẵn nét PDF đang hiển thị
 function dimFinish(){ if(!dimS) return; const s=dimS; dimS=null;
   if(s.refId){ const r=els.get(s.refId); if(r) r.el.style.display=''; } // hiện lại đoạn tham chiếu
   const ids=s.made.filter(id=>S.items.has(id));
   if(ids.length){ const g='g'+uid(); ids.forEach(id=>{ const i=S.items.get(id); i.g=g; i.locked=true; }); saveSoon(); onItemsChanged(); toast(`Đã dim ${ids.length} đoạn, đã nhóm và khóa`,null,2000); }
   requestRender(); }
+// Đọc nét vector của trang PDF (đường thẳng, gấp khúc, chữ nhật; đường cong xấp xỉ bằng đoạn ngắn).
+// Kết quả lưu theo tọa độ chuẩn hóa 0..1 của trang, nên dùng lại được khi PDF được di chuyển/co giãn.
+const pdfVecCache=new Map(), pdfVecBusy=new Set(); // "key#page" -> [{a:{x,y},b:{x,y}}]
+const PDF_MAX_SEG=60000;
+function pdfVecExtract(lib,pg){
+  const OPS=lib.OPS, vp=pg.getViewport({scale:1});
+  return pg.getOperatorList().then(ops=>{
+    const segs=[], st=[]; let m=[1,0,0,1,0,0];
+    const mul=(p,q)=>[p[0]*q[0]+p[2]*q[1],p[1]*q[0]+p[3]*q[1],p[0]*q[2]+p[2]*q[3],p[1]*q[2]+p[3]*q[3],p[0]*q[4]+p[2]*q[5]+p[4],p[1]*q[4]+p[3]*q[5]+p[5]];
+    const nrm=(x,y)=>{ const X=m[0]*x+m[2]*y+m[4], Y=m[1]*x+m[3]*y+m[5]; const [u,v]=vp.convertToViewportPoint(X,Y); return {x:u/vp.width,y:v/vp.height}; };
+    const seg=(x1,y1,x2,y2)=>{ if(segs.length<PDF_MAX_SEG) segs.push({a:nrm(x1,y1),b:nrm(x2,y2)}); };
+    const bez=(x0,y0,x1,y1,x2,y2,x3,y3)=>{ let px=x0,py=y0; for(let s=1;s<=8;s++){ const t=s/8,u=1-t;
+      const x=u*u*u*x0+3*u*u*t*x1+3*u*t*t*x2+t*t*t*x3, y=u*u*u*y0+3*u*u*t*y1+3*u*t*t*y2+t*t*t*y3; seg(px,py,x,y); px=x; py=y; } };
+    for(let i=0;i<ops.fnArray.length;i++){ const f=ops.fnArray[i], a=ops.argsArray[i];
+      if(f===OPS.save) st.push(m);
+      else if(f===OPS.restore){ if(st.length) m=st.pop(); }
+      else if(f===OPS.transform) m=mul(a,m);
+      else if(f===OPS.constructPath){ const ps=a[0], c=a[1]; let k=0, cx=0, cy=0, sx=0, sy=0;
+        for(const op of ps){
+          if(op===OPS.moveTo){ cx=sx=c[k++]; cy=sy=c[k++]; }
+          else if(op===OPS.lineTo){ const x=c[k++], y=c[k++]; seg(cx,cy,x,y); cx=x; cy=y; }
+          else if(op===OPS.curveTo){ const b=c.slice(k,k+6); k+=6; bez(cx,cy,b[0],b[1],b[2],b[3],b[4],b[5]); cx=b[4]; cy=b[5]; }
+          else if(op===OPS.curveTo2){ const b=c.slice(k,k+4); k+=4; bez(cx,cy,cx,cy,b[0],b[1],b[2],b[3]); cx=b[2]; cy=b[3]; }
+          else if(op===OPS.curveTo3){ const b=c.slice(k,k+4); k+=4; bez(cx,cy,b[0],b[1],b[2],b[3],b[2],b[3]); cx=b[2]; cy=b[3]; }
+          else if(op===OPS.closePath){ seg(cx,cy,sx,sy); cx=sx; cy=sy; }
+          else if(op===OPS.rectangle){ const x=c[k++],y=c[k++],w=c[k++],h=c[k++]; seg(x,y,x+w,y); seg(x+w,y,x+w,y+h); seg(x+w,y+h,x,y+h); seg(x,y+h,x,y); cx=sx=x; cy=sy=y; }
+        } } }
+    return segs; });
+}
+// Trả về nét của trang nếu đã đọc xong; nếu chưa thì bắt đầu đọc (nền) và trả về null.
+function pdfVecOf(it){ const k=it.key+'#'+(it.page||1); if(pdfVecCache.has(k)) return pdfVecCache.get(k);
+  if(!pdfVecBusy.has(k)){ pdfVecBusy.add(k);
+    (async()=>{ const lib=await pdfjs(); const doc=await getDoc(it.key); const pg=await doc.getPage(it.page||1); pdfVecCache.set(k, await pdfVecExtract(lib,pg)); })()
+      .catch(e=>{ console.warn('pdf vector',e); pdfVecCache.set(k,[]); })
+      .finally(()=>{ pdfVecBusy.delete(k); requestRender(); }); }
+  return null; }
 function dimSeg(p){ const tol=8/cam.z; let best=null, bd=tol;
   for(const it of S.items.values()){ if(it.type!=='arrow'||it.dm||!vis(it)||hidMine(it)||dimS.skip.has(it.id)) continue;
     const d=segDist(p,it.a,it.b); if(d<=bd){ bd=d; best=it; } }
+  for(const it of S.items.values()){ if(it.type!=='pdf'||it.rot||!vis(it)||hidMine(it)) continue;
+    const vs=pdfVecOf(it); if(!vs) continue;
+    for(let j=0;j<vs.length;j++){ const id='pdf:'+it.id+':'+j; if(dimS.skip.has(id)) continue; const sg=vs[j];
+      const a={x:it.x+sg.a.x*it.w, y:it.y+sg.a.y*it.h}, b={x:it.x+sg.b.x*it.w, y:it.y+sg.b.y*it.h};
+      const d=segDist(p,a,b); if(d<=bd){ bd=d; best={id,a,b}; } } }
   return best; }
 function dimMake(seg){
   const dx=seg.b.x-seg.a.x, dy=seg.b.y-seg.a.y, L=Math.hypot(dx,dy); if(!L) return;
@@ -3010,8 +3052,9 @@ function dimMake(seg){
   const it=createItem({type:'arrow', a, b, color:DIM_CLR, sw:1.2/cam.z, head:'both', text:String(val), dm:1, dmOf:seg.id, ds:dimS.scale, x:a.x, y:a.y, w:1, h:1});
   updateArrow(it); dimS.made.push(it.id); dimS.skip.add(seg.id); requestRender(); }
 function dimClick(wp){
-  const tg=snapTargets(); const sn=penSnapOn&&tg.length?penSnapFind(wp,tg):null; // bắt điểm (đỉnh/giữa/tâm/cạnh) kể cả từ PDF
-  const seg=dimSeg(sn?{x:sn.x,y:sn.y}:wp); if(!seg){ toast('Bấm vào một đoạn thẳng',null,1200); return; }
+  const seg=dimSeg(wp);
+  if(!seg){ const busy=[...S.items.values()].some(i=>i.type==='pdf'&&vis(i)&&!pdfVecCache.has(i.key+'#'+(i.page||1)));
+    toast(busy?'Đang đọc nét PDF, chờ một chút rồi bấm lại':'Bấm vào một đoạn thẳng',null,1600); return; }
   if(dimS.scale==null){ // đoạn tham chiếu: nhập số đo thực rồi ẩn đoạn này
     const L=Math.hypot(seg.b.x-seg.a.x,seg.b.y-seg.a.y); const v=parseFloat(prompt('Số đo thực của đoạn này (mm):',''));
     if(!(v>0)||!(L>0)) return;
