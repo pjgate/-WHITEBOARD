@@ -508,7 +508,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v36</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v37</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -3102,8 +3102,10 @@ function w3Norm(u){ try{ const x=new URL(u);
         return `https://web.connect.trimble.com/projects/${m[1]}/viewer/3d/?${o}`; } }
   }catch{} return u; }
 const w3IsShare=u=>/connect\.trimble\.com\/tc\/api\/[\d.]+\/s\//i.test(u);
-function w3Sync(it,r){ const u=w3Norm(it.url||''); if(r.frame.dataset.src!==u){ r.frame.dataset.src=u; if(u) r.frame.src=u; else r.frame.removeAttribute('src'); }
-  r.ph.textContent='Chưa có link — đúp để dán'; r.ph.style.display=u?'none':''; }
+function w3Sync(it,r){ let u=w3Norm(it.url||''); const bad=w3IsShare(u); if(bad) u='';
+  if(r.frame.dataset.src!==u){ r.frame.dataset.src=u; if(u) r.frame.src=u; else r.frame.removeAttribute('src'); }
+  r.ph.textContent=bad?'Link chia sẻ gốc của Trimble không nhúng được. Shift + nhấp đúp để dán link trang xem 3D (web.connect.trimble.com/projects/…)':'Chưa có link — đúp để dán';
+  r.ph.style.cssText=(u?'display:none':'')+';text-align:center;padding:16px'; }
 function w3Live(id,on){ els.get(id)?.el.classList.toggle('w3-live',!!on); }
 function w3Open(id){ if(!editMode()) return openLogin(); const it=S.items.get(id); if(!it) return;
   w3Id=id; $('#w3in').value=it.url||''; $('#w3m').classList.add('show'); setTimeout(()=>$('#w3in').focus(),50); }
