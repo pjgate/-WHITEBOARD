@@ -498,7 +498,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v32</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v33</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -511,6 +511,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Xoay</td><td>Kéo nút tròn phía trên (<kbd>Shift</kbd>: bước 15°)</td></tr>
     <tr><td>Nhóm / bỏ nhóm</td><td><kbd>Ctrl</kbd>+<kbd>G</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd></td></tr>
     <tr><td>Chọn 1 đối tượng trong nhóm</td><td>Bấm thêm lần nữa vào nó</td></tr>
+    <tr><td>Chọn thêm / bỏ chọn nhiều đối tượng</td><td><kbd>Shift</kbd>+bấm hoặc <kbd>Ctrl</kbd>+bấm (<kbd>Cmd</kbd> trên Mac)</td></tr>
     <tr><td>Khóa / mở khóa</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd></td></tr>
     <tr><td>Mũi tên nối đối tượng</td><td><kbd>A</kbd> rồi kéo</td></tr>
     <tr><td>Ghi chữ lên mũi tên</td><td>Bấm đúp vào mũi tên</td></tr>
@@ -2417,7 +2418,9 @@ vp.addEventListener('pointerdown',e=>{
           if((e.shiftKey||e.ctrlKey||e.metaKey)&&S.sel.size===1&&S.sel.has(hid)){ tablePick(ti,r,rc,e.shiftKey?'shift':'ctrl'); drag={type:'none'}; return; }
           tablePick(ti,r,rc,''); } } }
     if(hid){ let fresh=false; const grp=gEdit?new Set([hid]):withGroups([hid]);
-      if(e.shiftKey){ const s=new Set(S.sel); if(s.has(hid)) grp.forEach(id=>s.delete(id)); else grp.forEach(id=>s.add(id)); setSel(s); fresh=true; }
+      // Shift hoặc Ctrl/Cmd+click: thêm/bỏ đối tượng khỏi vùng chọn (bảng dùng Ctrl để chọn ô, đã xử lý ở trên)
+      const addMode=e.shiftKey||((e.ctrlKey||e.metaKey)&&S.items.get(hid)?.type!=='table');
+      if(addMode){ const s=new Set(S.sel); if(s.has(hid)) grp.forEach(id=>s.delete(id)); else grp.forEach(id=>s.add(id)); setSel(s); fresh=true; }
       else if(!S.sel.has(hid)){ setSel(grp); fresh=true; }
       if(S.items.get(hid)?.locked){ drag={type:'pan', last:sp}; vp.classList.add('panning'); return; }
       drag={type:'move', start:sp, moved:false, hid, fresh}; }
