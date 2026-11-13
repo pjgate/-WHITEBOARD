@@ -143,8 +143,11 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 #ctx.show{display:flex}
 #ctx .crow{display:flex;align-items:center;gap:2px;min-height:38px}
 #ctx .crow+.crow{border-top:1px solid var(--line)}
-#ctx .minfo{display:flex;flex-direction:column;gap:1px;padding:4px 8px;font-size:11.5px;line-height:1.35;color:var(--muted);max-width:340px;min-width:0}
-#ctx .minfo b{color:var(--ink);font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#minfo{left:64px;right:230px;bottom:12px;height:44px;padding:0 14px;display:none;align-items:center;gap:0;font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden}
+#minfo.show{display:flex}
+#minfo span{flex:none} #minfo span+span::before{content:'·';padding:0 8px;opacity:.6}
+#minfo span:first-child{color:var(--ink);font-weight:600}
+@media (max-width:640px){ #minfo{left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom))} }
 #world .item.lg::before{content:'LEGEND';position:absolute;left:0;bottom:100%;margin-bottom:.35em;font:600 .55em/1 system-ui;letter-spacing:.08em;color:#e8388a;pointer-events:none;white-space:nowrap}
 #world .item.lg{outline:1.5px dashed #e8388a;outline-offset:.25em}
 #acp{display:none;flex-direction:column;padding:4px;z-index:9;min-width:220px;max-width:min(420px,calc(100vw - 16px))}
@@ -519,9 +522,10 @@ body.relogin #loginBtn{background:#e0a92b}
   <div class="vsep"></div>
   <button class="ib" data-act="fit" title="Xem toàn bộ (Shift 1)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
 </div>
+<div id="minfo" class="panel"></div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v48</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v49</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -558,7 +562,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>L</kbd></td></tr>
     <tr><td>Bút: nét thẳng</td><td>Giữ <kbd>Shift</kbd> khi vẽ (góc làm tròn theo 45°)</td></tr>
     <tr><td>Chọn kiểu AutoCAD</td><td>Kéo trái→phải: chọn đối tượng nằm trọn trong khung. Kéo phải→trái: chọn đối tượng chạm khung</td></tr>
-    <tr><td>Thông tin tệp</td><td>Bấm chọn một trang PDF / ảnh / video / khung 3D → thanh công cụ hiện tên tệp, kích thước trên bảng, khổ giấy (PDF), dung lượng, ngày và người tải lên</td></tr>
+    <tr><td>Thông tin tệp</td><td>Bấm chọn một trang PDF / ảnh / video / khung 3D → thanh dưới đáy màn hình hiện tên, trang, kích thước trên bảng, khổ giấy, dung lượng, giờ, ngày, người tải lên</td></tr>
     <tr><td>Thông số dim</td><td>Bấm vào nhóm dim (đã khóa) → thanh công cụ hiện tỉ lệ, ô <b>Cỡ dim</b>: một số chỉnh cùng lúc cỡ chữ số đo, mũi tên tam giác và độ dày nét (tỉ lệ theo ISO)</td></tr>
     <tr><td>Sửa nhóm tại chỗ</td><td>Đúp vào đối tượng trong nhóm; đối tượng khác mờ đi. <kbd>Esc</kbd> để thoát</td></tr>
     <tr><td>Sao chép tại chỗ</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (nhân bản đúng vị trí, khác <kbd>Ctrl</kbd>+<kbd>D</kbd> lệch 24px)</td></tr>
@@ -2964,10 +2968,11 @@ ctx.addEventListener('keydown',e=>{ if(e.target.id!=='fsIn') return; e.stopPropa
 ctx.addEventListener('change',e=>{ if(e.target.id==='fsIn'){ const v=e.target.value; setTimeout(()=>{ setFsPx(v); }); } }); // chạy sau khi ô nhập đã mất focus để thanh công cụ vẽ lại
 ctx.addEventListener('focusin',e=>{ if(e.target.classList?.contains('fsin')) e.target.select(); });
 function renderCtx(){
+  renderMInfo();
   if(!S.sel.size||editing){ ctx.classList.remove('show'); return; }
   { const fi=document.activeElement; if(fi?.classList?.contains('fsin')&&ctx.contains(fi)&&ctx._sk===[...S.sel].join()) return; } ctx._sk=[...S.sel].join(); // đang gõ cỡ chữ: không vẽ lại thanh
   const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean);
-  let h=its.length===1?mediaInfo(its[0]):''; if(h) h+='<div class="vsep"></div>';
+  let h='';
   if(its.every(i=>i.locked)){ if(its.length===1&&(its[0].type==='image'||its[0].type==='pdf'||its[0].type==='video')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
     const dg=dimGroupSel(its); if(dg) h+=dimCtx(dg)+'<div class="vsep"></div>';
     h+=`<span class="ctxlbl">Đang khóa</span>`+btn('unlock','Mở khóa (Ctrl Shift L)'); ctx.innerHTML=ctxRows(h); ctx.classList.add('show'); positionCtx(); return; }
@@ -3016,19 +3021,21 @@ function pdfPageMm(it){ const k=it.key+'#'+(it.page||1); if(pdfPgMm.has(k)) retu
     .catch(()=>pdfPgMm.set(k,[0,0])).finally(()=>{ ctx._sk=''; renderCtx(); });
   return null; }
 const fmtDate=t=>{ if(!t) return ''; const d=new Date(t); return isNaN(d)?'':d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); };
-function mediaInfo(it){ if(!it||!['image','pdf','video','web3d'].includes(it.type)) return '';
-  const a=it.key&&assets.get(it.key), f=a?.driveId&&driveEntries.get(a.driveId)?.f, L=[];
-  let name=f?.name||a?.name||''; if(it.type==='web3d'){ try{ name=it.url?new URL(it.url).hostname:'Khung 3D (chưa có link)'; }catch{ name=it.url||'Khung 3D'; } }
-  const r=v=>Math.round(v);
-  let sz=`Trên bảng: ${r(it.w)} × ${r(it.h)}`;
-  if(it.type==='pdf'){ const mm=pdfPageMm(it); if(mm&&mm[0]){ const pn=paperName(mm[0],mm[1]); sz+=` · Giấy ${r(mm[0])} × ${r(mm[1])} mm${pn?' ('+pn+')':''}`; } if(it.pages>1) sz=`Trang ${it.page}/${it.pages} · `+sz; }
-  else if(a?.w&&a?.h) sz+=` · Gốc ${a.w} × ${a.h} px`;
-  const bytes=+(f?.size||a?.size||0); if(bytes) sz+=` · ${fmtSize(bytes)}`;
-  L.push(sz);
-  const when=fmtDate(f?.createdTime||f?.modifiedTime||a?.t), who=f?(f.owners?.[0]?.displayName||f.owners?.[0]?.emailAddress||f.lastModifyingUser?.displayName||f.lastModifyingUser?.emailAddress):a?.by;
-  if(when||who) L.push([when?'Tải lên '+when:'',who?'bởi '+who:''].filter(Boolean).join(' '));
-  else if(it.type!=='web3d') L.push(DRIVE?'Chưa có thông tin ngày / người tải lên':'Tệp trên máy này');
-  return `<div class="minfo"><b title="${esc(name)}">${esc(name||'(không tên)')}</b>${L.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`; }
+const cut10=t=>{ t=String(t||'').trim(); return t.length>10?t.slice(0,10)+'…':t; };
+function mediaInfo(it){ if(!it||!['image','pdf','video','web3d'].includes(it.type)) return null;
+  const a=it.key&&assets.get(it.key), f=a?.driveId&&driveEntries.get(a.driveId)?.f, r=Math.round, V=[];
+  let name=f?.name||a?.name||''; if(it.type==='web3d'){ try{ name=it.url?new URL(it.url).hostname:''; }catch{ name=it.url||''; } }
+  V.push([name||'—',name]);
+  if(it.type==='pdf'&&it.pages>1) V.push([`${it.page}/${it.pages}`]);
+  V.push([`${r(it.w)}×${r(it.h)}`]);
+  if(it.type==='pdf'){ const mm=pdfPageMm(it); if(mm&&mm[0]){ V.push([`${r(mm[0])}×${r(mm[1])}mm`]); const pn=paperName(mm[0],mm[1]); if(pn) V.push([pn]); } }
+  else if(a?.w&&a?.h) V.push([`${a.w}×${a.h}px`]);
+  const bytes=+(f?.size||a?.size||0); if(bytes) V.push([fmtSize(bytes)]);
+  const t=f?.createdTime||f?.modifiedTime||a?.t; if(t){ const d=new Date(t); if(!isNaN(d)){ V.push([d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})]); V.push([d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})]); } }
+  const who=f?(f.owners?.[0]?.displayName||f.owners?.[0]?.emailAddress||f.lastModifyingUser?.displayName||f.lastModifyingUser?.emailAddress):a?.by; if(who) V.push([who,who]);
+  return V.map(([v,full])=>`<span${full&&cut10(v)!==v?` title="${esc(full)}"`:''}>${esc(cut10(v))}</span>`).join(''); }
+function renderMInfo(){ const el=$('#minfo'); if(!el) return; const its=editing?[]:[...S.sel].map(id=>S.items.get(id)).filter(Boolean); const h=its.length===1?mediaInfo(its[0]):null;
+  el.innerHTML=h||''; el.classList.toggle('show',!!h); }
 const ctxRows=h=>h.split('<div class="vsep"></div>').map(s=>s.trim()).filter(Boolean).map(s=>`<div class="crow">${s}</div>`).join('');
 const btn=(k,t)=>`<button class="ib" data-cx="${k}" title="${t}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`;
 const btnOn=(k,t,on)=>`<button class="ib${on?' on':''}" data-cx="${k}" title="${t}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`;
