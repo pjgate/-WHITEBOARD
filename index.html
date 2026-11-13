@@ -519,7 +519,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v44</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v45</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -3101,7 +3101,7 @@ function finishLeader(d){ const it=d.it, p=it.a, fs=22/cam.z;
   it.a={x:p.x,y:p.y,id:tx.id}; updateArrow(it); pendingEdit=tx.id; }
 // ----- Dim nhanh: chọn đoạn tham chiếu + nhập số đo → các đoạn còn lại tự dim theo cùng tỉ lệ.
 // Kết thúc lệnh (Esc / đổi công cụ): các dim vừa tạo được gom nhóm và khóa; tỉ lệ lưu ở từng dim (ds).
-const DIM_CLR='#e8388a', DIM_FS=12, DIM_H=.7, DIM_HL=DIM_H/4, DIM_SW=DIM_FS*DIM_H/10; // DIM_H: chiều cao chữ hoa ≈ 0.7 × cỡ chữ; mũi tên = h/4 (người dùng muốn nhỏ hơn chuẩn ISO), nét = h/10 // theo ISO 129-1 / ISO 3098 (kiểu dim ISO-25): mũi tên dài bằng chiều cao chữ hoa h ≈ 0.7 × cỡ chữ, góc mở 30° // cỡ số đo & độ dày nét dim mặc định (px ở 100%)
+const DIM_CLR='#e8388a', DIM_FS=30, DIM_H=.7, DIM_HL=DIM_H/4, DIM_SW=DIM_FS*DIM_H/10; // DIM_H: chiều cao chữ hoa ≈ 0.7 × cỡ chữ; mũi tên = h/4 (người dùng muốn nhỏ hơn chuẩn ISO), nét = h/10 // theo ISO 129-1 / ISO 3098 (kiểu dim ISO-25): mũi tên dài bằng chiều cao chữ hoa h ≈ 0.7 × cỡ chữ, góc mở 30° // cỡ số đo & độ dày nét dim mặc định (px ở 100%)
 function dimStart(){ const g=[...S.sel].map(id=>S.items.get(id)).find(i=>i&&i.g&&i.ds);
   dimS={scale:g?g.ds:null, refId:null, made:[], cp:false};
   for(const it of S.items.values()) if(it.type==='pdf'&&vis(it)) pdfVecOf(it); } // đọc sẵn nét PDF đang hiển thị
