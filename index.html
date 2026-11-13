@@ -143,6 +143,8 @@ kbd{font-family:inherit;font-size:11.5px;background:#f1f1ee;border:1px solid var
 #ctx.show{display:flex}
 #ctx .crow{display:flex;align-items:center;gap:2px;min-height:38px}
 #ctx .crow+.crow{border-top:1px solid var(--line)}
+#ctx .minfo{display:flex;flex-direction:column;gap:1px;padding:4px 8px;font-size:11.5px;line-height:1.35;color:var(--muted);max-width:340px;min-width:0}
+#ctx .minfo b{color:var(--ink);font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #world .item.lg::before{content:'LEGEND';position:absolute;left:0;bottom:100%;margin-bottom:.35em;font:600 .55em/1 system-ui;letter-spacing:.08em;color:#e8388a;pointer-events:none;white-space:nowrap}
 #world .item.lg{outline:1.5px dashed #e8388a;outline-offset:.25em}
 #acp{display:none;flex-direction:column;padding:4px;z-index:9;min-width:220px;max-width:min(420px,calc(100vw - 16px))}
@@ -519,7 +521,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v47</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v48</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -556,6 +558,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>L</kbd></td></tr>
     <tr><td>Bút: nét thẳng</td><td>Giữ <kbd>Shift</kbd> khi vẽ (góc làm tròn theo 45°)</td></tr>
     <tr><td>Chọn kiểu AutoCAD</td><td>Kéo trái→phải: chọn đối tượng nằm trọn trong khung. Kéo phải→trái: chọn đối tượng chạm khung</td></tr>
+    <tr><td>Thông tin tệp</td><td>Bấm chọn một trang PDF / ảnh / video / khung 3D → thanh công cụ hiện tên tệp, kích thước trên bảng, khổ giấy (PDF), dung lượng, ngày và người tải lên</td></tr>
     <tr><td>Thông số dim</td><td>Bấm vào nhóm dim (đã khóa) → thanh công cụ hiện tỉ lệ, ô <b>Cỡ dim</b>: một số chỉnh cùng lúc cỡ chữ số đo, mũi tên tam giác và độ dày nét (tỉ lệ theo ISO)</td></tr>
     <tr><td>Sửa nhóm tại chỗ</td><td>Đúp vào đối tượng trong nhóm; đối tượng khác mờ đi. <kbd>Esc</kbd> để thoát</td></tr>
     <tr><td>Sao chép tại chỗ</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (nhân bản đúng vị trí, khác <kbd>Ctrl</kbd>+<kbd>D</kbd> lệch 24px)</td></tr>
@@ -1065,13 +1068,13 @@ function videoFrame(blob){
 }
 async function addVideoAsset(file,dm){
   const f=await videoFrame(file); const key=dm?driveKeyOf(dm):uid();
-  const a={key, kind:'video', blob:file, name:dm?.name||file.name||'video', w:f.w, h:f.h, thumbBlob:f.thumb||undefined, thumbUrl:f.thumb?URL.createObjectURL(f.thumb):undefined, driveId:dm?.id, ver:dm?verOf(dm):undefined};
+  const a={key, kind:'video', blob:file, name:dm?.name||file.name||'video', t:Date.now(), by:me?.name||me?.email, size:file.size, w:f.w, h:f.h, thumbBlob:f.thumb||undefined, thumbUrl:f.thumb?URL.createObjectURL(f.thumb):undefined, driveId:dm?.id, ver:dm?verOf(dm):undefined};
   assets.set(key,a); persistFile(key,recOf(a)); if(dm) registerDriveFile(dm,'video',key); return a;
 }
 async function addImageAsset(file,dm){
   const d=await decodeImage(file);
   try{ const t=await scaleToBlob(d.src,d.w,d.h,THUMB); const key=dm?driveKeyOf(dm):uid();
-    const a={key, kind:'image', blob:file, name:dm?.name||file.name||'image', w:d.w, h:d.h, thumbBlob:t.blob, thumbUrl:URL.createObjectURL(t.blob), tLong:Math.max(t.w,t.h), driveId:dm?.id, ver:dm?verOf(dm):undefined};
+    const a={key, kind:'image', blob:file, name:dm?.name||file.name||'image', t:Date.now(), by:me?.name||me?.email, size:file.size, w:d.w, h:d.h, thumbBlob:t.blob, thumbUrl:URL.createObjectURL(t.blob), tLong:Math.max(t.w,t.h), driveId:dm?.id, ver:dm?verOf(dm):undefined};
     assets.set(key,a); persistFile(key,recOf(a)); if(dm) registerDriveFile(dm,'image',key); return a;
   } finally{ d.close(); }
 }
@@ -1115,7 +1118,7 @@ async function importFiles(list, at, mode){
   for(const f of pdfs){
     try{
       const dm=up?await upload(f):null;
-      const key=dm?driveKeyOf(dm):uid(); const a={key,kind:'pdf',blob:f,name:dm?.name||f.name||'document.pdf',driveId:dm?.id,ver:dm?verOf(dm):undefined}; assets.set(key,a);
+      const key=dm?driveKeyOf(dm):uid(); const a={key,kind:'pdf',blob:f,name:dm?.name||f.name||'document.pdf',t:Date.now(),by:me?.name||me?.email,size:f.size,driveId:dm?.id,ver:dm?verOf(dm):undefined}; assets.set(key,a);
       const sizes=await measurePdf(key,(p,n)=>prog(`đọc ${f.name}: ${p}/${n} trang`));
       persistFile(key,recOf(a)); if(dm) registerDriveFile(dm,'pdf',key);
       const L=pdfLayout(sizes,1/z);
@@ -1185,7 +1188,7 @@ function driveErrMsg(e){
 }
 async function driveQuery(q,order='name_natural'){
   const out=[]; let tok='';
-  const fields=encodeURIComponent('nextPageToken,files(id,name,mimeType,parents,size,modifiedTime,md5Checksum,thumbnailLink,appProperties,shortcutDetails(targetId,targetMimeType),owners(emailAddress,displayName),imageMediaMetadata(width,height,rotation),videoMediaMetadata(width,height))');
+  const fields=encodeURIComponent('nextPageToken,files(id,name,mimeType,parents,size,modifiedTime,md5Checksum,thumbnailLink,appProperties,shortcutDetails(targetId,targetMimeType),owners(emailAddress,displayName),createdTime,lastModifyingUser(displayName,emailAddress),imageMediaMetadata(width,height,rotation),videoMediaMetadata(width,height))');
   do{ const u=`${GAPI}?q=${encodeURIComponent(q)}&fields=${fields}&pageSize=1000${order?'&orderBy='+order:''}&includeItemsFromAllDrives=true&${kQ()}${tok?'&pageToken='+encodeURIComponent(tok):''}`;
     const j=await (await gget(u)).json(); out.push(...(j.files||[])); tok=j.nextPageToken; }while(tok);
   return out;
@@ -1204,7 +1207,7 @@ function getBlob(a){
     persistFile(a.key,recOf(a)); return a.blob;
   }).catch(e=>{ a.blobP=null; throw e; });
 }
-const recOf=a=>({kind:a.kind,blob:a.blob,name:a.name,w:a.w,h:a.h,thumb:a.thumbBlob,driveId:a.driveId,ver:a.ver,export:a.export});
+const recOf=a=>({kind:a.kind,blob:a.blob,name:a.name,t:a.t,by:a.by,size:a.size,w:a.w,h:a.h,thumb:a.thumbBlob,driveId:a.driveId,ver:a.ver,export:a.export});
 function ensureImageThumb(it){
   const a=assets.get(it.key); if(!a) return; if(a.thumbUrl){ applyImgThumb(a); return; }
   const id=it.id;
@@ -1918,7 +1921,7 @@ function renderMenuDrive(){
 }
 
 // ================== Upload to Drive (OAuth) ==================
-const UPFIELDS='id,name,mimeType,size,modifiedTime,md5Checksum,thumbnailLink,imageMediaMetadata(width,height,rotation)';
+const UPFIELDS='id,name,mimeType,size,modifiedTime,createdTime,owners(emailAddress,displayName),lastModifyingUser(displayName,emailAddress),md5Checksum,thumbnailLink,imageMediaMetadata(width,height,rotation)';
 const upLimit=limiter(2);
 const driveKeyOf=f=>`d~${f.id}~${verOf(f)}`;
 function registerDriveFile(f,kind,key){ driveEntries.set(f.id,{f,kind,key}); hidden.delete(f.id); saveHidden(); }
@@ -2056,7 +2059,7 @@ async function restore(){
     const b=await DB.get('meta','board'); if(!b||!b.items?.length) return false;
     const keys=new Set(b.items.map(i=>i.key).filter(Boolean));
     await Promise.all([...keys].map(async k=>{ const rec=await DB.get('files',k); if(!rec) return;
-      const a={key:k,kind:rec.kind,blob:rec.blob,name:rec.name,w:rec.w,h:rec.h,driveId:rec.driveId,ver:rec.ver,export:rec.export};
+      const a={key:k,kind:rec.kind,blob:rec.blob,name:rec.name,t:rec.t,by:rec.by,size:rec.size,w:rec.w,h:rec.h,driveId:rec.driveId,ver:rec.ver,export:rec.export};
       if((rec.kind==='image'||rec.kind==='video')&&rec.thumb){ const k2=Math.min(1,THUMB/Math.max(rec.w,rec.h)); a.thumbBlob=rec.thumb; a.thumbUrl=URL.createObjectURL(rec.thumb); a.tLong=Math.round(Math.max(rec.w,rec.h)*k2); }
       assets.set(k,a); }));
     for(const it of b.items){ if(it.key && !assets.has(it.key) && !(DRIVE && it.key.startsWith('d~'))) continue; S.items.set(it.id,it); buildEl(it); }
@@ -2964,7 +2967,7 @@ function renderCtx(){
   if(!S.sel.size||editing){ ctx.classList.remove('show'); return; }
   { const fi=document.activeElement; if(fi?.classList?.contains('fsin')&&ctx.contains(fi)&&ctx._sk===[...S.sel].join()) return; } ctx._sk=[...S.sel].join(); // đang gõ cỡ chữ: không vẽ lại thanh
   const its=[...S.sel].map(id=>S.items.get(id)).filter(Boolean);
-  let h='';
+  let h=its.length===1?mediaInfo(its[0]):''; if(h) h+='<div class="vsep"></div>';
   if(its.every(i=>i.locked)){ if(its.length===1&&(its[0].type==='image'||its[0].type==='pdf'||its[0].type==='video')) h+=btn('zoom','Phóng to xem (nhấp đúp)');
     const dg=dimGroupSel(its); if(dg) h+=dimCtx(dg)+'<div class="vsep"></div>';
     h+=`<span class="ctxlbl">Đang khóa</span>`+btn('unlock','Mở khóa (Ctrl Shift L)'); ctx.innerHTML=ctxRows(h); ctx.classList.add('show'); positionCtx(); return; }
@@ -3004,6 +3007,28 @@ function renderCtx(){
   ctx.innerHTML=ctxRows(h); ctx.classList.add('show'); positionCtx();
 }
 // Mỗi nhóm nút (ngăn cách bằng vạch .vsep) thành một hàng riêng trên thanh ngữ cảnh
+// ----- Thông tin tệp (PDF / ảnh / video / khung 3D): tên, kích thước, ngày, người tải lên -----
+const PAPER=[['A0',841,1189],['A1',594,841],['A2',420,594],['A3',297,420],['A4',210,297],['A5',148,210]];
+const pdfPgMm=new Map(); // "key#page" -> [w,h] mm (null: đang đọc)
+function paperName(w,h){ const a=Math.min(w,h), b=Math.max(w,h); const p=PAPER.find(([,x,y])=>Math.abs(a-x)<=4&&Math.abs(b-y)<=4); return p?p[0]+(w>h?' ngang':' dọc'):''; }
+function pdfPageMm(it){ const k=it.key+'#'+(it.page||1); if(pdfPgMm.has(k)) return pdfPgMm.get(k); pdfPgMm.set(k,null);
+  (async()=>{ const doc=await getDoc(it.key); const pg=await doc.getPage(it.page||1); const v=pg.getViewport({scale:1}); pdfPgMm.set(k,[v.width*25.4/72,v.height*25.4/72]); })()
+    .catch(()=>pdfPgMm.set(k,[0,0])).finally(()=>{ ctx._sk=''; renderCtx(); });
+  return null; }
+const fmtDate=t=>{ if(!t) return ''; const d=new Date(t); return isNaN(d)?'':d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); };
+function mediaInfo(it){ if(!it||!['image','pdf','video','web3d'].includes(it.type)) return '';
+  const a=it.key&&assets.get(it.key), f=a?.driveId&&driveEntries.get(a.driveId)?.f, L=[];
+  let name=f?.name||a?.name||''; if(it.type==='web3d'){ try{ name=it.url?new URL(it.url).hostname:'Khung 3D (chưa có link)'; }catch{ name=it.url||'Khung 3D'; } }
+  const r=v=>Math.round(v);
+  let sz=`Trên bảng: ${r(it.w)} × ${r(it.h)}`;
+  if(it.type==='pdf'){ const mm=pdfPageMm(it); if(mm&&mm[0]){ const pn=paperName(mm[0],mm[1]); sz+=` · Giấy ${r(mm[0])} × ${r(mm[1])} mm${pn?' ('+pn+')':''}`; } if(it.pages>1) sz=`Trang ${it.page}/${it.pages} · `+sz; }
+  else if(a?.w&&a?.h) sz+=` · Gốc ${a.w} × ${a.h} px`;
+  const bytes=+(f?.size||a?.size||0); if(bytes) sz+=` · ${fmtSize(bytes)}`;
+  L.push(sz);
+  const when=fmtDate(f?.createdTime||f?.modifiedTime||a?.t), who=f?(f.owners?.[0]?.displayName||f.owners?.[0]?.emailAddress||f.lastModifyingUser?.displayName||f.lastModifyingUser?.emailAddress):a?.by;
+  if(when||who) L.push([when?'Tải lên '+when:'',who?'bởi '+who:''].filter(Boolean).join(' '));
+  else if(it.type!=='web3d') L.push(DRIVE?'Chưa có thông tin ngày / người tải lên':'Tệp trên máy này');
+  return `<div class="minfo"><b title="${esc(name)}">${esc(name||'(không tên)')}</b>${L.map(x=>`<span>${esc(x)}</span>`).join('')}</div>`; }
 const ctxRows=h=>h.split('<div class="vsep"></div>').map(s=>s.trim()).filter(Boolean).map(s=>`<div class="crow">${s}</div>`).join('');
 const btn=(k,t)=>`<button class="ib" data-cx="${k}" title="${t}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`;
 const btnOn=(k,t,on)=>`<button class="ib${on?' on':''}" data-cx="${k}" title="${t}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`;
