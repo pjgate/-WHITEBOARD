@@ -3,7 +3,7 @@
 // chỉ dùng bản lưu sẵn khi mất mạng. Nhờ vậy mỗi lần đẩy bản mới lên GitHub,
 // lần mở app kế tiếp sẽ tự dùng bản mới mà không cần cài lại.
 // Yêu cầu tới Google (Drive, đăng nhập, font…) không bị can thiệp.
-const CACHE = 'bang-trang-v52';
+const CACHE = 'bang-trang-v53';
 const SHELL = ['./', './index.html', './manifest.json', './icons/icon-192.png', './icons/icon-512.png'];
 
 self.addEventListener('install', e => {
