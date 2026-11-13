@@ -2000,6 +2000,10 @@ async function authCall(body){
   if(j.error) throw Object.assign(new Error(j.error),{relogin:!!j.relogin}); return j; }
 let longOK=null; // cổng có hỗ trợ đăng nhập nhiều ngày không (null = chưa biết)
 try{ const x=JSON.parse(localStorage.getItem('wb-long')||'null'); if(x&&x.u===AUTH_URL&&Date.now()-x.t<(x.ok?864e5:6e5)) longOK=x.ok; }catch{}
+function logVisit(){ // gửi vé hiện tại lên cổng để ghi "Mở app"; bỏ qua nếu đã ghi trong 1 giờ qua trên máy này
+  if(!AUTH_URL||!gTok?.t) return;
+  try{ if(Date.now()-(+localStorage.getItem('wb-visit')||0)<36e5) return; localStorage.setItem('wb-visit',String(Date.now())); }catch{}
+  authCall({action:'visit',token:gTok.t}).catch(()=>{}); }
 async function pingLong(){ if(!AUTH_URL||!DRIVE?.clientId) return longOK=false; if(longOK!==null) return longOK;
   try{ longOK=!!(await authCall({action:'auth_ping'})).auth; }catch{ longOK=false; }
   try{ localStorage.setItem('wb-long',JSON.stringify({ok:longOK,t:Date.now(),u:AUTH_URL})); }catch{} return longOK; }
@@ -3777,6 +3781,7 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState!=
   setInterval(()=>{ if(getRT()&&(!gTok||gTok.exp-Date.now()<5*60000)) refreshLong(); },20000); // gia hạn trước khi vé hết hạn
   if(PRIV&&!tokenValid()&&!(await refreshLong())){ setMeta(); await showGate(); }
   const ok=await restore();
+  if(tokenValid()) logVisit(); // ghi lịch sử truy cập (tối đa 1 lần/giờ/người, phía cổng và phía máy này)
   updateCount(); requestRender(); updateLODSoon();
   if(ok && !DRIVE) toast('Đã mở lại bảng đã lưu',null,1800);
   if(DRIVE){ document.body.classList.add('drive'); if(DRIVE.project) document.body.classList.add('proj'); setMeta();

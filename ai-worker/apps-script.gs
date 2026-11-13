@@ -27,6 +27,7 @@ function doPost(e) {
     try { body = JSON.parse(e.postData.contents); } catch (x) { fail_('Dữ liệu gửi lên không hợp lệ.'); }
     // đăng nhập nhiều ngày: đổi mã đăng nhập lấy refresh token, và dùng refresh token lấy vé mới
     if (body.action === 'auth_ping') return out_({ auth: !!prop_('GOOGLE_CLIENT_SECRET') });
+    if (body.action === 'visit') return out_(visit_(body));
     if (body.action === 'auth_code') return out_(authCode_(body));
     if (body.action === 'auth_refresh') return out_(authRefresh_(body));
     if (!prop_('GEMINI_API_KEY')) fail_('Cổng AI chưa có GEMINI_API_KEY (Script Properties).');
@@ -113,9 +114,48 @@ function tokenCall_(params) {
 }
 function authCode_(b) {
   if (!b.code) fail_('Thiếu mã đăng nhập.');
-  const j = tokenCall_({ code: String(b.code), grant_type: 'authorization_code', redirect_uri: 'postmessage' });
-  if (j.error) return j;
+  let j;
+  try { j = tokenCall_({ code: String(b.code), grant_type: 'authorization_code', redirect_uri: 'postmessage' }); }
+  catch (x) { logLogin_('', false, String(x && x.message || x)); throw x; }
+  if (j.error) { logLogin_('', false, j.error); return j; }
+  const email = emailOf_(j.access_token);
+  logLogin_(email, !!email, email ? 'Đăng nhập' : 'Không lấy được email từ Drive');
   return { access_token: j.access_token, expires_in: j.expires_in, refresh_token: j.refresh_token || '' };
+}
+
+// ================== Lịch sử đăng nhập ==================
+// Mỗi lần người dùng đăng nhập Google qua cổng (auth_code) thì ghi một dòng vào Google Sheet:
+// thời gian (giờ VN), email, kết quả, chi tiết. Không ghi các lần gia hạn tự động (auth_refresh).
+// ID của Sheet để trong Script Property LOGIN_SHEET_ID. Script chạy bằng tài khoản Me, nên Sheet phải thuộc tài khoản đó.
+// Ghi "Mở app" khi người đã đăng nhập tải bảng. Cùng một người chỉ được ghi một lần mỗi giờ (CacheService).
+function visit_(b) {
+  const email = checkUser_(b.token);
+  const cache = CacheService.getScriptCache();
+  if (!cache.get('visit:' + email)) {
+    cache.put('visit:' + email, '1', 3600);
+    logLogin_(email, true, 'Mở app');
+  }
+  return { ok: true };
+}
+function emailOf_(token) {
+  const ab = UrlFetchApp.fetch('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)', { headers: { Authorization: 'Bearer ' + token }, muteHttpExceptions: true });
+  if (ab.getResponseCode() !== 200) return '';
+  return ((JSON.parse(ab.getContentText()).user || {}).emailAddress || '').toLowerCase();
+}
+function logLogin_(email, ok, detail) {
+  try { // lỗi ghi log không được làm hỏng đăng nhập
+    const id = prop_('LOGIN_SHEET_ID');
+    if (!id) return;
+    const sh = SpreadsheetApp.openById(id).getSheets()[0];
+    if (sh.getLastRow() === 0) sh.appendRow(['Thời gian', 'Email', 'Kết quả', 'Chi tiết']);
+    sh.appendRow([Utilities.formatDate(new Date(), 'Asia/Ho_Chi_Minh', 'yyyy-MM-dd HH:mm:ss'), email || '', ok ? 'Thành công' : 'Lỗi', detail || '']);
+  } catch (x) {}
+}
+// Chạy hàm này một lần trong trình soạn thảo để Google hỏi quyền truy cập Sheet (sau khi triển khai phiên bản mới).
+function thuLichSu() { // không bọc try: lỗi (thiếu ID, thiếu quyền) sẽ hiện ra trong trình soạn thảo
+  const sh = SpreadsheetApp.openById(prop_('LOGIN_SHEET_ID')).getSheets()[0];
+  if (sh.getLastRow() === 0) sh.appendRow(['Thời gian', 'Email', 'Kết quả', 'Chi tiết']);
+  sh.appendRow([new Date(), '', 'Kiểm tra', 'thuLichSu']);
 }
 function authRefresh_(b) {
   if (!b.refresh_token) fail_('Thiếu refresh token.');
