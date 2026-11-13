@@ -524,7 +524,7 @@ body.relogin #loginBtn{background:#e0a92b}
 <div id="minfo" class="panel"></div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v50</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v51</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -1107,7 +1107,7 @@ async function importFiles(list, at, mode){
   prog();
   let cursorY=c.y;
   if(imgs.length){
-    const cell=320/z, gap=28/z, cols=Math.ceil(Math.sqrt(imgs.length*1.4)), rows=Math.ceil(imgs.length/cols);
+    const cell=MEDIA_W, gap=28, cols=Math.ceil(Math.sqrt(imgs.length*1.4)), rows=Math.ceil(imgs.length/cols);
     const gw=cols*(cell+gap)-gap, gh=rows*(cell+gap)-gap; const x0=c.x-gw/2, y0=pdfs.length?c.y-gh:c.y-gh/2;
     await Promise.all(imgs.map((f,i)=>imgLimit(async()=>{
       try{ const dm=up?await upload(f):null; const a=isVid(f)?await addVideoAsset(f,dm):await addImageAsset(f,dm); const k=Math.min(cell/a.w, cell/a.h); const w=a.w*k, h=a.h*k;
@@ -1124,7 +1124,7 @@ async function importFiles(list, at, mode){
       const key=dm?driveKeyOf(dm):uid(); const a={key,kind:'pdf',blob:f,name:dm?.name||f.name||'document.pdf',t:Date.now(),by:me?.name||me?.email,size:f.size,driveId:dm?.id,ver:dm?verOf(dm):undefined}; assets.set(key,a);
       const sizes=await measurePdf(key,(p,n)=>prog(`đọc ${f.name}: ${p}/${n} trang`));
       persistFile(key,recOf(a)); if(dm) registerDriveFile(dm,'pdf',key);
-      const L=pdfLayout(sizes,1/z);
+      const L=pdfLayout(sizes);
       const y0=imgs.length?cursorY:(pdfs.length===1?c.y-L.gh/2:cursorY);
       created.push(...placePdf(key,sizes,L,c.x-L.gw/2,y0));
       cursorY=y0+L.gh+L.gap*3;
@@ -1146,8 +1146,9 @@ async function measurePdf(key,onProg){
   for(let p=1;p<=n;p++){ const pg=await doc.getPage(p); const v=pg.getViewport({scale:1}); sizes.push([v.width,v.height]); if(onProg&&p%10===0) onProg(p,n); }
   return sizes;
 }
-function pdfLayout(sizes,u){ // u = world units per screen px
-  const n=sizes.length, pw=(n===1?420:300)*u, gap=24*u, cols=n<=4?n:Math.ceil(Math.sqrt(n*1.7));
+const MEDIA_W=300, MEDIA_H=212; // kích thước mặc định khi nhập (đơn vị bảng, không phụ thuộc mức thu phóng): trang PDF rộng 300; ảnh/video cạnh dài 300; khung 3D 300×212
+function pdfLayout(sizes){
+  const n=sizes.length, pw=MEDIA_W, gap=24, cols=n<=4?n:Math.ceil(Math.sqrt(n*1.7));
   const rowsH=[]; for(let i=0;i<n;i++){ const r=Math.floor(i/cols); rowsH[r]=Math.max(rowsH[r]||0,pw*sizes[i][1]/sizes[i][0]); }
   return {pw,gap,cols,rowsH,gw:Math.min(n,cols)*(pw+gap)-gap,gh:rowsH.reduce((s,h)=>s+h+gap,0)-gap};
 }
@@ -1351,7 +1352,7 @@ async function placeDriveFiles(entries){
   let y=list.length?b.y+b.h+120:0; const xL=list.length?b.x:0; const created=[];
   const imgs=entries.filter(e=>e.kind==='image'||e.kind==='video'), pdfs=entries.filter(e=>e.kind==='pdf');
   if(imgs.length){
-    const cell=320, gap=28, cols=Math.min(imgs.length,Math.ceil(Math.sqrt(imgs.length*1.4)));
+    const cell=MEDIA_W, gap=28, cols=Math.min(imgs.length,Math.ceil(Math.sqrt(imgs.length*1.4)));
     imgs.forEach((e,i)=>{ const a=assets.get(e.key); const ar=a.w&&a.h?a.h/a.w:(e.kind==='video'?9/16:0.75); const k=Math.min(cell, cell/ar); const w=k, h=k*ar;
       const col=i%cols, row=Math.floor(i/cols);
       created.push(createItem({type:e.kind, key:e.key, x:xL+col*(cell+gap)+(cell-w)/2, y:y+row*(cell+gap)+(cell-h)/2, w, h})); });
@@ -1361,7 +1362,7 @@ async function placeDriveFiles(entries){
   let i=0;
   for(const e of pdfs){ i++;
     try{ toast(`Đang tải PDF từ Drive ${i}/${pdfs.length}: ${e.f.name}`, (i-1)/pdfs.length);
-      const sizes=await measurePdf(e.key); const L=pdfLayout(sizes,1);
+      const sizes=await measurePdf(e.key); const L=pdfLayout(sizes);
       created.push(...placePdf(e.key,sizes,L,xL,y)); y+=L.gh+80; requestRender();
     }catch(err){ console.warn(err); }
   }
@@ -1783,7 +1784,7 @@ async function replaceMedia(id,file){
       const key=dm?driveKeyOf(dm):uid(); const a={key,kind:'pdf',blob:file,name:dm?.name||file.name||'document.pdf',driveId:dm?.id,ver:dm?verOf(dm):undefined};
       assets.set(key,a); persistFile(key,recOf(a)); if(dm) registerDriveFile(dm,'pdf',key);
       const olds=[...S.items.values()].filter(i=>i.type==='pdf'&&i.key===oldKey);
-      const bb=bbox(olds.length?olds:[it]), sizes=await measurePdf(key), L=pdfLayout(sizes,1/cam.z);
+      const bb=bbox(olds.length?olds:[it]), sizes=await measurePdf(key), L=pdfLayout(sizes);
       deleteItems(olds.map(i=>i.id)); // deleteItems bỏ cả các trang cũ
       placePdf(key,sizes,L,bb.x,bb.y).forEach(i=>{ if(grp) i.g=grp; });
     }
@@ -2646,7 +2647,7 @@ function endPointer(e){
   if(d.type==='move'&&!d.moved&&S.items.get(d.hid)?.type==='table') renderCtx();
   if(d.type==='move'){ if(d.moved) saveSoon(); else if(!e.shiftKey && !d.fresh && S.sel.size>1 && d.hid) setSel([d.hid]); } // bấm lần nữa: chọn riêng 1 đối tượng trong nhóm
   else if(d.type==='pen'){ clearTimeout(d.timer); if(d.shape) createShape(d.shape); else createPen(penPts(d)); }
-  else if(d.type==='create'){ const it=d.it; if(it.w*cam.z<6 && it.h*cam.z<6){ const w=160/cam.z, h=(it.shape==='ellipse'?160:110)/cam.z; it.x=d.start.x-w/2; it.y=d.start.y-h/2; it.w=w; it.h=h; syncEl(it); }
+  else if(d.type==='create'){ const it=d.it; if(it.w*cam.z<6 && it.h*cam.z<6){ const w3=it.type==='web3d', w=w3?MEDIA_W:160/cam.z, h=w3?MEDIA_H:(it.shape==='ellipse'?160:110)/cam.z; it.x=d.start.x-w/2; it.y=d.start.y-h/2; it.w=w; it.h=h; syncEl(it); }
     if(d.callout){ pendingCallout={rect:it.id,g:d.callout}; } else { setTool('select'); setSel([it.id]); if(it.type==='web3d') w3Open(it.id); } saveSoon(); }
   else if(d.type==='leader'){ finishLeader(d); }
   else if(d.type==='tcol'||d.type==='trow'){ d.it.t=Date.now(); saveSoon(); }
