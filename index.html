@@ -519,7 +519,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v40</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v41</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -556,7 +556,7 @@ body.relogin #loginBtn{background:#e0a92b}
     <tr><td>Công cụ</td><td><kbd>V</kbd> <kbd>H</kbd> <kbd>N</kbd> <kbd>T</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>A</kbd> <kbd>L</kbd></td></tr>
     <tr><td>Bút: nét thẳng</td><td>Giữ <kbd>Shift</kbd> khi vẽ (góc làm tròn theo 45°)</td></tr>
     <tr><td>Chọn kiểu AutoCAD</td><td>Kéo trái→phải: chọn đối tượng nằm trọn trong khung. Kéo phải→trái: chọn đối tượng chạm khung</td></tr>
-    <tr><td>Thông số dim</td><td>Bấm vào nhóm dim (đã khóa) → thanh công cụ hiện tỉ lệ, ô <b>Cỡ số</b> (cỡ chữ số đo) và <b>Nét</b> (độ dày đường dim, mũi tên)</td></tr>
+    <tr><td>Thông số dim</td><td>Bấm vào nhóm dim (đã khóa) → thanh công cụ hiện tỉ lệ, ô <b>Cỡ số + mũi tên</b> (một số chỉnh cùng lúc cỡ chữ số đo và mũi tên tam giác) và <b>Nét</b> (độ dày đường dim)</td></tr>
     <tr><td>Sửa nhóm tại chỗ</td><td>Đúp vào đối tượng trong nhóm; đối tượng khác mờ đi. <kbd>Esc</kbd> để thoát</td></tr>
     <tr><td>Sao chép tại chỗ</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> (nhân bản đúng vị trí, khác <kbd>Ctrl</kbd>+<kbd>D</kbd> lệch 24px)</td></tr>
     <tr><td>Bắt điểm kiểu AutoCAD (bút)</td><td><kbd>F3</kbd> bật/tắt. Rê gần đỉnh, điểm giữa, tâm hoặc cạnh để bắt; giữ <kbd>Shift</kbd> để căn thẳng theo đỉnh/tâm</td></tr>
@@ -920,7 +920,7 @@ function updateArrow(it){
 function updateArrows(){ for(const it of S.items.values()) if(it.type==='arrow') updateArrow(it); }
 function drawArrowEl(it,el){
   const svg=el.firstChild, [hp,ln,hd]=svg.children; svg.setAttribute('viewBox',`0 0 ${it.w} ${it.h}`);
-  const A={x:it.a.x-it.x,y:it.a.y-it.y}, B={x:it.b.x-it.x,y:it.b.y-it.y}, sw=it.sw||2, L=Math.max(sw*4.2,6);
+  const A={x:it.a.x-it.x,y:it.a.y-it.y}, B={x:it.b.x-it.x,y:it.b.y-it.y}, sw=it.sw||2, L=it.hl||Math.max(sw*4.2,6); // hl: độ dài mũi tên tam giác (dim)
   const len=Math.hypot(B.x-A.x,B.y-A.y)||1, ux=(B.x-A.x)/len, uy=(B.y-A.y)/len;
   const head=(T,dx,dy)=>{ const bx=T.x-dx*L, by=T.y-dy*L, nx=-dy*L*.55, ny=dx*L*.55; return `M${T.x} ${T.y}L${bx+nx} ${by+ny}L${bx-nx} ${by-ny}Z`; };
   const hE=it.head!=='none', hS=it.head==='both';
@@ -2609,7 +2609,7 @@ addEventListener('pointermove',e=>{
       let s=Math.max(((wp.x-A.x)*d.sx)/d.w0, ((wp.y-A.y)*d.sy)/d.h0); s=Math.max(s, mn/Math.min(d.w0,d.h0));
       const sc=p=>({x:A.x+(p.x-A.x)*s, y:A.y+(p.y-A.y)*s});
       d.its.forEach((it,i)=>{ const o=d.orig[i];
-        if(it.type==='arrow'){ if(!o.a.id){ const p=sc(o.a); it.a.x=p.x; it.a.y=p.y; } if(!o.b.id){ const p=sc(o.b); it.b.x=p.x; it.b.y=p.y; } it.sw=o.sw*s; return; }
+        if(it.type==='arrow'){ if(!o.a.id){ const p=sc(o.a); it.a.x=p.x; it.a.y=p.y; } if(!o.b.id){ const p=sc(o.b); it.b.x=p.x; it.b.y=p.y; } it.sw=o.sw*s; if(o.hl) it.hl=o.hl*s; if(o.fs) it.fs=o.fs*s; return; }
         const c=sc(ctr(o)); it.w=o.w*s; it.h=o.h*s; it.x=c.x-it.w/2; it.y=c.y-it.h/2; if(o.fs) it.fs=o.fs*s; if(o.bw) it.bw=o.bw*s; syncEl(it); });
       updateArrows(); requestRender(); break; }
     case 'dimdrag':{ const p=dimSnap(toWorld(sp.x,sp.y)); dimHover=p; drag.it.b={x:p.x,y:p.y}; updateArrow(drag.it); requestRender(); break; }
@@ -2946,10 +2946,10 @@ function setFsPx(px){ px=+px; if(!(px>=2&&px<=2000)) return; const its=[...S.sel
 const dimGroupSel=its=>its.length&&its.every(i=>i.type==='arrow'&&i.dm&&canEdit(i))?its:null;
 function dimCtx(its){ const d0=its.find(i=>i.ds), r=v=>Math.round(v*100)/100, same=f=>{ const v=its.map(f).map(r); return v.every(x=>x===v[0])?v[0]:''; };
   return (d0?`<span class="ctxlbl">Tỉ lệ: 1px = ${+d0.ds.toPrecision(3)} mm</span>`:'')
-    +`<span class="ctxlbl">Cỡ số</span><input class="fsin" id="dimFsIn" type="number" min="1" max="2000" step="1" inputmode="decimal" value="${same(i=>txtBase(i))}" title="Cỡ chữ số đo của các dim (px ở mức thu phóng 100%). Gõ số rồi Enter.">`
-    +`<span class="ctxlbl">Nét</span><input class="fsin" id="dimSwIn" type="number" min="0.1" max="200" step="0.1" inputmode="decimal" value="${same(i=>i.sw||2)}" title="Độ dày đường dim và mũi tên (px ở mức thu phóng 100%). Gõ số rồi Enter.">`; }
+    +`<span class="ctxlbl">Cỡ số + mũi tên</span><input class="fsin" id="dimFsIn" type="number" min="1" max="2000" step="1" inputmode="decimal" value="${same(i=>txtBase(i))}" title="Một số chỉnh cùng lúc cỡ chữ số đo và mũi tên tam giác (mũi tên = cỡ số × 0.5). Gõ số rồi Enter.">`
+    +`<span class="ctxlbl">Nét</span><input class="fsin" id="dimSwIn" type="number" min="0.1" max="200" step="0.1" inputmode="decimal" value="${same(i=>i.sw||2)}" title="Độ dày đường dim (px ở mức thu phóng 100%). Gõ số rồi Enter.">`; }
 function setDimStyle(k,v){ v=+v; if(!(v>0)) return; const its=dimGroupSel(selItems()); if(!its) return; checkpoint();
-  its.forEach(i=>{ i[k]=v; i.t=Date.now(); updateArrow(i); }); saveSoon(); renderCtx(); requestRender(); }
+  its.forEach(i=>{ i[k]=v; if(k==='fs') i.hl=v*DIM_HL; i.t=Date.now(); updateArrow(i); }); saveSoon(); renderCtx(); requestRender(); }
 ctx.addEventListener('keydown',e=>{ if(e.target.id==='dimFsIn'||e.target.id==='dimSwIn'){ e.stopPropagation(); if(e.key==='Enter'||e.key==='Escape'){ e.preventDefault(); e.target.blur(); } } },true);
 ctx.addEventListener('change',e=>{ const id=e.target.id; if(id==='dimFsIn'||id==='dimSwIn'){ const v=e.target.value; setTimeout(()=>setDimStyle(id==='dimFsIn'?'fs':'sw',v)); } });
 ctx.addEventListener('keydown',e=>{ if(e.target.id!=='fsIn') return; e.stopPropagation();
@@ -3101,7 +3101,7 @@ function finishLeader(d){ const it=d.it, p=it.a, fs=22/cam.z;
   it.a={x:p.x,y:p.y,id:tx.id}; updateArrow(it); pendingEdit=tx.id; }
 // ----- Dim nhanh: chọn đoạn tham chiếu + nhập số đo → các đoạn còn lại tự dim theo cùng tỉ lệ.
 // Kết thúc lệnh (Esc / đổi công cụ): các dim vừa tạo được gom nhóm và khóa; tỉ lệ lưu ở từng dim (ds).
-const DIM_CLR='#e8388a', DIM_FS=12, DIM_SW=1.2; // cỡ số đo & độ dày nét dim mặc định (px ở 100%)
+const DIM_CLR='#e8388a', DIM_FS=12, DIM_SW=1.2, DIM_HL=.5; // DIM_HL: mũi tên tam giác = cỡ số × 0.5 // cỡ số đo & độ dày nét dim mặc định (px ở 100%)
 function dimStart(){ const g=[...S.sel].map(id=>S.items.get(id)).find(i=>i&&i.g&&i.ds);
   dimS={scale:g?g.ds:null, refId:null, made:[], cp:false};
   for(const it of S.items.values()) if(it.type==='pdf'&&vis(it)) pdfVecOf(it); } // đọc sẵn nét PDF đang hiển thị
@@ -3163,11 +3163,11 @@ function dimEnd(it){ const L=Math.hypot(it.b.x-it.a.x,it.b.y-it.a.y);
   if(dimS.scale==null){ // đoạn tham chiếu (thước): nhập số đo thực, rồi ẩn trong lúc dim
     const v=parseFloat(prompt('Số đo thực của đoạn này (mm):',''));
     if(!(v>0)){ drop(); return; }
-    dimS.scale=v/L; dimS.refId=it.id; it.text=String(v); it.ds=dimS.scale; it.dm=1; it.fs=DIM_FS; updateArrow(it);
+    dimS.scale=v/L; dimS.refId=it.id; it.text=String(v); it.ds=dimS.scale; it.dm=1; it.fs=DIM_FS; it.hl=DIM_FS*DIM_HL; updateArrow(it);
     const r=els.get(it.id); if(r) r.el.style.display='none';
     dimS.made.push(it.id); toast('Đã nhận tỉ lệ, kéo các đoạn còn lại để dim',null,1600);
   } else {
-    it.text=String(Math.round(L*dimS.scale*10)/10); it.ds=dimS.scale; it.dm=1; it.fs=DIM_FS; updateArrow(it); dimS.made.push(it.id);
+    it.text=String(Math.round(L*dimS.scale*10)/10); it.ds=dimS.scale; it.dm=1; it.fs=DIM_FS; it.hl=DIM_FS*DIM_HL; updateArrow(it); dimS.made.push(it.id);
   }
   saveSoon(); requestRender(); }
 // ----- Khung 3D: nhúng trang xem model (Trimble Connect, 3D Warehouse) bằng iframe -----
