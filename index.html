@@ -519,7 +519,7 @@ body.relogin #loginBtn{background:#e0a92b}
 </div>
 <div id="help-btn" class="panel"><button class="ib" data-act="help" title="Phím tắt"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.5M12 17h.01"/></svg></button></div>
 <div id="help" class="panel">
-  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v46</small></h3>
+  <h3>Thao tác nhanh <small style="font-weight:400;color:#888;font-size:12px">· bản v47</small></h3>
   <table>
     <tr><td>Di chuyển bảng</td><td>Kéo 2 ngón / <kbd>Space</kbd>+kéo / chuột giữa</td></tr>
     <tr><td>Phóng to, thu nhỏ</td><td>Lăn chuột / chụm 2 ngón</td></tr>
@@ -761,7 +761,7 @@ let storageOK = true;
 
 // ================== State ==================
 const vp=$('#vp'), world=$('#world'), ovc=$('#ov'), ov=ovc.getContext('2d');
-const DIM_CLR='#e8388a', DIM_FS=30, DIM_H=.7, DIM_HL=DIM_H/4, DIM_SW=DIM_FS*DIM_H/10; // DIM_H: chiều cao chữ hoa ≈ 0.7 × cỡ chữ; mũi tên = h/4 (người dùng muốn nhỏ hơn chuẩn ISO), nét = h/10 // theo ISO 129-1 / ISO 3098 (kiểu dim ISO-25): mũi tên dài bằng chiều cao chữ hoa h ≈ 0.7 × cỡ chữ, góc mở 30° // cỡ số đo & độ dày nét dim mặc định (px ở 100%)
+const DIM_CLR='#e8388a', DIM_FS=30, DIM_H=.7, DIM_HL=DIM_H, DIM_SW=DIM_FS*DIM_H/10; // DIM_H: chiều cao chữ hoa ≈ 0.7 × cỡ chữ; mũi tên dài h = 10 × nét (theo DIN 406 / Neufert), nét = h/10 // theo ISO 129-1 / ISO 3098 (kiểu dim ISO-25): mũi tên dài bằng chiều cao chữ hoa h ≈ 0.7 × cỡ chữ, góc mở 30° // cỡ số đo & độ dày nét dim mặc định (px ở 100%)
 let dimOn=(()=>{ try{ return localStorage.getItem('wb-dim-on')!=='0'; }catch{ return true; } })(); // bật/tắt hiển thị dim
 let dimS=null, dimHover=null; // trạng thái công cụ dim
 const S = { items:new Map(), sel:new Set() };
@@ -2948,7 +2948,7 @@ function setFsPx(px){ px=+px; if(!(px>=2&&px<=2000)) return; const its=[...S.sel
 const dimGroupSel=its=>its.length&&its.every(i=>i.type==='arrow'&&i.dm&&canEdit(i))?its:null;
 function dimCtx(its){ const d0=its.find(i=>i.ds), r=v=>Math.round(v*100)/100, same=f=>{ const v=its.map(f).map(r); return v.every(x=>x===v[0])?v[0]:''; };
   return (d0?`<span class="ctxlbl">Tỉ lệ: 1px = ${+d0.ds.toPrecision(3)} mm</span>`:'')
-    +`<span class="ctxlbl">Cỡ dim</span><input class="fsin" id="dimFsIn" type="number" min="0.1" max="2000" step="any" inputmode="decimal" value="${same(i=>txtBase(i))}" title="Một số chỉnh cùng lúc cỡ chữ số đo, mũi tên tam giác và độ dày nét (theo ISO: chiều cao chữ hoa h ≈ 0.7 × cỡ số; mũi tên dài h/4, góc 30°; nét h/10). Gõ số rồi Enter.">`
+    +`<span class="ctxlbl">Cỡ dim</span><input class="fsin" id="dimFsIn" type="number" min="0.1" max="2000" step="any" inputmode="decimal" value="${same(i=>txtBase(i))}" title="Một số chỉnh cùng lúc cỡ chữ số đo, mũi tên tam giác và độ dày nét (theo ISO: chiều cao chữ hoa h ≈ 0.7 × cỡ số; mũi tên dài h, góc 30°; nét h/10). Gõ số rồi Enter.">`
 ; }
 function setDimStyle(k,v){ v=+v; if(!(v>0)) return; const its=dimGroupSel(selItems()); if(!its) return; checkpoint();
   its.forEach(i=>{ i[k]=v; if(k==='fs'){ i.hl=v*DIM_HL; i.sw=v*DIM_H/10; } i.t=Date.now(); updateArrow(i); }); saveSoon(); renderCtx(); requestRender(); }
