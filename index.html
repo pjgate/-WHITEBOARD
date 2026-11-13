@@ -922,7 +922,7 @@ function drawArrowEl(it,el){
   const svg=el.firstChild, [hp,ln,hd]=svg.children; svg.setAttribute('viewBox',`0 0 ${it.w} ${it.h}`);
   const A={x:it.a.x-it.x,y:it.a.y-it.y}, B={x:it.b.x-it.x,y:it.b.y-it.y}, sw=it.sw||2, L=it.hl||Math.max(sw*4.2,6); // hl: độ dài mũi tên tam giác (dim)
   const len=Math.hypot(B.x-A.x,B.y-A.y)||1, ux=(B.x-A.x)/len, uy=(B.y-A.y)/len;
-  const head=(T,dx,dy)=>{ const bx=T.x-dx*L, by=T.y-dy*L, w=it.dm?.268:.55, nx=-dy*L*w, ny=dx*L*w; // dim: nửa góc 15° (tan15°≈0.268) return `M${T.x} ${T.y}L${bx+nx} ${by+ny}L${bx-nx} ${by-ny}Z`; };
+  const head=(T,dx,dy)=>{ const bx=T.x-dx*L, by=T.y-dy*L, w=it.dm?.268:.55 /* dim: nửa góc 15°, tan15°≈0.268 */, nx=-dy*L*w, ny=dx*L*w; return `M${T.x} ${T.y}L${bx+nx} ${by+ny}L${bx-nx} ${by-ny}Z`; };
   const hE=it.head!=='none', hS=it.head==='both';
   const s0=hS?{x:A.x+ux*L*.8,y:A.y+uy*L*.8}:A, s1=hE?{x:B.x-ux*L*.8,y:B.y-uy*L*.8}:B;
   const d=`M${s0.x} ${s0.y}L${s1.x} ${s1.y}`; ln.setAttribute('d',d); hp.setAttribute('d',`M${A.x} ${A.y}L${B.x} ${B.y}`);
